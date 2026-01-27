@@ -1,0 +1,49 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "sportexd-1bb0e",
+                    "appId": "1:1082610556580:android:cb8a956430f5de2fbd9031",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "sportexd-1bb0e",
+                    "configurations": {
+                        "android": "1:1082610556580:android:cb8a956430f5de2fbd9031",
+                        "ios": "1:1082610556580:ios:a1904fff67bc3e97bd9031",
+                        "web": "1:1082610556580:web:6445582d9b10639cbd9031",
+                        "windows": "1:1082610556580:web:76b434ad8ce16f47bd9031"
+                    }
+                }
+            }
+        }
+    },
+    "hosting": {
+        "public": "build/web",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ],
+        "rewrites": [
+            {
+                "source": "**",
+                "destination": "/index.html"
+            }
+        ],
+        "headers": [
+            {
+                "source": "**/*.@(js|html|css|json)",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "max-age=0, no-cache"
+                    }
+                ]
+            }
+        ]
+    }
+}
