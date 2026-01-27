@@ -10,6 +10,7 @@ import 'features/auth/presentation/signup_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/main/presentation/main_shell.dart';
 import 'features/profile/presentation/profile_screen.dart';
+import 'features/profile/presentation/edit_profile_screen.dart';
 import 'features/meetups/presentation/create_meetup_screen.dart';
 import 'features/meetups/presentation/meetup_detail_screen.dart';
 import 'features/chat/presentation/my_chats_screen.dart';
@@ -83,6 +84,13 @@ final _router = GoRouter(
           chatId: extra['chatId'],
           title: extra['title'],
         );
+      },
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) {
+        final user = state.extra as UserModel;
+        return EditProfileScreen(user: user);
       },
     ),
   ],

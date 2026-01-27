@@ -146,7 +146,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () async {
+              final result = await context.push('/edit-profile', extra: user);
+              if (result == true) {
+                _loadCurrentUser(); // Reload user data after edit
+              }
+            },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 32),
             ),

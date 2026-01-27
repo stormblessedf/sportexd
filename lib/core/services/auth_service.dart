@@ -178,3 +178,52 @@ class AuthService {
       'followers': FieldValue.arrayRemove([currentUserId])
     });
   }
+
+  // Update User Profile
+  Future<void> updateUser({
+    required String userId,
+    String? username,
+    String? bio,
+    String? location,
+    String? gender,
+    String? profileImageUrl,
+    dynamic level,
+    dynamic playStyle,
+  }) async {
+    try {
+      final Map<String, dynamic> updateData = {};
+
+      if (username != null && username.isNotEmpty) {
+        updateData['username'] = username;
+      }
+      if (bio != null) {
+        updateData['bio'] = bio;
+      }
+      if (location != null) {
+        updateData['location'] = location;
+      }
+      if (gender != null) {
+        updateData['gender'] = gender;
+      }
+      if (profileImageUrl != null) {
+        updateData['profileImageUrl'] = profileImageUrl;
+      }
+      if (level != null) {
+        updateData['level'] = level.toString().split('.').last;
+      }
+      if (playStyle != null) {
+        updateData['playStyle'] = playStyle.toString().split('.').last;
+      }
+
+      if (updateData.isNotEmpty) {
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .update(updateData)
+            .timeout(const Duration(seconds: 10));
+      }
+    } catch (e) {
+      throw Exception('Profil güncellenirken hata oluştu: $e');
+    }
+  }
+}
