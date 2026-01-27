@@ -1,3 +1,4 @@
+enum BadgeType { organizer, participant, achievement, milestone }
 
 class Badge {
   final String id;

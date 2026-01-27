@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/models/meetup_model.dart';
+import '../../../../core/services/meetup_service.dart';
 
 class MeetupCard extends StatelessWidget {
   final MeetupModel meetup;
