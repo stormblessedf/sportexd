@@ -81,6 +81,56 @@ class Certificate {
   }
 }
 
+// Spor dalları enum
+enum SportType {
+  football,
+  basketball,
+  volleyball,
+  tennis,
+  swimming,
+  running,
+  cycling,
+  yoga,
+  fitness,
+  boxing,
+  tableTennis,
+  badminton,
+  other,
+}
+
+extension SportTypeExtension on SportType {
+  String get displayName {
+    switch (this) {
+      case SportType.football:
+        return 'Futbol';
+      case SportType.basketball:
+        return 'Basketbol';
+      case SportType.volleyball:
+        return 'Voleybol';
+      case SportType.tennis:
+        return 'Tenis';
+      case SportType.swimming:
+        return 'Yüzme';
+      case SportType.running:
+        return 'Koşu';
+      case SportType.cycling:
+        return 'Bisiklet';
+      case SportType.yoga:
+        return 'Yoga';
+      case SportType.fitness:
+        return 'Fitness';
+      case SportType.boxing:
+        return 'Boks';
+      case SportType.tableTennis:
+        return 'Masa Tenisi';
+      case SportType.badminton:
+        return 'Badminton';
+      case SportType.other:
+        return 'Diğer';
+    }
+  }
+}
+
 class UserModel {
   final String id;
   final String username;
@@ -94,6 +144,9 @@ class UserModel {
   final String? location;
   final String? gender;
   final DateTime? birthDate;
+  final int? height; // cm cinsinden
+  final int? weight; // kg cinsinden
+  final List<SportType>? interestedSports;
   final Level? level;
   final List<PreferredTime>? preferredTimes;
   final PlayStyle? playStyle;
@@ -114,6 +167,9 @@ class UserModel {
     this.location,
     this.gender,
     this.birthDate,
+    this.height,
+    this.weight,
+    this.interestedSports,
     this.level,
     this.preferredTimes,
     this.playStyle,
@@ -136,6 +192,9 @@ class UserModel {
       'location': location,
       'gender': gender,
       'birthDate': birthDate?.toIso8601String(),
+      'height': height,
+      'weight': weight,
+      'interestedSports': interestedSports?.map((e) => e.name).toList(),
       'level': level?.name,
       'preferredTimes': preferredTimes?.map((e) => e.name).toList(),
       'playStyle': playStyle?.name,
@@ -167,6 +226,14 @@ class UserModel {
       birthDate: json['birthDate'] != null
           ? DateTime.parse(json['birthDate'])
           : null,
+      height: json['height'],
+      weight: json['weight'],
+      interestedSports: (json['interestedSports'] as List<dynamic>?)
+          ?.map((e) => SportType.values.firstWhere(
+                (element) => element.name == e,
+                orElse: () => SportType.other,
+              ))
+          .toList(),
       level: Level.values.firstWhere(
         (e) => e.name == json['level'],
         orElse: () => Level.beginner,

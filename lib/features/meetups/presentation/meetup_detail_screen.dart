@@ -172,34 +172,48 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                   // Organizer Info
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: widget.meetup.organizerImageUrl != null
-                            ? NetworkImage(widget.meetup.organizerImageUrl!)
-                            : null,
-                        child: widget.meetup.organizerImageUrl == null
-                            ? const Icon(Icons.person, color: Colors.white)
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Organizatör',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          Text(
-                            widget.meetup.organizerName,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      GestureDetector(
+                        onTap: () {
+                          context.push('/user-profile/${widget.meetup.organizerId}');
+                        },
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              backgroundImage: widget.meetup.organizerImageUrl != null
+                                  ? NetworkImage(widget.meetup.organizerImageUrl!)
+                                  : null,
+                              child: widget.meetup.organizerImageUrl == null
+                                  ? const Icon(Icons.person, color: Colors.white)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Organizatör',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Text(
+                                  widget.meetup.organizerName,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                       const Spacer(),
                       OutlinedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          context.push('/user-profile/${widget.meetup.organizerId}');
+                        },
                         child: const Text('Profil'),
                       ),
                     ],

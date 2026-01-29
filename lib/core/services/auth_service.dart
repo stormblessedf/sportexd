@@ -6,6 +6,10 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Public getters to access private instances
+  FirebaseAuth get auth => _auth;
+  FirebaseFirestore get firestore => _firestore;
+
   // Current User Stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -43,7 +47,7 @@ class AuthService {
         email: email,
         password: password,
       );
-      
+
       if (result.user == null) {
         throw Exception('Kullanıcı bulunamadı');
       }
@@ -80,7 +84,7 @@ class AuthService {
     }
   }
 
-  // Sign Up
+  // Sign Up (Full - with username)
   Future<UserModel> signUp({
     required String email,
     required String password,
@@ -128,6 +132,77 @@ class AuthService {
     }
   }
 
+  // Sign Up (Email Only - Firestore profile created later)
+  Future<void> signUpWithEmailOnly({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (result.user == null) {
+        throw Exception('Kayıt oluşturulamadı');
+      }
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_getErrorMessage(e.code));
+    }
+  }
+
+  // Create User Profile in Firestore
+  Future<void> createUserProfile({
+    required String username,
+    String? bio,
+    String? location,
+    String? gender,
+    DateTime? birthDate,
+    int? height,
+    int? weight,
+    List<String>? interestedSports,
+    String? profileImageUrl,
+    dynamic level,
+    dynamic playStyle,
+  }) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) {
+      throw Exception('Kullanıcı oturumu bulunamadı');
+    }
+
+    try {
+      final userData = {
+        'id': authUser.uid,
+        'username': username,
+        'email': authUser.email ?? '',
+        'bio': bio,
+        'location': location,
+        'gender': gender,
+        'birthDate': birthDate?.toIso8601String(),
+        'height': height,
+        'weight': weight,
+        'interestedSports': interestedSports,
+        'profileImageUrl': profileImageUrl,
+        'followersCount': 0,
+        'followingCount': 0,
+        'badges': [],
+        'certificates': [],
+        'followers': [],
+        'following': [],
+        'level': level?.toString().split('.').last ?? 'beginner',
+        'playStyle': playStyle?.toString().split('.').last ?? 'casual',
+      };
+
+      await _firestore
+          .collection('users')
+          .doc(authUser.uid)
+          .set(userData)
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      throw Exception('Profil oluşturulurken hata: $e');
+    }
+  }
+
   // Sign Out
   Future<void> signOut() async {
     await _auth.signOut();
@@ -157,12 +232,12 @@ class AuthService {
   Future<void> followUser(String currentUserId, String targetUserId) async {
     // Update current user's following list
     await _firestore.collection('users').doc(currentUserId).update({
-      'following': FieldValue.arrayUnion([targetUserId])
+      'following': FieldValue.arrayUnion([targetUserId]),
     });
 
     // Update target user's followers list
     await _firestore.collection('users').doc(targetUserId).update({
-      'followers': FieldValue.arrayUnion([currentUserId])
+      'followers': FieldValue.arrayUnion([currentUserId]),
     });
   }
 
@@ -170,12 +245,12 @@ class AuthService {
   Future<void> unfollowUser(String currentUserId, String targetUserId) async {
     // Update current user's following list
     await _firestore.collection('users').doc(currentUserId).update({
-      'following': FieldValue.arrayRemove([targetUserId])
+      'following': FieldValue.arrayRemove([targetUserId]),
     });
 
     // Update target user's followers list
     await _firestore.collection('users').doc(targetUserId).update({
-      'followers': FieldValue.arrayRemove([currentUserId])
+      'followers': FieldValue.arrayRemove([currentUserId]),
     });
   }
 
@@ -189,6 +264,10 @@ class AuthService {
     String? profileImageUrl,
     dynamic level,
     dynamic playStyle,
+    DateTime? birthDate,
+    int? height,
+    int? weight,
+    List<String>? interestedSports,
   }) async {
     try {
       final Map<String, dynamic> updateData = {};
@@ -213,6 +292,18 @@ class AuthService {
       }
       if (playStyle != null) {
         updateData['playStyle'] = playStyle.toString().split('.').last;
+      }
+      if (birthDate != null) {
+        updateData['birthDate'] = birthDate.toIso8601String();
+      }
+      if (height != null) {
+        updateData['height'] = height;
+      }
+      if (weight != null) {
+        updateData['weight'] = weight;
+      }
+      if (interestedSports != null) {
+        updateData['interestedSports'] = interestedSports;
       }
 
       if (updateData.isNotEmpty) {

@@ -11,6 +11,8 @@ import 'features/home/presentation/home_screen.dart';
 import 'features/main/presentation/main_shell.dart';
 import 'features/profile/presentation/profile_screen.dart';
 import 'features/profile/presentation/edit_profile_screen.dart';
+import 'features/profile/presentation/create_profile_screen.dart';
+import 'features/profile/presentation/settings_screen.dart';
 import 'features/meetups/presentation/create_meetup_screen.dart';
 import 'features/meetups/presentation/meetup_detail_screen.dart';
 import 'features/chat/presentation/my_chats_screen.dart';
@@ -49,6 +51,7 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
+    GoRoute(path: '/create-profile', builder: (context, state) => const CreateProfileScreen()),
     ShellRoute(
       builder: (context, state, child) {
         return MainShell(navigationShell: child);
@@ -93,6 +96,17 @@ final _router = GoRouter(
         return EditProfileScreen(user: user);
       },
     ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/user-profile/:userId',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return ProfileScreen(userId: userId);
+      },
+    ),
   ],
 );
 
@@ -112,7 +126,7 @@ class SporsalApp extends StatelessWidget {
         builder: DevicePreview.appBuilder,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.dark, // Start with dark mode for that premium feel
+        themeMode: ThemeMode.light, // Light theme as per HTML design
         routerConfig: _router,
         debugShowCheckedModeBanner: false,
       ),

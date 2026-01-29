@@ -61,7 +61,7 @@ class MyChatsScreen extends StatelessWidget {
                 leading: CircleAvatar(
                   radius: 28,
                   backgroundImage: NetworkImage(meetup.imageUrl),
-                  onBackgroundImageError: (_, __) => const Icon(Icons.group),
+                  onBackgroundImageError: (exception, stackTrace) {},
                 ),
                 title: Text(
                   meetup.title,

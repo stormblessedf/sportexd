@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
@@ -23,6 +26,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   MeetupType _selectedType = MeetupType.football;
   int _maxParticipants = 10;
   bool _isLoading = false;
+  Uint8List? _imageBytes;
 
   @override
   void dispose() {
@@ -30,6 +34,38 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
+  Future<String?> _uploadImage(String meetupId) async {
+    if (_imageBytes == null) return null;
+
+    try {
+      final ref = FirebaseStorage.instance.ref('meetup_images/$meetupId.jpg');
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'uploadedBy': meetupId},
+      );
+      final uploadTask = ref.putData(_imageBytes!, metadata);
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Görsel yükleme hatası: $e');
+      return null;
+    }
   }
 
   Future<void> _pickDate() async {
@@ -76,6 +112,15 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         _selectedTime.minute,
       );
 
+      // Generate a temporary ID for the image upload
+      final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Upload image if selected
+      String? imageUrl;
+      if (_imageBytes != null) {
+        imageUrl = await _uploadImage(tempId);
+      }
+
       await meetupService.createMeetup(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -87,6 +132,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         organizerId: user.id,
         organizerName: user.username,
         organizerImageUrl: user.profileImageUrl,
+        imageUrl: imageUrl,
       );
 
       if (mounted) {
@@ -125,11 +171,81 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Image Picker
+              Center(
+                child: GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                        width: 2,
+                        style: BorderStyle.solid,
+                      ),
+                      image: _imageBytes != null
+                          ? DecorationImage(
+                              image: MemoryImage(_imageBytes!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _imageBytes == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 64,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Buluşma Görseli Ekle',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '(İsteğe bağlı)',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Stack(
+                            children: [
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.white),
+                                    onPressed: _pickImage,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Event Type Dropdown
               Text('Spor Dalı', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               DropdownButtonFormField<MeetupType>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.sports),
                 ),

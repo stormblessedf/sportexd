@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/models/message_model.dart';
 import '../../../../core/services/chat_service.dart';
 import '../../../../core/services/auth_service.dart';
@@ -172,12 +173,17 @@ class _ChatScreenState extends State<ChatScreen> {
                                   if (!isMe)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 2.0),
-                                      child: Text(
-                                        message.senderName,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: _getNameColor(message.senderId),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          context.push('/user-profile/${message.senderId}');
+                                        },
+                                        child: Text(
+                                          message.senderName,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: _getNameColor(message.senderId),
+                                          ),
                                         ),
                                       ),
                                     ),

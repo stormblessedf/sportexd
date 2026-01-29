@@ -19,15 +19,19 @@ class MeetupService {
     required String organizerId,
     required String organizerName,
     String? organizerImageUrl,
-    String imageUrl = 'https://images.unsplash.com/photo-1579952363873-27f3bde9be2d?auto=format&fit=crop&q=80', // Default placeholder
+    String? imageUrl,
   }) async {
     final docRef = _meetupsRef.doc(); // Generate ID
+
+    // Use provided imageUrl or default placeholder
+    final finalImageUrl = imageUrl ??
+        'https://images.unsplash.com/photo-1579952363873-27f3bde9be2d?auto=format&fit=crop&q=80';
 
     final meetup = MeetupModel(
       id: docRef.id,
       title: title,
       description: description,
-      imageUrl: imageUrl, // In real app, upload to Storage first
+      imageUrl: finalImageUrl,
       type: type,
       date: date,
       locationName: locationName,
