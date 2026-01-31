@@ -43,3 +43,26 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Security & Secrets
+.env
+.env.local
+.env.*.local
+**/apikeys.properties
+**/secrets.properties
+.claude/settings.local.json
+
+# Firebase
+firebase-debug.log
+.firebase/
+
+# Temporary files
+*.tmp
+nul
+analysis_log*.txt
+build_log.txt
+
+# Specs and documentation (optional)
+.kiro/
+Mainpage.html
+MeetingDiscoveryPage.html
