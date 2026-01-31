@@ -1,0 +1,92 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUser(user) {
+      return user.keys().hasAll(['name', 'email', 'createdAt']) &&
+             user.name is string && user.name.size() > 0 &&
+             user.email is string && user.email.matches('.*@.*\\..*');
+    }
+
+    function isValidMeetup(meetup) {
+      return meetup.keys().hasAll(['title', 'date', 'organizerId', 'maxParticipants']) &&
+             meetup.title is string && meetup.title.size() > 0 &&
+             meetup.date is timestamp &&
+             meetup.maxParticipants is int && meetup.maxParticipants > 0;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles
+      allow read: if true;
+
+      // Only owner can create/update their profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // Meetups collection
+    match /meetups/{meetupId} {
+      // Anyone can read meetups
+      allow read: if true;
+
+      // Only authenticated users can create meetups
+      allow create: if isSignedIn() &&
+                       isValidMeetup(request.resource.data) &&
+                       request.resource.data.organizerId == request.auth.uid;
+
+      // Only organizer can update/delete
+      allow update: if isSignedIn() &&
+                       resource.data.organizerId == request.auth.uid;
+      allow delete: if isSignedIn() &&
+                       resource.data.organizerId == request.auth.uid;
+    }
+
+    // Chat messages (subcollection of meetups)
+    match /meetups/{meetupId}/chats/{chatId}/messages/{messageId} {
+      // Only authenticated users can read messages
+      allow read: if isSignedIn();
+
+      // Only message sender can write their own messages
+      allow create: if isSignedIn() &&
+                       request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if isSignedIn() &&
+                               resource.data.senderId == request.auth.uid;
+    }
+
+    // Ratings collection
+    match /ratings/{ratingId} {
+      // Only authenticated users can read ratings
+      allow read: if isSignedIn();
+
+      // Only rater can create/update their ratings
+      allow create: if isSignedIn() &&
+                       request.resource.data.raterId == request.auth.uid;
+      allow update: if isSignedIn() &&
+                       resource.data.raterId == request.auth.uid;
+      allow delete: if false; // Ratings cannot be deleted
+    }
+
+    // User presence
+    match /presence/{userId} {
+      allow read: if true; // Anyone can see online status
+      allow write: if isOwner(userId);
+    }
+
+    // Deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
