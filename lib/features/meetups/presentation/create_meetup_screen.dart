@@ -5,8 +5,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../../../core/models/meetup_model.dart';
+import '../../../core/models/location_data.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
+import 'widgets/location_picker_widget.dart';
 
 class CreateMeetupScreen extends StatefulWidget {
   const CreateMeetupScreen({super.key});
@@ -19,7 +21,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _locationNameController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 18, minute: 0);
@@ -27,12 +29,13 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   int _maxParticipants = 10;
   bool _isLoading = false;
   Uint8List? _imageBytes;
+  LocationData? _selectedLocation;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _locationController.dispose();
+    _locationNameController.dispose();
     super.dispose();
   }
 
@@ -93,6 +96,18 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Validate location
+    final locationName = _locationNameController.text.trim();
+    if (locationName.isEmpty && _selectedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen konum bilgisi girin'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -121,18 +136,26 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         imageUrl = await _uploadImage(tempId);
       }
 
+      // Determine location details
+      final finalLocationName = locationName.isNotEmpty
+          ? locationName
+          : (_selectedLocation?.name ?? _selectedLocation?.address ?? 'Belirtilmemiş');
+      final finalLocationAddress = _selectedLocation?.address ?? locationName;
+
       await meetupService.createMeetup(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _selectedType,
         date: meetupDateTime,
-        locationName: _locationController.text.trim(),
-        locationAddress: _locationController.text.trim(), // Simplified
+        locationName: finalLocationName,
+        locationAddress: finalLocationAddress,
         maxParticipants: _maxParticipants,
         organizerId: user.id,
         organizerName: user.username,
         organizerImageUrl: user.profileImageUrl,
         imageUrl: imageUrl,
+        latitude: _selectedLocation?.latitude,
+        longitude: _selectedLocation?.longitude,
       );
 
       if (mounted) {
@@ -242,7 +265,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               const SizedBox(height: 24),
 
               // Event Type Dropdown
-              Text('Spor Dalı', style: Theme.of(context).textTheme.titleSmall),
+              Text('Spor Dalı', style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               DropdownButtonFormField<MeetupType>(
                 initialValue: _selectedType,
@@ -255,12 +278,16 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                     child: Text(type.name.toUpperCase()),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedType = val!),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => _selectedType = val);
+                  }
+                },
               ),
               const SizedBox(height: 20),
 
               // Title
-              Text('Başlık', style: Theme.of(context).textTheme.titleSmall),
+              Text('Başlık', style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
@@ -274,7 +301,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               const SizedBox(height: 20),
 
               // Description
-              Text('Açıklama', style: Theme.of(context).textTheme.titleSmall),
+              Text('Açıklama', style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
@@ -286,20 +313,33 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Location
+              // Location Name
               Text(
                 'Konum / Saha Adı',
-                style: Theme.of(context).textTheme.titleSmall,
+                style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _locationController,
+                controller: _locationNameController,
                 decoration: const InputDecoration(
                   hintText: 'Örn: Bostancı Sahil Parkı',
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Lütfen konum girin' : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Location Picker Map
+              Text(
+                'Haritadan Konum Seç',
+                style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              LocationPickerWidget(
+                initialLocation: _selectedLocation,
+                onLocationSelected: (location) {
+                  setState(() => _selectedLocation = location);
+                },
+                height: 250,
               ),
               const SizedBox(height: 20),
 
@@ -312,7 +352,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       children: [
                         Text(
                           'Tarih',
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
                         InkWell(
@@ -336,7 +376,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       children: [
                         Text(
                           'Saat',
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
                         InkWell(
@@ -358,7 +398,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               // Max Participants
               Text(
                 'Katılımcı Sınırı: $_maxParticipants',
-                style: Theme.of(context).textTheme.titleSmall,
+                style: Theme.of(context).textTheme.titleSmall ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               Slider(
                 value: _maxParticipants.toDouble(),

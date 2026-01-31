@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/presence_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../../theme/app_theme.dart';
+import 'widgets/profile_header.dart';
+import 'widgets/stats_cards.dart';
+import 'widgets/about_me_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel? user;
@@ -19,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final PresenceService _presenceService = PresenceService();
   UserModel? _user;
   bool _isLoading = false;
 
@@ -171,6 +175,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           if (isOwnProfile)
             IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () {
+                context.push('/edit-profile');
+              },
+            ),
+          if (isOwnProfile)
+            IconButton(
               icon: const Icon(Icons.settings_outlined),
               onPressed: () {
                 context.push('/settings');
@@ -178,164 +189,281 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(context, user),
-            const SizedBox(height: 16),
-            _buildStats(context, user),
-            const SizedBox(height: 24),
-            _buildAboutSection(context, user),
-            const SizedBox(height: 24),
-            _buildBadges(context, user),
-            const SizedBox(height: 24),
-            _buildCertificates(context, user),
-            const SizedBox(height: 80),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (widget.userId != null) {
+            await _loadUserById(widget.userId!);
+          } else {
+            await _loadCurrentUser();
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // New Profile Header
+              ProfileHeader(
+                user: user,
+                isOwnProfile: isOwnProfile,
+                onProfilePictureChange: _changeProfilePicture,
+              ),
+
+              const SizedBox(height: 20),
+
+              // Stats Cards
+              StatsCards(
+                reliabilityScore: user.reliabilityScore,
+                totalMeetups: user.totalMeetupsJoined,
+                averageRating: user.averageRating,
+                totalRatings: user.totalRatings,
+              ),
+
+              const SizedBox(height: 20),
+
+              // About Me Card
+              AboutMeCard(bio: user.bio),
+
+              const SizedBox(height: 20),
+
+              // Follow Button (only for other users' profiles)
+              if (!isOwnProfile) _buildFollowButton(context, user),
+              if (!isOwnProfile) const SizedBox(height: 16),
+
+              // Past Events Button (only for own profile)
+              if (isOwnProfile) _buildPastEventsButton(context, user),
+              if (isOwnProfile) const SizedBox(height: 16),
+
+              // Rate Participants Button (only for own profile)
+              if (isOwnProfile) _buildRateParticipantsButton(context),
+              if (isOwnProfile) const SizedBox(height: 24),
+
+              // About Section (detailed info)
+              _buildAboutSection(context, user),
+              const SizedBox(height: 24),
+
+              // Badges
+              _buildBadges(context, user),
+              const SizedBox(height: 24),
+
+              // Certificates
+              _buildCertificates(context, user),
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, UserModel user) {
-    final isOwnProfile = _authService.currentUserId == user.id;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.15),
-            AppTheme.backgroundLight,
-          ],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: isOwnProfile ? _changeProfilePicture : null,
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.primary, width: 3),
-                  ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppTheme.surfaceLight,
-                    backgroundImage: user.profileImageUrl != null
-                        ? NetworkImage(user.profileImageUrl!)
-                        : null,
-                    child: user.profileImageUrl == null
-                        ? Icon(Icons.person, size: 48, color: Colors.grey[400])
-                        : null,
-                  ),
+  Widget _buildPastEventsButton(BuildContext context, UserModel user) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: InkWell(
+        onTap: () {
+          context.push('/past-meetups', extra: user.id);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                if (isOwnProfile)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.backgroundLight,
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        size: 16,
+                child: const Icon(
+                  Icons.history,
+                  color: AppTheme.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Geçmiş Etkinliklerim',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: AppTheme.textDark,
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            user.username,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
-            ),
-          ),
-          if (user.bio != null && user.bio!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              user.bio!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    SizedBox(height: 4),
+                    Text(
+                      'Katıldığın geçmiş etkinlikleri gör',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
                 color: AppTheme.textMuted,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRateParticipantsButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: InkWell(
+        onTap: () {
+          // Navigate to past meetups - user can rate from there
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Geçmiş etkinliklerden değerlendirme yapabilirsiniz'),
+              duration: Duration(seconds: 2),
             ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStats(BuildContext context, UserModel user) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
+          );
+          context.push('/past-meetups', extra: _user?.id);
+        },
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _statItem(context, user.followersCount.toString(), 'Takipçi'),
-          Container(width: 1, height: 40, color: AppTheme.borderLight),
-          _statItem(context, user.followingCount.toString(), 'Takip'),
-          Container(width: 1, height: 40, color: AppTheme.borderLight),
-          _statItem(context, user.badges.length.toString(), 'Rozet'),
-        ],
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9800).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.star_rate,
+                  color: Color(0xFFFF9800),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Katılımcıları Değerlendir',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Geçmiş etkinlik katılımcılarını puanla',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: AppTheme.textMuted,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _statItem(BuildContext context, String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primary,
+  Widget _buildFollowButton(BuildContext context, UserModel user) {
+    final currentUserId = _authService.currentUserId;
+    if (currentUserId == null) return const SizedBox.shrink();
+
+    final isFollowing = user.followers?.contains(currentUserId) ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () async {
+            try {
+              if (isFollowing) {
+                await _authService.unfollowUser(currentUserId, user.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${user.username} takipten çıkarıldı'),
+                      backgroundColor: Colors.grey,
+                    ),
+                  );
+                  await _loadUserById(user.id);
+                }
+              } else {
+                await _authService.followUser(currentUserId, user.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${user.username} takip ediliyor'),
+                      backgroundColor: AppTheme.primary,
+                    ),
+                  );
+                  await _loadUserById(user.id);
+                }
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Hata: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+          icon: Icon(
+            isFollowing ? Icons.person_remove : Icons.person_add,
+            size: 20,
+          ),
+          label: Text(
+            isFollowing ? 'Takipten Çık' : 'Takip Et',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isFollowing ? Colors.grey[300] : AppTheme.primary,
+            foregroundColor: isFollowing ? AppTheme.textDark : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textMuted,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildAboutSection(BuildContext context, UserModel user) {
-    int? age;
-    if (user.birthDate != null) {
-      final now = DateTime.now();
-      age = now.year - user.birthDate!.year;
-      if (now.month < user.birthDate!.month ||
-          (now.month == user.birthDate!.month && now.day < user.birthDate!.day)) {
-        age--;
-      }
-    }
-
     final hasInfo = user.location != null ||
-        age != null ||
+        user.age != null ||
         (user.height != null && user.weight != null) ||
         user.gender != null ||
         user.level != null ||
@@ -403,7 +531,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               iconColor: AppTheme.primary,
               collapsedIconColor: AppTheme.textMuted,
               title: Text(
-                'Hakkımda',
+                'Detaylı Bilgiler',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textDark,
@@ -421,10 +549,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (user.location != null)
-                        _buildInfoRow(Icons.location_on_outlined, 'Konum', user.location!),
-                      if (age != null)
-                        _buildInfoRow(Icons.cake_outlined, 'Yaş', '$age yaşında'),
                       if (user.height != null && user.weight != null)
                         _buildInfoRow(
                           Icons.straighten_outlined,
@@ -444,7 +568,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icon(
                               Icons.sports_soccer_outlined,
                               size: 20,
-                              color: AppTheme.primary.withValues(alpha: 0.7),
+                              color: AppTheme.primary.withOpacity(0.7),
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -467,7 +591,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.15),
+                                color: AppTheme.primary.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -500,7 +624,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Icon(
             icon,
             size: 20,
-            color: AppTheme.primary.withValues(alpha: 0.7),
+            color: AppTheme.primary.withOpacity(0.7),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -626,7 +750,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
+                      color: Colors.blue.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

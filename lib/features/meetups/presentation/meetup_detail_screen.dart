@@ -4,6 +4,7 @@ import '../../../core/models/meetup_model.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../chat/presentation/chat_screen.dart';
+import 'widgets/meetup_map_widget.dart';
 
 class MeetupDetailScreen extends StatefulWidget {
   final MeetupModel meetup;
@@ -89,6 +90,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   Widget build(BuildContext context) {
     final bool isFull =
         widget.meetup.currentParticipants >= widget.meetup.maxParticipants;
+    final bool isPast = _meetupService.isMeetupPast(widget.meetup);
 
     return Scaffold(
       body: CustomScrollView(
@@ -166,6 +168,15 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                     title: 'Buluşma Yeri',
                     subtitle: widget.meetup.locationName,
                     description: widget.meetup.locationAddress,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Map Widget
+                  MeetupMapWidget(
+                    latitude: widget.meetup.latitude,
+                    longitude: widget.meetup.longitude,
+                    locationName: widget.meetup.locationName,
+                    locationAddress: widget.meetup.locationAddress,
                   ),
                   const SizedBox(height: 24),
 
@@ -276,29 +287,87 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                 height: 48,
                 child: Center(child: CircularProgressIndicator()),
               )
-            : _isParticipating
-                ? ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            chatId: widget.meetup.id,
-                            title: widget.meetup.title,
+            : isPast
+                ? _isParticipating
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatScreen(
+                                    chatId: widget.meetup.id,
+                                    title: widget.meetup.title,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.chat_bubble_rounded),
+                            label: const Text('Grup Sohbetine Git'),
                           ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              context.push('/rate-participants', extra: {
+                                'meetupId': widget.meetup.id,
+                                'meetupTitle': widget.meetup.title,
+                                'participantIds': widget.meetup.participantIds,
+                              });
+                            },
+                            icon: const Icon(Icons.star_rate, color: Color(0xFFFF9800)),
+                            label: const Text(
+                              'Katılımcıları Değerlendir',
+                              style: TextStyle(color: Color(0xFFFF9800)),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFFF9800)),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.chat_bubble_rounded),
-                    label: const Text('Grup Sohbetine Git'),
-                  )
-                : ElevatedButton(
-                    onPressed: isFull ? null : _joinMeetup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isFull ? Colors.grey : null,
-                    ),
-                    child: Text(isFull ? 'Kontenjan Dolu' : 'Hemen Katıl'),
-                  ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.event_busy, color: Colors.grey),
+                            SizedBox(width: 8),
+                            Text(
+                              'Bu etkinlik tamamlandı',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                : _isParticipating
+                    ? ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                chatId: widget.meetup.id,
+                                title: widget.meetup.title,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.chat_bubble_rounded),
+                        label: const Text('Grup Sohbetine Git'),
+                      )
+                    : ElevatedButton(
+                        onPressed: isFull ? null : _joinMeetup,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isFull ? Colors.grey : null,
+                        ),
+                        child: Text(isFull ? 'Kontenjan Dolu' : 'Hemen Katıl'),
+                      ),
       ),
     );
   }

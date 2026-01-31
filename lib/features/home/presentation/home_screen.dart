@@ -80,7 +80,7 @@ class HomeScreen extends StatelessWidget {
             // Scrollable Content
             Expanded(
               child: StreamBuilder<List<MeetupModel>>(
-                stream: meetupService.getMeetups(),
+                stream: meetupService.getUpcomingMeetups(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(

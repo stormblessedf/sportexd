@@ -154,6 +154,15 @@ class UserModel {
   final List<String>? followers;
   final List<String>? following;
 
+  // New fields for reliability, rating and online status
+  final double reliabilityScore;
+  final int totalMeetupsJoined;
+  final int totalMeetupsRegistered;
+  final double averageRating;
+  final int totalRatings;
+  final DateTime? lastSeen;
+  final bool isOnline;
+
   const UserModel({
     required this.id,
     required this.username,
@@ -176,6 +185,13 @@ class UserModel {
     this.teamPreference,
     this.followers,
     this.following,
+    this.reliabilityScore = 100.0,
+    this.totalMeetupsJoined = 0,
+    this.totalMeetupsRegistered = 0,
+    this.averageRating = 0.0,
+    this.totalRatings = 0,
+    this.lastSeen,
+    this.isOnline = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -201,6 +217,13 @@ class UserModel {
       'teamPreference': teamPreference,
       'followers': followers,
       'following': following,
+      'reliabilityScore': reliabilityScore,
+      'totalMeetupsJoined': totalMeetupsJoined,
+      'totalMeetupsRegistered': totalMeetupsRegistered,
+      'averageRating': averageRating,
+      'totalRatings': totalRatings,
+      'lastSeen': lastSeen?.toIso8601String(),
+      'isOnline': isOnline,
     };
   }
 
@@ -252,6 +275,15 @@ class UserModel {
       teamPreference: json['teamPreference'],
       followers: (json['followers'] as List<dynamic>?)?.cast<String>() ?? [],
       following: (json['following'] as List<dynamic>?)?.cast<String>() ?? [],
+      reliabilityScore: (json['reliabilityScore'] ?? 100.0).toDouble(),
+      totalMeetupsJoined: json['totalMeetupsJoined'] ?? 0,
+      totalMeetupsRegistered: json['totalMeetupsRegistered'] ?? 0,
+      averageRating: (json['averageRating'] ?? 0.0).toDouble(),
+      totalRatings: json['totalRatings'] ?? 0,
+      lastSeen: json['lastSeen'] != null
+          ? DateTime.parse(json['lastSeen'])
+          : null,
+      isOnline: json['isOnline'] ?? false,
     );
   }
 
@@ -261,9 +293,18 @@ class UserModel {
       id: 'mock_1',
       username: 'Kaan Sportif',
       email: 'kaan@sporsal.com',
-      bio: 'Futbol ve CrossFit tutkunu. Haftada 3 gün antrenman!',
+      bio: 'Futbol ve CrossFit tutkunu. Haftada 3 gün antrenman! 🏃🎾',
       followersCount: 128,
       followingCount: 45,
+      location: 'İstanbul, Türkiye',
+      birthDate: DateTime(1998, 5, 15),
+      reliabilityScore: 98.0,
+      totalMeetupsJoined: 13,
+      totalMeetupsRegistered: 14,
+      averageRating: 4.9,
+      totalRatings: 8,
+      lastSeen: DateTime.now(),
+      isOnline: true,
       badges: [
         const Badge(
           id: 'b1',
@@ -285,10 +326,29 @@ class UserModel {
           id: 'c1',
           title: 'CrossFit Level 1',
           issuer: 'CrossFit Inc.',
-          imageUrl: '', // TODO: Placeholder
+          imageUrl: '',
           dateDate: DateTime(2025, 5, 20),
         ),
       ],
     );
+  }
+
+  // Helper to calculate age from birthDate
+  int? get age {
+    if (birthDate == null) return null;
+    final now = DateTime.now();
+    int calculatedAge = now.year - birthDate!.year;
+    if (now.month < birthDate!.month ||
+        (now.month == birthDate!.month && now.day < birthDate!.day)) {
+      calculatedAge--;
+    }
+    return calculatedAge;
+  }
+
+  // Check if user is considered online (last seen within 5 minutes)
+  bool get isCurrentlyOnline {
+    if (lastSeen == null) return false;
+    final difference = DateTime.now().difference(lastSeen!);
+    return difference.inMinutes <= 5;
   }
 }

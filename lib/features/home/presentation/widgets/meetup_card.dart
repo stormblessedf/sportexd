@@ -19,10 +19,15 @@ class MeetupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceLight,
-        borderRadius: BorderRadius.circular(16),
+    final meetupService = MeetupService();
+    final isPast = meetupService.isMeetupPast(meetup);
+    
+    return Opacity(
+      opacity: isPast ? 0.6 : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: surfaceLight,
+          borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
@@ -377,6 +382,7 @@ class MeetupCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

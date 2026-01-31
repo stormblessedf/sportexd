@@ -2,6 +2,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum MeetupType { football, yoga, tennis, basketball, running, other }
 
+extension MeetupTypeExtension on MeetupType {
+  String get displayName {
+    switch (this) {
+      case MeetupType.football:
+        return 'Futbol';
+      case MeetupType.basketball:
+        return 'Basketbol';
+      case MeetupType.tennis:
+        return 'Tenis';
+      case MeetupType.yoga:
+        return 'Yoga';
+      case MeetupType.running:
+        return 'Koşu';
+      case MeetupType.other:
+        return 'Diğer';
+    }
+  }
+}
+
 class MeetupModel {
   final String id;
   final String title;
@@ -18,8 +37,11 @@ class MeetupModel {
   final int maxParticipants;
   final bool isFull;
   final List<String> participantIds;
+  final double? latitude;
+  final double? longitude;
+  final DateTime createdAt;
 
-  const MeetupModel({
+  MeetupModel({
     required this.id,
     required this.title,
     required this.description,
@@ -35,7 +57,12 @@ class MeetupModel {
     required this.maxParticipants,
     this.isFull = false,
     this.participantIds = const [],
-  });
+    this.latitude,
+    this.longitude,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   Map<String, dynamic> toJson() {
     return {
@@ -54,10 +81,24 @@ class MeetupModel {
       'maxParticipants': maxParticipants,
       'isFull': isFull,
       'participantIds': participantIds,
+      'latitude': latitude,
+      'longitude': longitude,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
   factory MeetupModel.fromJson(Map<String, dynamic> json) {
+    // Safely parse the date field
+    DateTime parsedDate;
+    final dateValue = json['date'];
+    if (dateValue is Timestamp) {
+      parsedDate = dateValue.toDate();
+    } else if (dateValue is String) {
+      parsedDate = DateTime.tryParse(dateValue) ?? DateTime.now();
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return MeetupModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
@@ -67,7 +108,7 @@ class MeetupModel {
         (e) => e.name == json['type'],
         orElse: () => MeetupType.other,
       ),
-      date: (json['date'] as Timestamp).toDate(),
+      date: parsedDate,
       locationName: json['locationName'] ?? '',
       locationAddress: json['locationAddress'] ?? '',
       organizerId: json['organizerId'] ?? '',
@@ -77,7 +118,19 @@ class MeetupModel {
       maxParticipants: json['maxParticipants'] ?? 0,
       isFull: json['isFull'] ?? false,
       participantIds: List<String>.from(json['participantIds'] ?? []),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      createdAt: _parseDateTime(json['createdAt']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 
   factory MeetupModel.mockFootball() {

@@ -230,28 +230,44 @@ class AuthService {
 
   // Follow User
   Future<void> followUser(String currentUserId, String targetUserId) async {
-    // Update current user's following list
-    await _firestore.collection('users').doc(currentUserId).update({
+    final batch = _firestore.batch();
+
+    // Update current user's following list and count
+    final currentUserRef = _firestore.collection('users').doc(currentUserId);
+    batch.update(currentUserRef, {
       'following': FieldValue.arrayUnion([targetUserId]),
+      'followingCount': FieldValue.increment(1),
     });
 
-    // Update target user's followers list
-    await _firestore.collection('users').doc(targetUserId).update({
+    // Update target user's followers list and count
+    final targetUserRef = _firestore.collection('users').doc(targetUserId);
+    batch.update(targetUserRef, {
       'followers': FieldValue.arrayUnion([currentUserId]),
+      'followersCount': FieldValue.increment(1),
     });
+
+    await batch.commit();
   }
 
   // Unfollow User
   Future<void> unfollowUser(String currentUserId, String targetUserId) async {
-    // Update current user's following list
-    await _firestore.collection('users').doc(currentUserId).update({
+    final batch = _firestore.batch();
+
+    // Update current user's following list and count
+    final currentUserRef = _firestore.collection('users').doc(currentUserId);
+    batch.update(currentUserRef, {
       'following': FieldValue.arrayRemove([targetUserId]),
+      'followingCount': FieldValue.increment(-1),
     });
 
-    // Update target user's followers list
-    await _firestore.collection('users').doc(targetUserId).update({
+    // Update target user's followers list and count
+    final targetUserRef = _firestore.collection('users').doc(targetUserId);
+    batch.update(targetUserRef, {
       'followers': FieldValue.arrayRemove([currentUserId]),
+      'followersCount': FieldValue.increment(-1),
     });
+
+    await batch.commit();
   }
 
   // Update User Profile

@@ -20,6 +20,8 @@ class MeetupService {
     required String organizerName,
     String? organizerImageUrl,
     String? imageUrl,
+    double? latitude,
+    double? longitude,
   }) async {
     final docRef = _meetupsRef.doc(); // Generate ID
 
@@ -42,12 +44,15 @@ class MeetupService {
       currentParticipants: 1, // Organizer joins automatically
       maxParticipants: maxParticipants,
       participantIds: [organizerId],
+      latitude: latitude,
+      longitude: longitude,
     );
 
     await docRef.set(meetup.toJson());
   }
 
-  // Get Meetups Stream
+  // Get Meetups Stream (All meetups - deprecated, use getUpcomingMeetups instead)
+  @Deprecated('Use getUpcomingMeetups() to show only upcoming events')
   Stream<List<MeetupModel>> getMeetups() {
     return _meetupsRef
         .orderBy('date', descending: false)
@@ -57,6 +62,42 @@ class MeetupService {
         return MeetupModel.fromJson(doc.data() as Map<String, dynamic>);
       }).toList();
     });
+  }
+
+  // Get Upcoming Meetups (Future events only)
+  Stream<List<MeetupModel>> getUpcomingMeetups() {
+    final now = DateTime.now();
+    
+    return _meetupsRef
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
+        .orderBy('date', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return MeetupModel.fromJson(doc.data() as Map<String, dynamic>);
+      }).toList();
+    });
+  }
+
+  // Get Past Meetups for User (Events user participated in that are now past)
+  Stream<List<MeetupModel>> getPastMeetupsForUser(String userId) {
+    final now = DateTime.now();
+    
+    return _meetupsRef
+        .where('participantIds', arrayContains: userId)
+        .where('date', isLessThan: Timestamp.fromDate(now))
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return MeetupModel.fromJson(doc.data() as Map<String, dynamic>);
+      }).toList();
+    });
+  }
+
+  // Check if meetup is in the past
+  bool isMeetupPast(MeetupModel meetup) {
+    return meetup.date.isBefore(DateTime.now());
   }
 
   // Get User Meetups (My Chats)
