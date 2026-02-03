@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/models/location_data.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/services/places_service.dart';
-import '../../../../core/utils/map_style.dart';
+import '../../../../core/services/map_preferences_service.dart';
 
 class LocationPickerWidget extends StatefulWidget {
   final LocationData? initialLocation;
@@ -24,7 +25,7 @@ class LocationPickerWidget extends StatefulWidget {
 }
 
 class _LocationPickerWidgetState extends State<LocationPickerWidget> {
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final PlacesService _placesService = PlacesService();
@@ -68,7 +69,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
       _selectedAddress = widget.initialLocation!.address;
       _selectedName = widget.initialLocation!.name;
     } else {
-      _selectedPosition = const LatLng(
+      _selectedPosition = LatLng(
         LocationService.defaultLatitude,
         LocationService.defaultLongitude,
       );
@@ -86,7 +87,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   @override
   void dispose() {
     _hideOverlay();
-    _mapController?.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _debounceTimer?.cancel();
@@ -211,9 +211,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         _isLoading = false;
       });
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(position, 16),
-      );
+      _mapController.move(position, 16);
 
       _notifyLocationSelected();
     } else {
@@ -221,7 +219,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     }
   }
 
-  Future<void> _onMapTap(LatLng position) async {
+  Future<void> _onMapTap(TapPosition tapPosition, LatLng position) async {
     _hideOverlay();
     setState(() {
       _selectedPosition = position;
@@ -265,9 +263,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
           _isLoading = false;
         });
 
-        _mapController?.animateCamera(
-          CameraUpdate.newLatLngZoom(position, 16),
-        );
+        _mapController.move(position, 16);
 
         _notifyLocationSelected();
       } else {
@@ -296,6 +292,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final mapPrefs = context.watch<MapPreferencesService>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -367,37 +365,44 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                   )
                 : Stack(
                     children: [
-                      GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: _selectedPosition ?? const LatLng(
+                      FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _selectedPosition ?? LatLng(
                             LocationService.defaultLatitude,
                             LocationService.defaultLongitude,
                           ),
-                          zoom: 14,
+                          initialZoom: 14,
+                          onTap: _onMapTap,
+                          onMapReady: () {
+                            setState(() {
+                              _mapError = false;
+                              _mapLoading = false;
+                            });
+                          },
                         ),
-                        onMapCreated: (controller) {
-                          _mapController = controller;
-                          setState(() {
-                            _mapError = false;
-                            _mapLoading = false;
-                          });
-                        },
-                        onTap: _onMapTap,
-                        markers: _selectedPosition != null
-                            ? {
+                        children: [
+                          TileLayer(
+                            urlTemplate: mapPrefs.currentTileUrl,
+                            subdomains: mapPrefs.currentSubdomains,
+                            userAgentPackageName: 'com.sporsal.app',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              if (_selectedPosition != null)
                                 Marker(
-                                  markerId: const MarkerId('selected'),
-                                  position: _selectedPosition!,
-                                  draggable: true,
-                                  onDragEnd: _onMapTap,
+                                  point: _selectedPosition!,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(
+                                    Icons.location_pin,
+                                    color: Colors.green,
+                                    size: 40,
+                                  ),
                                 ),
-                              }
-                            : {},
-                        style: MapStyle.lightStyle,
-                        zoomControlsEnabled: false,
-                        mapToolbarEnabled: false,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
+                            ],
+                          ),
+                        ],
                       ),
 
                       // Map Loading Overlay

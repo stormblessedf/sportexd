@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../core/utils/map_style.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/services/map_preferences_service.dart';
 import 'map_error_widget.dart';
 
 class MeetupMapWidget extends StatelessWidget {
@@ -47,6 +49,7 @@ class MeetupMapWidget extends StatelessWidget {
     }
 
     final position = LatLng(latitude!, longitude!);
+    final mapPrefs = context.watch<MapPreferencesService>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,27 +59,35 @@ class MeetupMapWidget extends StatelessWidget {
           child: SizedBox(
             height: height,
             width: double.infinity,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: position,
-                zoom: 15,
-              ),
-              markers: {
-                Marker(
-                  markerId: const MarkerId('meetup_location'),
-                  position: position,
-                  infoWindow: InfoWindow(title: locationName),
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: position,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.none,
                 ),
-              },
-              style: MapStyle.minimalStyle,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              myLocationButtonEnabled: false,
-              scrollGesturesEnabled: false,
-              zoomGesturesEnabled: false,
-              rotateGesturesEnabled: false,
-              tiltGesturesEnabled: false,
-              liteModeEnabled: true,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: mapPrefs.currentTileUrl,
+                  subdomains: mapPrefs.currentSubdomains,
+                  userAgentPackageName: 'com.sporsal.app',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: position,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

@@ -1,82 +1,15 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:js_interop';
 import '../models/location_data.dart';
-
-// Geocoder API
-@JS('google.maps.Geocoder')
-extension type GeocoderJS._(JSObject _) implements JSObject {
-  external factory GeocoderJS();
-  external JSPromise geocode(JSObject request);
-}
-
-@JS()
-extension type GeocoderResponse._(JSObject _) implements JSObject {
-  external JSArray? get results;
-}
-
-@JS()
-extension type GeocoderResult._(JSObject _) implements JSObject {
-  external String get formatted_address;
-  external GeocoderGeometry get geometry;
-}
-
-@JS()
-extension type GeocoderGeometry._(JSObject _) implements JSObject {
-  external LatLngJS get location;
-}
-
-@JS()
-extension type LatLngJS._(JSObject _) implements JSObject {
-  external double lat();
-  external double lng();
-}
-
-// Helper to create JS objects
-@JS('Object.create')
-external JSObject _objectCreate(JSObject? proto);
-
-@JS('Reflect.set')
-external void _setProperty(JSObject obj, String key, JSAny? value);
-
-JSObject _createJsObject(Map<String, dynamic> map) {
-  final obj = _objectCreate(null);
-  for (final entry in map.entries) {
-    _setProperty(obj, entry.key, _toJsValue(entry.value));
-  }
-  return obj;
-}
-
-JSAny? _toJsValue(dynamic value) {
-  if (value == null) return null;
-  if (value is String) return value.toJS;
-  if (value is num) return value.toJS;
-  if (value is bool) return value.toJS;
-  if (value is Map<String, dynamic>) {
-    return _createJsObject(value);
-  }
-  return null;
-}
+import 'nominatim_service.dart';
 
 class LocationService {
   static const double defaultLatitude = 41.0082;
   static const double defaultLongitude = 28.9784;
 
-  GeocoderJS? _geocoder;
-
-  void _initGeocoder() {
-    if (_geocoder == null && kIsWeb) {
-      try {
-        _geocoder = GeocoderJS();
-        debugPrint('LocationService: Geocoder initialized');
-      } catch (e) {
-        debugPrint('LocationService: Error initializing Geocoder: $e');
-      }
-    }
-  }
+  final NominatimService _nominatimService = NominatimService();
 
   Future<bool> checkAndRequestPermission() async {
     try {
@@ -145,78 +78,18 @@ class LocationService {
     double latitude,
     double longitude,
   ) async {
-    if (kIsWeb) {
-      return _getAddressFromCoordinatesWeb(latitude, longitude);
-    }
+    // Use Nominatim for all platforms
+    final address = await _nominatimService.getAddressFromCoordinates(
+      latitude,
+      longitude,
+    );
 
-    // For mobile, return a formatted coordinate string as fallback
-    return '$latitude, $longitude';
-  }
-
-  Future<String?> _getAddressFromCoordinatesWeb(
-    double latitude,
-    double longitude,
-  ) async {
-    try {
-      _initGeocoder();
-      if (_geocoder == null) return null;
-
-      final request = _createJsObject({
-        'location': {
-          'lat': latitude,
-          'lng': longitude,
-        },
-      });
-
-      final response = await _geocoder!.geocode(request).toDart as GeocoderResponse;
-      final results = response.results?.toDart;
-
-      if (results != null && results.isNotEmpty) {
-        final firstResult = results.first as GeocoderResult;
-        return firstResult.formatted_address;
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('Reverse geocoding error: $e');
-      return null;
-    }
+    // Fallback to coordinate string if Nominatim fails
+    return address ?? '$latitude, $longitude';
   }
 
   Future<LocationData?> getCoordinatesFromAddress(String address) async {
-    if (kIsWeb) {
-      return _getCoordinatesFromAddressWeb(address);
-    }
-    return null;
-  }
-
-  Future<LocationData?> _getCoordinatesFromAddressWeb(String address) async {
-    try {
-      _initGeocoder();
-      if (_geocoder == null) return null;
-
-      final request = _createJsObject({
-        'address': address,
-      });
-
-      final response = await _geocoder!.geocode(request).toDart as GeocoderResponse;
-      final results = response.results?.toDart;
-
-      if (results != null && results.isNotEmpty) {
-        final firstResult = results.first as GeocoderResult;
-        final location = firstResult.geometry.location;
-        return LocationData(
-          latitude: location.lat(),
-          longitude: location.lng(),
-          address: firstResult.formatted_address,
-        );
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('Geocoding error: $e');
-      return null;
-    }
+    return _nominatimService.getCoordinatesFromAddress(address);
   }
 
   double calculateDistance(
