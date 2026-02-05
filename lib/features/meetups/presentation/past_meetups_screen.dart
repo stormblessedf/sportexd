@@ -4,17 +4,70 @@ import '../../../core/models/meetup_model.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../home/presentation/widgets/meetup_card.dart';
 
-class PastMeetupsScreen extends StatelessWidget {
+enum PastMeetupSort { newest, oldest, title, type }
+
+class PastMeetupsScreen extends StatefulWidget {
   final String userId;
 
   const PastMeetupsScreen({super.key, required this.userId});
 
-  // Theme colors
+  @override
+  State<PastMeetupsScreen> createState() => _PastMeetupsScreenState();
+}
+
+class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
   static const Color backgroundLight = Color(0xFFF6F8F6);
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color primary = Color(0xFF13EC5B);
   static const Color textDark = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
+
+  PastMeetupSort _currentSort = PastMeetupSort.newest;
+
+  List<MeetupModel> _sortMeetups(List<MeetupModel> meetups) {
+    final sorted = List<MeetupModel>.from(meetups);
+    switch (_currentSort) {
+      case PastMeetupSort.newest:
+        sorted.sort((a, b) => b.date.compareTo(a.date));
+        break;
+      case PastMeetupSort.oldest:
+        sorted.sort((a, b) => a.date.compareTo(b.date));
+        break;
+      case PastMeetupSort.title:
+        sorted.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case PastMeetupSort.type:
+        sorted.sort((a, b) => a.type.displayName.compareTo(b.type.displayName));
+        break;
+    }
+    return sorted;
+  }
+
+  String _sortLabel(PastMeetupSort sort) {
+    switch (sort) {
+      case PastMeetupSort.newest:
+        return 'En Yeni';
+      case PastMeetupSort.oldest:
+        return 'En Eski';
+      case PastMeetupSort.title:
+        return 'İsim (A-Z)';
+      case PastMeetupSort.type:
+        return 'Spor Türü';
+    }
+  }
+
+  IconData _sortIcon(PastMeetupSort sort) {
+    switch (sort) {
+      case PastMeetupSort.newest:
+        return Icons.arrow_downward;
+      case PastMeetupSort.oldest:
+        return Icons.arrow_upward;
+      case PastMeetupSort.title:
+        return Icons.sort_by_alpha;
+      case PastMeetupSort.type:
+        return Icons.sports;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,28 +82,20 @@ class PastMeetupsScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: StreamBuilder<List<MeetupModel>>(
-        stream: meetupService.getPastMeetupsForUser(userId),
+        stream: meetupService.getPastMeetupsForUser(widget.userId),
         builder: (context, snapshot) {
-          // Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: primary,
-              ),
+              child: CircularProgressIndicator(color: primary),
             );
           }
 
-          // Error State
           if (snapshot.hasError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red[300],
-                  ),
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
                     'Bir hata oluştu',
@@ -63,10 +108,7 @@ class PastMeetupsScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     snapshot.error.toString(),
-                    style: const TextStyle(
-                      color: textMuted,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: textMuted, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -76,17 +118,12 @@ class PastMeetupsScreen extends StatelessWidget {
 
           final pastMeetups = snapshot.data ?? [];
 
-          // Empty State
           if (pastMeetups.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.history, size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 24),
                   Text(
                     'Henüz geçmiş etkinliğiniz yok',
@@ -99,16 +136,11 @@ class PastMeetupsScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Etkinliklere katılmaya başlayın!',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      context.go('/home');
-                    },
+                    onPressed: () => context.go('/home'),
                     icon: const Icon(Icons.explore),
                     label: const Text('Etkinlikleri Keşfet'),
                     style: ElevatedButton.styleFrom(
@@ -125,27 +157,129 @@ class PastMeetupsScreen extends StatelessWidget {
             );
           }
 
-          // List of Past Meetups
-          return RefreshIndicator(
-            color: primary,
-            backgroundColor: surfaceLight,
-            onRefresh: () async {
-              await Future.delayed(const Duration(milliseconds: 500));
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: pastMeetups.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final meetup = pastMeetups[index];
-                return MeetupCard(
-                  meetup: meetup,
-                  onTap: () {
-                    context.push('/detail', extra: meetup);
+          final sortedMeetups = _sortMeetups(pastMeetups);
+
+          return Column(
+            children: [
+              // Sort chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Row(
+                  children: PastMeetupSort.values.map((sort) {
+                    final isSelected = _currentSort == sort;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        selected: isSelected,
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _sortIcon(sort),
+                              size: 14,
+                              color: isSelected ? Colors.white : textMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(_sortLabel(sort)),
+                          ],
+                        ),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : textDark,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                        backgroundColor: surfaceLight,
+                        selectedColor: primary,
+                        checkmarkColor: Colors.white,
+                        showCheckmark: false,
+                        side: BorderSide(
+                          color: isSelected ? primary : const Color(0xFFE2E8F0),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        onSelected: (_) {
+                          setState(() => _currentSort = sort);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              // Count
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${sortedMeetups.length} etkinlik',
+                    style: const TextStyle(
+                      color: textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+
+              // List
+              Expanded(
+                child: RefreshIndicator(
+                  color: primary,
+                  backgroundColor: surfaceLight,
+                  onRefresh: () async {
+                    await Future.delayed(const Duration(milliseconds: 500));
                   },
-                );
-              },
-            ),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: sortedMeetups.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final meetup = sortedMeetups[index];
+                      return Column(
+                        children: [
+                          MeetupCard(
+                            meetup: meetup,
+                            onTap: () {
+                              context.push('/detail', extra: meetup);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                context.push(
+                                    '/evaluate-event', extra: meetup);
+                              },
+                              icon:
+                                  const Icon(Icons.star_outline, size: 18),
+                              label: const Text(
+                                  'Katılımcıları Değerlendir'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: primary,
+                                side: BorderSide(
+                                    color:
+                                        primary.withValues(alpha: 0.5)),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),

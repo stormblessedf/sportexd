@@ -219,7 +219,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.1),
+            color: AppTheme.primary.withValues(alpha:0.1),
             border: Border(
               bottom: BorderSide(color: AppTheme.borderLight),
             ),
@@ -345,7 +345,7 @@ class _ParticipantRatingCard extends StatelessWidget {
         ),
         boxShadow: alreadyRated ? null : [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha:0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -400,7 +400,7 @@ class _ParticipantRatingCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.2),
+                    color: AppTheme.primary.withValues(alpha:0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(

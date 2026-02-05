@@ -101,12 +101,32 @@ class QuickFilterChips extends StatelessWidget {
         return Icons.sports_soccer;
       case MeetupType.basketball:
         return Icons.sports_basketball;
+      case MeetupType.volleyball:
+        return Icons.sports_volleyball;
       case MeetupType.tennis:
         return Icons.sports_tennis;
-      case MeetupType.yoga:
-        return Icons.self_improvement;
+      case MeetupType.tableTennis:
+        return Icons.sports_cricket;
+      case MeetupType.badminton:
+        return Icons.sports_tennis;
+      case MeetupType.swimming:
+        return Icons.pool;
       case MeetupType.running:
         return Icons.directions_run;
+      case MeetupType.cycling:
+        return Icons.directions_bike;
+      case MeetupType.hiking:
+        return Icons.hiking;
+      case MeetupType.yoga:
+        return Icons.self_improvement;
+      case MeetupType.fitness:
+        return Icons.fitness_center;
+      case MeetupType.boxing:
+        return Icons.sports_mma;
+      case MeetupType.climbing:
+        return Icons.terrain;
+      case MeetupType.skiing:
+        return Icons.downhill_skiing;
       case MeetupType.other:
         return Icons.sports;
     }
@@ -133,9 +153,9 @@ class _QuickChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = isDestructive
-        ? Colors.red.withOpacity(0.1)
+        ? Colors.red.withValues(alpha:0.1)
         : isActive
-            ? AppTheme.primary.withOpacity(0.15)
+            ? AppTheme.primary.withValues(alpha:0.15)
             : AppTheme.surfaceLight;
 
     final foregroundColor = isDestructive
@@ -145,9 +165,9 @@ class _QuickChip extends StatelessWidget {
             : AppTheme.textMuted;
 
     final borderColor = isDestructive
-        ? Colors.red.withOpacity(0.3)
+        ? Colors.red.withValues(alpha:0.3)
         : isActive
-            ? AppTheme.primary.withOpacity(0.3)
+            ? AppTheme.primary.withValues(alpha:0.3)
             : AppTheme.borderLight;
 
     return Material(

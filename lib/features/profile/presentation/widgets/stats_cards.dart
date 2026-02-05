@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../theme/app_theme.dart';
 
 class StatsCards extends StatelessWidget {
   final double reliabilityScore;
   final int totalMeetups;
-  final double averageRating;
-  final int totalRatings;
+  final String profileOwnerId;
+  final VoidCallback? onRatingTap;
 
   const StatsCards({
     super.key,
     required this.reliabilityScore,
     required this.totalMeetups,
-    required this.averageRating,
-    required this.totalRatings,
+    required this.profileOwnerId,
+    this.onRatingTap,
   });
 
   // Minimum ratings required to show rating
@@ -29,7 +30,7 @@ class StatsCards extends StatelessWidget {
             child: _StatCard(
               value: '${reliabilityScore.round()}%',
               label: 'GÜVENİLİRLİK',
-              color: const Color(0xFF2196F3), // Blue
+              color: const Color(0xFF2196F3),
               icon: Icons.verified_user,
             ),
           ),
@@ -40,32 +41,79 @@ class StatsCards extends StatelessWidget {
             child: _StatCard(
               value: totalMeetups.toString(),
               label: 'ETKİNLİKLER',
-              color: const Color(0xFF4CAF50), // Green
+              color: const Color(0xFF4CAF50),
               icon: Icons.groups,
             ),
           ),
           const SizedBox(width: 12),
 
-          // Rating Card (only show if minimum ratings met)
+          // Rating Card - Real-time with StreamBuilder
           Expanded(
-            child: totalRatings >= minRatingsToShow
-                ? _StatCard(
-                    value: averageRating.toStringAsFixed(1),
-                    label: 'PUAN',
-                    color: const Color(0xFFFF9800), // Orange
-                    icon: Icons.star,
-                    showStar: true,
-                  )
-                : _StatCard(
-                    value: '-',
-                    label: 'PUAN',
-                    color: Colors.grey[400]!,
-                    icon: Icons.star_border,
-                    subtitle: '$totalRatings/$minRatingsToShow',
-                  ),
+            child: _RatingStatCard(
+              profileOwnerId: profileOwnerId,
+              minRatingsToShow: minRatingsToShow,
+              onTap: onRatingTap,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Real-time Rating Card that listens to Firestore changes
+class _RatingStatCard extends StatelessWidget {
+  final String profileOwnerId;
+  final int minRatingsToShow;
+  final VoidCallback? onTap;
+
+  const _RatingStatCard({
+    required this.profileOwnerId,
+    required this.minRatingsToShow,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(profileOwnerId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        double averageRating = 0.0;
+        int totalRatings = 0;
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          if (data != null) {
+            averageRating = (data['averageRating'] ?? 0.0).toDouble();
+            totalRatings = (data['totalRatings'] ?? 0) as int;
+          }
+        }
+
+        return GestureDetector(
+          onTap: onTap,
+          child: totalRatings >= minRatingsToShow
+              ? _StatCard(
+                  value: averageRating.toStringAsFixed(1),
+                  label: 'PUAN',
+                  color: const Color(0xFFFF9800),
+                  icon: Icons.star,
+                  showStar: true,
+                  isClickable: onTap != null,
+                )
+              : _StatCard(
+                  value: totalRatings > 0 ? averageRating.toStringAsFixed(1) : '-',
+                  label: 'PUAN',
+                  color: totalRatings > 0 ? const Color(0xFFFF9800) : Colors.grey,
+                  icon: totalRatings > 0 ? Icons.star : Icons.star_border,
+                  subtitle: '$totalRatings/$minRatingsToShow değerlendirme',
+                  showStar: totalRatings > 0,
+                  isClickable: onTap != null,
+                ),
+        );
+      },
     );
   }
 }
@@ -77,6 +125,7 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final bool showStar;
   final String? subtitle;
+  final bool isClickable;
 
   const _StatCard({
     required this.value,
@@ -85,6 +134,7 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     this.showStar = false,
     this.subtitle,
+    this.isClickable = false,
   });
 
   @override
@@ -94,10 +144,12 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderLight),
+        border: Border.all(
+          color: isClickable ? color.withValues(alpha: 0.3) : AppTheme.borderLight,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -110,7 +162,7 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -151,9 +203,10 @@ class _StatCard extends StatelessWidget {
             Text(
               subtitle!,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 color: Colors.grey[500],
               ),
+              textAlign: TextAlign.center,
             ),
           ],
 
@@ -169,6 +222,16 @@ class _StatCard extends StatelessWidget {
               letterSpacing: 0.5,
             ),
           ),
+
+          // Clickable indicator
+          if (isClickable) ...[
+            const SizedBox(height: 4),
+            Icon(
+              Icons.touch_app,
+              size: 12,
+              color: Colors.grey[400],
+            ),
+          ],
         ],
       ),
     );

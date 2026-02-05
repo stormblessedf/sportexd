@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sporsal - Create Event V3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c2e22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased overflow-x-hidden">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-xl">
+<header class="sticky top-0 z-10 flex items-center justify-between px-4 py-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Create Event</h1>
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-0 pointer-events-none">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col gap-8 px-5 pb-24">
+<section>
+<h2 class="text-2xl font-bold tracking-tight mb-4">Choose Sport</h2>
+<div class="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-5 px-5">
+<button class="flex flex-col items-center gap-2 shrink-0 group">
+<div class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30 transition-transform group-active:scale-95">
+<span class="material-symbols-outlined text-black text-3xl">directions_run</span>
+</div>
+<span class="text-sm font-semibold text-black dark:text-white">Running</span>
+</button>
+<button class="flex flex-col items-center gap-2 shrink-0 group">
+<div class="w-16 h-16 rounded-2xl bg-white dark:bg-surface-dark border border-gray-100 dark:border-gray-700 flex items-center justify-center transition-transform group-active:scale-95">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 text-3xl">pedal_bike</span>
+</div>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400">Cycling</span>
+</button>
+<button class="flex flex-col items-center gap-2 shrink-0 group">
+<div class="w-16 h-16 rounded-2xl bg-white dark:bg-surface-dark border border-gray-100 dark:border-gray-700 flex items-center justify-center transition-transform group-active:scale-95">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 text-3xl">fitness_center</span>
+</div>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400">Gym</span>
+</button>
+<button class="flex flex-col items-center gap-2 shrink-0 group">
+<div class="w-16 h-16 rounded-2xl bg-white dark:bg-surface-dark border border-gray-100 dark:border-gray-700 flex items-center justify-center transition-transform group-active:scale-95">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 text-3xl">self_improvement</span>
+</div>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400">Yoga</span>
+</button>
+<button class="flex flex-col items-center gap-2 shrink-0 group">
+<div class="w-16 h-16 rounded-2xl bg-white dark:bg-surface-dark border border-gray-100 dark:border-gray-700 flex items-center justify-center transition-transform group-active:scale-95">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400 text-3xl">sports_tennis</span>
+</div>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400">Tennis</span>
+</button>
+</div>
+</section>
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold tracking-tight">Time &amp; Date</h2>
+<button class="text-sm font-semibold text-primary">Edit</button>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex items-center justify-between mb-4">
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+<span class="material-symbols-outlined text-gray-400">chevron_left</span>
+</button>
+<span class="text-base font-bold">October 2023</span>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</button>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center mb-6">
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">S</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">M</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">T</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">W</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">T</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">F</div>
+<div class="text-xs font-medium text-gray-400 uppercase pb-2">S</div>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-400">1</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-400">2</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-400">3</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-900 dark:text-white font-medium">4</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm bg-primary text-black font-bold shadow-lg shadow-primary/40">5</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-900 dark:text-white font-medium">6</button>
+<button class="h-9 w-9 rounded-full flex items-center justify-center text-sm text-gray-900 dark:text-white font-medium">7</button>
+</div>
+<div class="flex items-center justify-between bg-background-light dark:bg-black/20 rounded-xl p-3 px-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400">schedule</span>
+<div class="flex flex-col">
+<span class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase">Start</span>
+<span class="font-bold text-gray-900 dark:text-white">07:00 AM</span>
+</div>
+</div>
+<div class="h-8 w-[1px] bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase">End</span>
+<span class="font-bold text-gray-900 dark:text-white">08:30 AM</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold tracking-tight mb-4">Location</h2>
+<div class="relative w-full h-48 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 group cursor-pointer">
+<img alt="Map showing city streets in minimalist style" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="Map view of city streets with a pin" data-location="Istanbul" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlqQ7VHMOIjraG1CKYLwb3uPilIOBEuxbyntSLL9_vrGLelzpbtFpMh4vt7_uBKHLDzofbNOSTekq2tJkUaaNCtIhoyGnq7SRUzjvP96Hqnrr-qspMHt0otQ2CVX8T_D7jlA2qeu-P71CWaa4RWNS9Nl9pQryS1C_Ikpf3eHgZwtD1-0rQNOtu3FsYaXkmL-coItOWW_w1rx_YUOBdQtBA8w6OXPHFIj8kdqNsglThuPizSiIs9ZhIZbhBHdjBkjPH5yqdtwlSdEA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
+<div class="relative">
+<span class="material-symbols-outlined text-primary text-5xl drop-shadow-md z-10 relative">location_on</span>
+<div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-black/40 blur-sm rounded-[100%]"></div>
+</div>
+</div>
+<div class="absolute bottom-3 left-3 bg-white dark:bg-surface-dark px-3 py-2 rounded-lg shadow-md flex items-center gap-2 max-w-[80%]">
+<span class="material-symbols-outlined text-gray-500 text-lg">near_me</span>
+<div class="truncate text-sm font-semibold">Maçka Demokrasi Parkı</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="text-xl font-bold tracking-tight mb-4">Details</h2>
+<div class="space-y-4">
+<div class="relative">
+<label class="absolute -top-2.5 left-3 bg-background-light dark:bg-background-dark px-1 text-xs font-medium text-gray-500 dark:text-gray-400" for="event-title">Event Title</label>
+<input class="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-base font-semibold focus:border-primary focus:ring-0 placeholder-gray-400 dark:text-white transition-colors" id="event-title" type="text" value="Morning Run 5K"/>
+</div>
+<div class="relative">
+<label class="absolute -top-2.5 left-3 bg-background-light dark:bg-background-dark px-1 text-xs font-medium text-gray-500 dark:text-gray-400" for="event-desc">Description</label>
+<textarea class="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-sm focus:border-primary focus:ring-0 placeholder-gray-400 resize-none dark:text-white transition-colors" id="event-desc" rows="3">Easy pace morning run around the park. Everyone is welcome!</textarea>
+</div>
+<div class="relative">
+<label class="absolute -top-2.5 left-3 bg-background-light dark:bg-background-dark px-1 text-xs font-medium text-gray-500 dark:text-gray-400">Participant Limit</label>
+<div class="flex items-center justify-between w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2">
+<span class="text-base font-semibold text-gray-900 dark:text-white">Max Participants</span>
+<div class="flex items-center gap-3">
+<button class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-lg text-gray-600 dark:text-gray-400">remove</span>
+</button>
+<span class="text-lg font-bold text-gray-900 dark:text-white w-6 text-center">4</span>
+<button class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-lg text-black font-bold">add</span>
+</button>
+</div>
+</div>
+</div>
+<div class="relative">
+<label class="absolute -top-2.5 left-3 bg-background-light dark:bg-background-dark px-1 text-xs font-medium text-gray-500 dark:text-gray-400">Skill Level</label>
+<div class="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded-xl p-2">
+<div class="flex items-center gap-2">
+<button class="flex-1 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Beginner</button>
+<button class="flex-1 py-2.5 rounded-full bg-primary border border-primary text-black text-xs font-bold shadow-md shadow-primary/20">Intermediate</button>
+<button class="flex-1 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Advanced</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed bottom-0 left-0 right-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 p-5 z-20 max-w-md mx-auto">
+<button class="w-full bg-primary hover:bg-primary/90 text-black font-bold text-lg py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">
+                Etkinliği Yayınla
+            </button>
+</div>
+</div>
+</body></html>

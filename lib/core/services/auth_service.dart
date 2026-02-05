@@ -183,12 +183,10 @@ class AuthService {
         'weight': weight,
         'interestedSports': interestedSports,
         'profileImageUrl': profileImageUrl,
-        'followersCount': 0,
-        'followingCount': 0,
+        'partnersCount': 0,
+        'partners': [],
         'badges': [],
         'certificates': [],
-        'followers': [],
-        'following': [],
         'level': level?.toString().split('.').last ?? 'beginner',
         'playStyle': playStyle?.toString().split('.').last ?? 'casual',
       };
@@ -226,48 +224,6 @@ class AuthService {
     } catch (_) {
       return null;
     }
-  }
-
-  // Follow User
-  Future<void> followUser(String currentUserId, String targetUserId) async {
-    final batch = _firestore.batch();
-
-    // Update current user's following list and count
-    final currentUserRef = _firestore.collection('users').doc(currentUserId);
-    batch.update(currentUserRef, {
-      'following': FieldValue.arrayUnion([targetUserId]),
-      'followingCount': FieldValue.increment(1),
-    });
-
-    // Update target user's followers list and count
-    final targetUserRef = _firestore.collection('users').doc(targetUserId);
-    batch.update(targetUserRef, {
-      'followers': FieldValue.arrayUnion([currentUserId]),
-      'followersCount': FieldValue.increment(1),
-    });
-
-    await batch.commit();
-  }
-
-  // Unfollow User
-  Future<void> unfollowUser(String currentUserId, String targetUserId) async {
-    final batch = _firestore.batch();
-
-    // Update current user's following list and count
-    final currentUserRef = _firestore.collection('users').doc(currentUserId);
-    batch.update(currentUserRef, {
-      'following': FieldValue.arrayRemove([targetUserId]),
-      'followingCount': FieldValue.increment(-1),
-    });
-
-    // Update target user's followers list and count
-    final targetUserRef = _firestore.collection('users').doc(targetUserId);
-    batch.update(targetUserRef, {
-      'followers': FieldValue.arrayRemove([currentUserId]),
-      'followersCount': FieldValue.increment(-1),
-    });
-
-    await batch.commit();
   }
 
   // Update User Profile

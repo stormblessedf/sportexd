@@ -10,6 +10,7 @@ import 'widgets/filter_panel.dart';
 import 'widgets/recommendation_section.dart';
 import '../../home/presentation/widgets/meetup_card.dart';
 import '../../meetups/presentation/nearby_meetups_map_screen.dart';
+import '../../notifications/presentation/widgets/notification_bell.dart';
 
 class DiscoveryPage extends StatefulWidget {
   const DiscoveryPage({super.key});
@@ -122,7 +123,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     }
 
                     if (controller.viewMode == ViewMode.map) {
-                      return const NearbyMeetupsMapScreen();
+                      return const NearbyMeetupsMapScreen(embedded: true);
                     }
 
                     return _buildListView(controller);
@@ -206,7 +207,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         border: Border.all(color: AppTheme.borderLight),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha:0.04),
                             blurRadius: 8,
                           ),
                         ],
@@ -240,6 +241,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              // Notification Bell
+              const NotificationBellStyled(),
             ],
           ),
         ],
@@ -258,7 +262,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppTheme.primary.withOpacity(0.15) : Colors.transparent,
+          color: isActive ? AppTheme.primary.withValues(alpha:0.15) : Colors.transparent,
           borderRadius: BorderRadius.horizontal(
             left: isLeft ? const Radius.circular(11) : Radius.zero,
             right: isLeft ? Radius.zero : const Radius.circular(11),

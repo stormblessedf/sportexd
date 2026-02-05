@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Reviews - Sports Social App</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a3324",
+                        "text-primary-light": "#0d1b12",
+                        "text-primary-dark": "#ffffff",
+                        "text-secondary-light": "#4c9a66",
+                        "text-secondary-dark": "#add7bb",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark min-h-screen flex flex-col items-center">
+<div class="w-full max-w-md bg-background-light dark:bg-background-dark min-h-screen flex flex-col relative shadow-2xl overflow-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center p-4 justify-between">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-text-primary-light dark:text-text-primary-dark" style="font-size: 24px;">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Reputation</h2>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto w-full pb-24">
+<!-- Rating Summary -->
+<section class="p-6">
+<div class="flex flex-col sm:flex-row gap-6 items-center sm:items-start bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex flex-col items-center sm:items-start gap-1">
+<span class="text-5xl font-black tracking-tighter text-text-primary-light dark:text-text-primary-dark">4.8</span>
+<div class="flex gap-1 my-1">
+<span class="material-symbols-outlined text-primary fill-current" style="font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;">star</span>
+<span class="material-symbols-outlined text-primary fill-current" style="font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;">star</span>
+<span class="material-symbols-outlined text-primary fill-current" style="font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;">star</span>
+<span class="material-symbols-outlined text-primary fill-current" style="font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;">star</span>
+<span class="material-symbols-outlined text-primary fill-current" style="font-variation-settings: 'FILL' 0.5, 'wght' 400, 'GRAD' 0, 'opsz' 24;">star_half</span>
+</div>
+<p class="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">124 ratings</p>
+</div>
+<div class="flex-1 w-full grid grid-cols-[16px_1fr_32px] items-center gap-y-2 gap-x-3 text-xs font-medium">
+<!-- 5 Star -->
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">5</span>
+<div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary w-[60%]"></div>
+</div>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">60%</span>
+<!-- 4 Star -->
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">4</span>
+<div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary w-[20%]"></div>
+</div>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">20%</span>
+<!-- 3 Star -->
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">3</span>
+<div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary w-[10%]"></div>
+</div>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">10%</span>
+<!-- 2 Star -->
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">2</span>
+<div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary w-[5%]"></div>
+</div>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">5%</span>
+<!-- 1 Star -->
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">1</span>
+<div class="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary w-[5%]"></div>
+</div>
+<span class="text-text-secondary-light dark:text-text-secondary-dark text-right">5%</span>
+</div>
+</div>
+</section>
+<!-- Filters -->
+<section class="px-6 pb-4">
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+<button class="flex h-9 shrink-0 items-center justify-center px-4 rounded-full bg-primary text-background-dark font-semibold text-sm transition-transform active:scale-95">
+                        Most Recent
+                    </button>
+<button class="flex h-9 shrink-0 items-center justify-center px-4 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark font-medium text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                        Highest
+                    </button>
+<button class="flex h-9 shrink-0 items-center justify-center px-4 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark font-medium text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                        Lowest
+                    </button>
+<button class="flex h-9 shrink-0 items-center justify-center px-4 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark font-medium text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                        With Photos
+                    </button>
+</div>
+</section>
+<!-- Review List -->
+<section class="px-4 flex flex-col gap-4">
+<!-- Review 1 -->
+<article class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Portrait of Sarah Jenkins" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoNxr_JjUeXmcl9Hvays8OYY8XABNafR3ceaZU8A4wdjdcYSNvJx0faQkhK4Qq9YOC1ppGrSounx3Cj5dc5GrHAB2CmNVS6mtXNZIpOUjvlEUccKm9re6AFPam32aOPU82q5_fKjM-WBMB2q0jAm7sXcLPHY0YCG2JMeq5kEPgkSeXz5dOV_QMc1QBZi1TjeVuUxJieLYc5H6Me3zgGN-igvNC-TdshOuBvHyFKV6rx462ZmrKH8fbAkcBTtcXJscMKjCHVoAn670');"></div>
+<div>
+<h3 class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">Sarah Jenkins</h3>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">2 days ago • Paddle</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-text-primary-light dark:text-gray-300 mb-4">
+                        Great teammate! Showed up on time for the paddle match and was super friendly. Highly recommend playing with her.
+                    </p>
+<div class="flex items-center gap-4 text-text-secondary-light dark:text-text-secondary-dark">
+<button class="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span>
+<span>Helpful (12)</span>
+</button>
+</div>
+</article>
+<!-- Review 2 -->
+<article class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Portrait of Mike Ross" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCyXPzmtYPIDzK3hdvlVyX1F__U4a1kZ6E0rMdn9JyK2P7U04BLWXAJeULMxhD19UGGJsHB8fub2s2M7HYyi4fR7i0mS6DFftEfHVedsfhbJljTvlALs3OW0zpkF9fua5eJyxk5fPfogKgN5GW2Hejds_YfBVbJoEs6yXsGkAQfwJzVhUCFGyII4Dilm3qNeyWpmemcfuQU56HGv7i6zVGAaWSAzdUfP3ZJoR6-4DUnXX9qXvnyOdipNgxZ2fLvenUc9Qtjy5n19To');"></div>
+<div>
+<h3 class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">Mike Ross</h3>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">1 week ago • Basketball</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-gray-300 dark:text-gray-600 text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-text-primary-light dark:text-gray-300 mb-4">
+                        Solid basketball skills, but we started 10 mins late. Otherwise a good game.
+                    </p>
+<div class="flex items-center gap-4 text-text-secondary-light dark:text-text-secondary-dark">
+<button class="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span>
+<span>Helpful (4)</span>
+</button>
+</div>
+</article>
+<!-- Review 3 -->
+<article class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Portrait of Jessica Pearson" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqOVG_Jp9rc_EL9MG-MRUmWJEfC8qX7KwxFDrnHcDRLLWaoQcarTZzkfvIxuD7c4FbSS1-nDSB8VCm7jnKehv78-yeE6xaK-7cMvvIE7JGYhBVqxuIo58zXpArk9rPoOF4ZM8e-uiHOPkXIOpP1F1tzNA1qoqPt3Xlp0_29CpjwJhM5nMqnWfbzrjYXB1b3-yvNalhmBNazEpjaNDh-MEr92Hqsx3IFc8GEkCkRaag0jO1pO3MyNAEgu1gjcmGJjow0ANUlK-b-es');"></div>
+<div>
+<h3 class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">Jessica Pearson</h3>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">3 weeks ago • Soccer</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-text-primary-light dark:text-gray-300 mb-4">
+                        Best goalkeeper we've had in the league. Very communicative and supportive. She even brought extra water for everyone!
+                    </p>
+<div class="flex items-center gap-4 text-text-secondary-light dark:text-text-secondary-dark">
+<button class="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span>
+<span>Helpful (8)</span>
+</button>
+</div>
+</article>
+<!-- Review 4 -->
+<article class="p-4 rounded-2xl bg-surface-light dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Portrait of Louis Litt" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD-QMf-tZdeJjdVNQtOTlKdD4JoBdNKxzDrdM9TAV-6uzNZQd8QyTpIpngJnbHh59nLgK5VRxaALhiX4O72wRVwRrxMcd_AQlWSWAmYRKaac2MOtbYIhr1f8S7W6NJtlO5ISS5T0KGyfk3JjOPsA33Jg12seGq6sSaj0ukDsXQFaUpM4Hd2TD3SuzXomS5004Ri4CjSehnoSH3u8DZhdbaY3TaGIZsaaEVgMPgygX_sFZvHIK5bi1NETt5mNt_VzhPYthP_3UaQFkM');"></div>
+<div>
+<h3 class="font-bold text-sm text-text-primary-light dark:text-text-primary-dark">Louis Litt</h3>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">1 month ago • Tennis</p>
+</div>
+</div>
+<div class="flex gap-0.5">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-text-primary-light dark:text-gray-300 mb-4">
+                        Incredible energy on the court. Would definitely invite again for the next tournament.
+                    </p>
+<div class="flex items-center gap-4 text-text-secondary-light dark:text-text-secondary-dark">
+<button class="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">thumb_up</span>
+<span>Helpful (2)</span>
+</button>
+</div>
+</article>
+</section>
+</main>
+<!-- Floating Action Button / Sticky Footer -->
+<div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-light dark:from-background-dark via-background-light/95 dark:via-background-dark/95 to-transparent pb-6 pt-10">
+<button class="w-full flex items-center justify-center gap-2 rounded-xl h-12 bg-primary text-background-dark font-bold text-base shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+<span>Write a Review</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -139,8 +139,8 @@ class UserModel {
   final String? bio;
   final List<Certificate> certificates;
   final List<Badge> badges;
-  final int followersCount;
-  final int followingCount;
+  final int partnersCount;
+  final List<String> partners;
   final String? location;
   final String? gender;
   final DateTime? birthDate;
@@ -151,8 +151,6 @@ class UserModel {
   final List<PreferredTime>? preferredTimes;
   final PlayStyle? playStyle;
   final String? teamPreference;
-  final List<String>? followers;
-  final List<String>? following;
 
   // New fields for reliability, rating and online status
   final double reliabilityScore;
@@ -171,8 +169,8 @@ class UserModel {
     this.bio,
     this.certificates = const [],
     this.badges = const [],
-    this.followersCount = 0,
-    this.followingCount = 0,
+    this.partnersCount = 0,
+    this.partners = const [],
     this.location,
     this.gender,
     this.birthDate,
@@ -183,8 +181,6 @@ class UserModel {
     this.preferredTimes,
     this.playStyle,
     this.teamPreference,
-    this.followers,
-    this.following,
     this.reliabilityScore = 100.0,
     this.totalMeetupsJoined = 0,
     this.totalMeetupsRegistered = 0,
@@ -203,8 +199,8 @@ class UserModel {
       'bio': bio,
       'certificates': certificates.map((e) => e.toJson()).toList(),
       'badges': badges.map((e) => e.toJson()).toList(),
-      'followersCount': followersCount,
-      'followingCount': followingCount,
+      'partnersCount': partnersCount,
+      'partners': partners,
       'location': location,
       'gender': gender,
       'birthDate': birthDate?.toIso8601String(),
@@ -215,8 +211,6 @@ class UserModel {
       'preferredTimes': preferredTimes?.map((e) => e.name).toList(),
       'playStyle': playStyle?.name,
       'teamPreference': teamPreference,
-      'followers': followers,
-      'following': following,
       'reliabilityScore': reliabilityScore,
       'totalMeetupsJoined': totalMeetupsJoined,
       'totalMeetupsRegistered': totalMeetupsRegistered,
@@ -242,8 +236,8 @@ class UserModel {
               ?.map((e) => Badge.fromJson(e))
               .toList() ??
           [],
-      followersCount: json['followersCount'] ?? 0,
-      followingCount: json['followingCount'] ?? 0,
+      partnersCount: json['partnersCount'] ?? 0,
+      partners: (json['partners'] as List<dynamic>?)?.cast<String>() ?? [],
       location: json['location'],
       gender: json['gender'],
       birthDate: json['birthDate'] != null
@@ -273,8 +267,6 @@ class UserModel {
         orElse: () => PlayStyle.casual,
       ),
       teamPreference: json['teamPreference'],
-      followers: (json['followers'] as List<dynamic>?)?.cast<String>() ?? [],
-      following: (json['following'] as List<dynamic>?)?.cast<String>() ?? [],
       reliabilityScore: (json['reliabilityScore'] ?? 100.0).toDouble(),
       totalMeetupsJoined: json['totalMeetupsJoined'] ?? 0,
       totalMeetupsRegistered: json['totalMeetupsRegistered'] ?? 0,
@@ -294,8 +286,7 @@ class UserModel {
       username: 'Kaan Sportif',
       email: 'kaan@sporsal.com',
       bio: 'Futbol ve CrossFit tutkunu. Haftada 3 gün antrenman! 🏃🎾',
-      followersCount: 128,
-      followingCount: 45,
+      partnersCount: 12,
       location: 'İstanbul, Türkiye',
       birthDate: DateTime(1998, 5, 15),
       reliabilityScore: 98.0,

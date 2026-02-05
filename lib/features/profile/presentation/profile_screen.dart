@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/models/user_model.dart';
+import '../../../core/models/partnership_model.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/presence_service.dart';
-import 'package:go_router/go_router.dart';
+import '../../../core/services/partnership_service.dart';
+import '../../../core/services/messaging_permission_service.dart';
+import '../../../core/services/chat_service.dart';
+import '../../../core/widgets/partnership_button.dart';
+import '../../../core/widgets/locked_message_button.dart';
+import '../../../core/widgets/mutual_partners_widget.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/stats_cards.dart';
@@ -22,19 +28,60 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
-  final PresenceService _presenceService = PresenceService();
+  final PartnershipService _partnershipService = PartnershipService();
+  final MessagingPermissionService _messagingService = MessagingPermissionService();
+  final ChatService _chatService = ChatService();
   UserModel? _user;
   bool _isLoading = false;
+
+  // Partnership state
+  PartnershipModel? _partnership;
+  List<String> _sharedMeetupIds = [];
+  bool _isPartnershipLoading = false;
+  bool _isMessageLocked = true;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
     if (widget.user != null) {
       _user = widget.user;
+      _loadPartnershipData();
     } else if (widget.userId != null) {
       _loadUserById(widget.userId!);
     } else {
       _loadCurrentUser();
+    }
+  }
+
+  Future<void> _loadPartnershipData() async {
+    final currentUserId = _authService.currentUserId;
+    final profileUserId = _user?.id;
+    if (currentUserId == null || profileUserId == null || currentUserId == profileUserId) return;
+
+    setState(() => _isPartnershipLoading = true);
+    try {
+      final results = await Future.wait([
+        _partnershipService.getPartnershipStatus(currentUserId, profileUserId),
+        _partnershipService.getSharedMeetupIds(currentUserId, profileUserId),
+        _messagingService.canSendDirectMessage(currentUserId, profileUserId),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _partnership = results[0] as PartnershipModel?;
+          _sharedMeetupIds = results[1] as List<String>;
+          _isMessageLocked = !(results[2] as bool);
+          _isPartnershipLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isPartnershipLoading = false);
+      }
     }
   }
 
@@ -58,6 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _user = UserModel.fromJson(doc.data() as Map<String, dynamic>);
           _isLoading = false;
         });
+        _loadPartnershipData();
       }
     } catch (e) {
       if (mounted) {
@@ -175,17 +223,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           if (isOwnProfile)
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(Icons.star_rate, color: Color(0xFFFF9800)),
+              tooltip: 'Katılımcıları Değerlendir',
               onPressed: () {
-                context.push('/edit-profile');
+                context.push('/past-meetups', extra: user.id);
               },
             ),
           if (isOwnProfile)
             IconButton(
-              icon: const Icon(Icons.settings_outlined),
+              icon: const Icon(Icons.history, color: AppTheme.textMuted),
+              tooltip: 'Geçmiş Etkinliklerim',
               onPressed: () {
-                context.push('/settings');
+                context.push('/past-meetups', extra: user.id);
               },
+            ),
+          if (isOwnProfile)
+            IconButton(
+              icon: const Icon(Icons.handshake, color: AppTheme.primary),
+              tooltip: 'Partner İstekleri',
+              onPressed: () {
+                context.push('/partnership-requests');
+              },
+            ),
+          if (isOwnProfile)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  context.push('/edit-profile');
+                } else if (value == 'settings') {
+                  context.push('/settings');
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('Profili Düzenle'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('Ayarlar'),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -206,16 +297,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 user: user,
                 isOwnProfile: isOwnProfile,
                 onProfilePictureChange: _changeProfilePicture,
+                onPartnersTap: () {
+                  context.push('/partners/${user.id}');
+                },
               ),
 
               const SizedBox(height: 20),
 
-              // Stats Cards
+              // Stats Cards - Rating card uses real-time StreamBuilder
               StatsCards(
                 reliabilityScore: user.reliabilityScore,
                 totalMeetups: user.totalMeetupsJoined,
-                averageRating: user.averageRating,
-                totalRatings: user.totalRatings,
+                profileOwnerId: user.id,
+                onRatingTap: () {
+                  context.push('/user-ratings/${user.id}');
+                },
               ),
 
               const SizedBox(height: 20),
@@ -225,17 +321,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               const SizedBox(height: 20),
 
-              // Follow Button (only for other users' profiles)
-              if (!isOwnProfile) _buildFollowButton(context, user),
+              // Partnership & Message Buttons (only for other users' profiles)
+              if (!isOwnProfile) _buildPartnershipSection(context, user),
               if (!isOwnProfile) const SizedBox(height: 16),
 
-              // Past Events Button (only for own profile)
-              if (isOwnProfile) _buildPastEventsButton(context, user),
-              if (isOwnProfile) const SizedBox(height: 16),
-
-              // Rate Participants Button (only for own profile)
-              if (isOwnProfile) _buildRateParticipantsButton(context),
-              if (isOwnProfile) const SizedBox(height: 24),
+              if (isOwnProfile) const SizedBox(height: 4),
 
               // About Section (detailed info)
               _buildAboutSection(context, user),
@@ -255,208 +345,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPastEventsButton(BuildContext context, UserModel user) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: InkWell(
-        onTap: () {
-          context.push('/past-meetups', extra: user.id);
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.borderLight),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.history,
-                  color: AppTheme.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Geçmiş Etkinliklerim',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Katıldığın geçmiş etkinlikleri gör',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRateParticipantsButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: InkWell(
-        onTap: () {
-          // Navigate to past meetups - user can rate from there
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Geçmiş etkinliklerden değerlendirme yapabilirsiniz'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-          context.push('/past-meetups', extra: _user?.id);
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.borderLight),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF9800).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.star_rate,
-                  color: Color(0xFFFF9800),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Katılımcıları Değerlendir',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Geçmiş etkinlik katılımcılarını puanla',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFollowButton(BuildContext context, UserModel user) {
+  Widget _buildPartnershipSection(BuildContext context, UserModel user) {
     final currentUserId = _authService.currentUserId;
     if (currentUserId == null) return const SizedBox.shrink();
 
-    final isFollowing = user.followers?.contains(currentUserId) ?? false;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () async {
-            try {
-              if (isFollowing) {
-                await _authService.unfollowUser(currentUserId, user.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${user.username} takipten çıkarıldı'),
-                      backgroundColor: Colors.grey,
-                    ),
-                  );
-                  await _loadUserById(user.id);
-                }
-              } else {
-                await _authService.followUser(currentUserId, user.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${user.username} takip ediliyor'),
-                      backgroundColor: AppTheme.primary,
-                    ),
-                  );
-                  await _loadUserById(user.id);
-                }
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Hata: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
-          icon: Icon(
-            isFollowing ? Icons.person_remove : Icons.person_add,
-            size: 20,
+      child: Column(
+        children: [
+          // Mutual Partners Widget
+          MutualPartnersWidget(
+            currentUserId: currentUserId,
+            profileUserId: user.id,
           ),
-          label: Text(
-            isFollowing ? 'Takipten Çık' : 'Takip Et',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: 12),
+          // Partnership & Message buttons row
+          Row(
+            children: [
+              Expanded(
+                child: PartnershipButtonWidget(
+                  currentUserId: currentUserId,
+                  profileUserId: user.id,
+                  partnership: _partnership,
+                  sharedMeetupIds: _sharedMeetupIds,
+                  isLoading: _isPartnershipLoading,
+                  onSendRequest: () async {
+                    try {
+                      await _partnershipService.sendPartnershipRequest(
+                        requesterId: currentUserId,
+                        receiverId: user.id,
+                        sharedMeetupIds: _sharedMeetupIds,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Partner isteği gönderildi!'),
+                            backgroundColor: AppTheme.primary,
+                          ),
+                        );
+                        _loadPartnershipData();
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Hata: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  onAcceptRequest: () async {
+                    if (_partnership == null) return;
+                    try {
+                      await _partnershipService.acceptPartnershipRequest(_partnership!.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Partner isteği kabul edildi!'),
+                            backgroundColor: AppTheme.primary,
+                          ),
+                        );
+                        _loadPartnershipData();
+                        _loadUserById(user.id);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Hata: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              LockedMessageButton(
+                isLocked: _isMessageLocked,
+                onPressed: () async {
+                  try {
+                    final chatId = await _chatService.getOrCreateDirectChat(
+                      userId1: currentUserId,
+                      userId2: user.id,
+                      user1Name: '', // Will be fetched from auth
+                      user2Name: user.username,
+                    );
+                    if (context.mounted) {
+                      context.push('/chat', extra: {
+                        'chatId': chatId,
+                        'title': user.username,
+                      });
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Hata: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
           ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isFollowing ? Colors.grey[300] : AppTheme.primary,
-            foregroundColor: isFollowing ? AppTheme.textDark : Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -568,7 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Icon(
                               Icons.sports_soccer_outlined,
                               size: 20,
-                              color: AppTheme.primary.withOpacity(0.7),
+                              color: AppTheme.primary.withValues(alpha:0.7),
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -591,7 +589,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withOpacity(0.15),
+                                color: AppTheme.primary.withValues(alpha:0.15),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -624,7 +622,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Icon(
             icon,
             size: 20,
-            color: AppTheme.primary.withOpacity(0.7),
+            color: AppTheme.primary.withValues(alpha:0.7),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -750,7 +748,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: Colors.blue.withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

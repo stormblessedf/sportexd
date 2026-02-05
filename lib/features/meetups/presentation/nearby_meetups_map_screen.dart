@@ -32,7 +32,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
   String? _selectedMarkerId;
   bool _isLoading = true;
   LatLng? _userLocation;
-  Set<MeetupType> _selectedFilters = {};
+  final Set<MeetupType> _selectedFilters = {};
   bool _filterExpanded = false;
   List<MeetupModel> _allMeetups = [];
   double _currentZoom = 12;
@@ -246,8 +246,13 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  String _formatDate(DateTime date, {DateTime? endDate}) {
+    final startTime = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (endDate != null) {
+      final endTime = '${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}';
+      return '${date.day}/${date.month} $startTime - $endTime';
+    }
+    return '${date.day}/${date.month} $startTime';
   }
 
   @override
@@ -792,7 +797,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                             children: [
                               _buildInfoChip(
                                 Icons.schedule_rounded,
-                                _formatDate(meetup.date),
+                                _formatDate(meetup.date, endDate: meetup.endDate),
                               ),
                               const SizedBox(width: 10),
                               _buildInfoChip(

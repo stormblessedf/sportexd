@@ -98,8 +98,7 @@ class PlacesService {
 
       final request = _createJsObject({
         'input': query,
-        'includedRegionCodes': ['TR'],
-        'language': 'tr',
+        // No region restriction - works worldwide
       });
 
       final response = await _fetchAutocompleteSuggestions(request).toDart

@@ -185,11 +185,11 @@ class _FilterPanelState extends State<FilterPanel> {
             size: 18,
             color: isSelected ? AppTheme.primary : AppTheme.textMuted,
           ),
-          selectedColor: AppTheme.primary.withOpacity(0.15),
+          selectedColor: AppTheme.primary.withValues(alpha:0.15),
           checkmarkColor: AppTheme.primary,
           side: BorderSide(
             color: isSelected
-                ? AppTheme.primary.withOpacity(0.3)
+                ? AppTheme.primary.withValues(alpha:0.3)
                 : AppTheme.borderLight,
           ),
           onSelected: (selected) {
@@ -226,10 +226,10 @@ class _FilterPanelState extends State<FilterPanel> {
     return ChoiceChip(
       selected: isSelected,
       label: Text(label),
-      selectedColor: AppTheme.primary.withOpacity(0.15),
+      selectedColor: AppTheme.primary.withValues(alpha:0.15),
       side: BorderSide(
         color: isSelected
-            ? AppTheme.primary.withOpacity(0.3)
+            ? AppTheme.primary.withValues(alpha:0.3)
             : AppTheme.borderLight,
       ),
       onSelected: (selected) {
@@ -252,9 +252,9 @@ class _FilterPanelState extends State<FilterPanel> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
           ),
           child: Row(
             children: [
@@ -308,10 +308,10 @@ class _FilterPanelState extends State<FilterPanel> {
           avatar: d.$1 == null
               ? null
               : const Icon(Icons.near_me, size: 16),
-          selectedColor: AppTheme.primary.withOpacity(0.15),
+          selectedColor: AppTheme.primary.withValues(alpha:0.15),
           side: BorderSide(
             color: isSelected
-                ? AppTheme.primary.withOpacity(0.3)
+                ? AppTheme.primary.withValues(alpha:0.3)
                 : AppTheme.borderLight,
           ),
           onSelected: (selected) {
@@ -352,10 +352,10 @@ class _FilterPanelState extends State<FilterPanel> {
           selected: isSelected,
           label: Text(o.$2),
           avatar: Icon(o.$3, size: 18),
-          selectedColor: AppTheme.primary.withOpacity(0.15),
+          selectedColor: AppTheme.primary.withValues(alpha:0.15),
           side: BorderSide(
             color: isSelected
-                ? AppTheme.primary.withOpacity(0.3)
+                ? AppTheme.primary.withValues(alpha:0.3)
                 : AppTheme.borderLight,
           ),
           onSelected: (selected) {
@@ -388,10 +388,10 @@ class _FilterPanelState extends State<FilterPanel> {
           selected: isSelected,
           label: Text(o.$2),
           avatar: Icon(o.$3, size: 18),
-          selectedColor: AppTheme.primary.withOpacity(0.15),
+          selectedColor: AppTheme.primary.withValues(alpha:0.15),
           side: BorderSide(
             color: isSelected
-                ? AppTheme.primary.withOpacity(0.3)
+                ? AppTheme.primary.withValues(alpha:0.3)
                 : AppTheme.borderLight,
           ),
           onSelected: (selected) {
@@ -412,12 +412,32 @@ class _FilterPanelState extends State<FilterPanel> {
         return Icons.sports_soccer;
       case MeetupType.basketball:
         return Icons.sports_basketball;
+      case MeetupType.volleyball:
+        return Icons.sports_volleyball;
       case MeetupType.tennis:
         return Icons.sports_tennis;
-      case MeetupType.yoga:
-        return Icons.self_improvement;
+      case MeetupType.tableTennis:
+        return Icons.sports_cricket;
+      case MeetupType.badminton:
+        return Icons.sports_tennis;
+      case MeetupType.swimming:
+        return Icons.pool;
       case MeetupType.running:
         return Icons.directions_run;
+      case MeetupType.cycling:
+        return Icons.directions_bike;
+      case MeetupType.hiking:
+        return Icons.hiking;
+      case MeetupType.yoga:
+        return Icons.self_improvement;
+      case MeetupType.fitness:
+        return Icons.fitness_center;
+      case MeetupType.boxing:
+        return Icons.sports_mma;
+      case MeetupType.climbing:
+        return Icons.terrain;
+      case MeetupType.skiing:
+        return Icons.downhill_skiing;
       case MeetupType.other:
         return Icons.sports;
     }

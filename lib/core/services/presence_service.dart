@@ -12,10 +12,10 @@ class PresenceService {
   /// Sets user as online
   Future<void> setUserOnline(String userId) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection('users').doc(userId).set({
         'isOnline': true,
         'lastSeen': DateTime.now().toIso8601String(),
-      });
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error setting user online: $e');
     }
@@ -24,10 +24,10 @@ class PresenceService {
   /// Sets user as offline
   Future<void> setUserOffline(String userId) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection('users').doc(userId).set({
         'isOnline': false,
         'lastSeen': DateTime.now().toIso8601String(),
-      });
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error setting user offline: $e');
     }
@@ -36,9 +36,9 @@ class PresenceService {
   /// Updates last seen timestamp
   Future<void> updateLastSeen(String userId) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
+      await _firestore.collection('users').doc(userId).set({
         'lastSeen': DateTime.now().toIso8601String(),
-      });
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error updating last seen: $e');
     }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Event Evaluation Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "text-main": "#111813",
+                        "text-secondary": "#61896f",
+                        "card-bg-light": "#ffffff",
+                        "card-bg-dark": "#1a2c20",
+                        "border-light": "#dbe6df",
+                        "border-dark": "#2a3c30",
+                        "status-red": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(97, 137, 111, 0.2);
+            border-radius: 20px;
+        }
+        .rating {
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 0.1rem;
+        }
+        .rating input {
+            appearance: none;
+            -webkit-appearance: none;
+            display: none;
+        }
+        .rating label {
+            cursor: pointer;
+            color: #dbe6df;
+            transition: color 0.2s;
+        }
+        .dark .rating label {
+             color: #2a3c30;
+        }
+        .rating input:checked ~ label,
+        .rating label:hover,
+        .rating label:hover ~ label {
+            color: #FFB800;
+        }
+        .slider-thumb {
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-white overflow-hidden h-screen flex flex-col">
+<header class="flex items-center justify-between px-4 py-3 bg-card-bg-light dark:bg-card-bg-dark border-b border-border-light dark:border-border-dark shrink-0 z-10">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-main dark:text-white">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] text-center flex-1">Etkinlik Değerlendirme</h2>
+<button class="flex items-center justify-end p-2 text-text-secondary dark:text-gray-400 font-bold text-sm hover:text-text-main dark:hover:text-white transition-colors">
+        İptal
+    </button>
+</header>
+<main class="flex-1 overflow-y-auto pb-24">
+<div class="p-4">
+<div class="flex flex-col gap-4 rounded-xl border border-border-light dark:border-border-dark bg-card-bg-light dark:bg-card-bg-dark p-5 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1.5">
+<h3 class="text-xl font-bold leading-tight">Salı Akşamı Halı Saha</h3>
+<div class="flex items-center gap-1.5 text-text-secondary dark:text-gray-400 text-sm font-medium">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span>24 Ekim 2023</span>
+<span class="mx-1">•</span>
+<span>21:00 - 22:00</span>
+</div>
+<div class="flex items-center gap-1.5 text-text-secondary dark:text-gray-400 text-sm font-medium">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span>Caddebostan Sahil</span>
+</div>
+</div>
+<button class="flex h-9 px-4 items-center justify-center rounded-lg bg-primary/10 hover:bg-primary/20 text-primary-dark dark:text-primary font-medium text-sm transition-colors">
+                    Detaylar
+                </button>
+</div>
+</div>
+</div>
+<h3 class="text-xl font-bold leading-tight px-4 pb-2 pt-2">Katılımcılar</h3>
+<div class="flex flex-col gap-3 px-4 pb-4">
+<div class="bg-card-bg-light dark:bg-card-bg-dark rounded-xl border border-border-light dark:border-border-dark p-4 shadow-sm transition-all duration-300">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="Male portrait smiling" class="h-12 w-12 rounded-full object-cover border border-border-light dark:border-border-dark" data-alt="Male portrait smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIv_oLGtpWlhUip80ysPRVY68JFOyoqpcvm6JH5Gz-Oz7CWaIRPHO4azBVVAypHK_1kBpb9QYoYS7jSSRKp_tgDDJk0sScVXzbM0iY7GSHfEV-rbPGbXmlJHYUnJJSOnigtPKO1X6GD2xVd6pwAuFflVrShj0N5xPkVSnOaFOi4YRuUGzTeSAi1SZv_R1Rc13J82_EQnszANbhf9VEx0OJFX6bGO4vTKNtobmg8TEtciJxo3lp1U7ibgorLUIYFqg4xBEw5bzZXKI"/>
+<div class="absolute -bottom-1 -right-1 bg-primary text-[10px] font-bold text-background-dark px-1.5 py-0.5 rounded-full border-2 border-white dark:border-card-bg-dark">ORG</div>
+</div>
+<div class="flex flex-col justify-center h-12">
+<p class="font-bold text-base">Ahmet Yılmaz</p>
+</div>
+</div>
+<div class="relative w-20 h-8 bg-primary rounded-full flex items-center shadow-inner cursor-pointer transition-colors duration-300">
+<div class="absolute inset-0 flex items-center justify-center pr-7">
+<span class="text-[10px] font-bold text-background-dark uppercase tracking-wide leading-none">Geldi</span>
+</div>
+<div class="absolute right-1 w-6 h-6 bg-white rounded-full shadow-md z-10 slider-thumb flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xs font-bold">check</span>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-border-light dark:border-border-dark animate-fade-in">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium text-text-secondary dark:text-gray-300">Performans / Fair Play</span>
+<div class="rating">
+<input id="star5-p1" name="rating-p1" type="radio" value="5"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star5-p1">star</label>
+<input id="star4-p1" name="rating-p1" type="radio" value="4"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star4-p1">star</label>
+<input checked="" id="star3-p1" name="rating-p1" type="radio" value="3"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star3-p1">star</label>
+<input id="star2-p1" name="rating-p1" type="radio" value="2"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star2-p1">star</label>
+<input id="star1-p1" name="rating-p1" type="radio" value="1"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star1-p1">star</label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-card-bg-light dark:bg-card-bg-dark rounded-xl border border-border-light dark:border-border-dark p-4 shadow-sm opacity-90 hover:opacity-100 transition-all">
+<div class="flex items-center justify-between h-[88px] sm:h-auto">
+<div class="flex items-center gap-3">
+<img alt="Female portrait smiling" class="h-12 w-12 rounded-full object-cover border border-border-light dark:border-border-dark grayscale-[0.5]" data-alt="Female portrait smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCXrzBp8ab9wjFFAzIDyxyw27W9ZxapMXFEFOkEz9FTKVsXTLUQtaZ8mWxe2wZv1lxdo4Soy8X1tbqanRqbm_xNiqb6gZ4R-MN9FykeJFrQHO2gmwpk-xCWaYdObLY1j70qoAnFlymCG3fZ6ll8kCJv7l1kfuOr0yj381YxHaDwC6PXANs8WDGupBaGRU5mm27HL2QnDHVx7sVGDM0BlhhVBszXZo3ojVKpjExglfyG3Aiv1j0zYvTtatk2F4RYZyA48pOUG0mNE8"/>
+<div class="flex flex-col justify-center h-12">
+<p class="font-bold text-base">Ayşe Demir</p>
+</div>
+</div>
+<div class="relative w-20 h-8 bg-status-red rounded-full flex items-center shadow-inner cursor-pointer transition-colors duration-300">
+<div class="absolute inset-0 flex items-center justify-center pl-7">
+<span class="text-[10px] font-bold text-white uppercase tracking-wide leading-none">Gelmedi</span>
+</div>
+<div class="absolute left-1 w-6 h-6 bg-white rounded-full shadow-md z-10 slider-thumb flex items-center justify-center">
+<span class="material-symbols-outlined text-status-red text-xs font-bold">close</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-card-bg-light dark:bg-card-bg-dark rounded-xl border border-border-light dark:border-border-dark p-4 shadow-sm">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-3">
+<img alt="Male portrait with glasses" class="h-12 w-12 rounded-full object-cover border border-border-light dark:border-border-dark" data-alt="Male portrait with glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQYrB_7OpOMlXQHMzzh0-UljIxYFjOrUIC2gw0RLhF2eo8VLw7G6SVOSAhmydFHNczK4VZDHup9m4cqco8y5hswNCKcOrbVGX5QvXODxov5i6E-J7pyfsrschdg7g4atfgDR-wow3wd54IotAfflQpyrlrJFnFIZh9-qKRRCdYNASXXkbIHvvoamQNANwwBZpjGtLtBRevjeDRd9j53qe7StgqLAjb4d1Ml3Xxwk4GG9jAYc5PmDnu9ShK2tToKcmzCGI98KWzc9A"/>
+<div class="flex flex-col justify-center h-12">
+<p class="font-bold text-base">Mehmet Kaya</p>
+</div>
+</div>
+<div class="relative w-20 h-8 bg-primary rounded-full flex items-center shadow-inner cursor-pointer transition-colors duration-300">
+<div class="absolute inset-0 flex items-center justify-center pr-7">
+<span class="text-[10px] font-bold text-background-dark uppercase tracking-wide leading-none">Geldi</span>
+</div>
+<div class="absolute right-1 w-6 h-6 bg-white rounded-full shadow-md z-10 slider-thumb flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xs font-bold">check</span>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-border-light dark:border-border-dark">
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium text-text-secondary dark:text-gray-300">Performans / Fair Play</span>
+<div class="rating">
+<input checked="" id="star5-p3" name="rating-p3" type="radio" value="5"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star5-p3">star</label>
+<input id="star4-p3" name="rating-p3" type="radio" value="4"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star4-p3">star</label>
+<input id="star3-p3" name="rating-p3" type="radio" value="3"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star3-p3">star</label>
+<input id="star2-p3" name="rating-p3" type="radio" value="2"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star2-p3">star</label>
+<input id="star1-p3" name="rating-p3" type="radio" value="1"/><label class="material-symbols-outlined !text-[32px] fill-current" for="star1-p3">star</label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-card-bg-light dark:bg-card-bg-dark rounded-xl border border-border-light dark:border-border-dark p-4 shadow-sm opacity-90 hover:opacity-100 transition-all">
+<div class="flex items-center justify-between h-[88px] sm:h-auto">
+<div class="flex items-center gap-3">
+<img alt="Male portrait with stubble" class="h-12 w-12 rounded-full object-cover border border-border-light dark:border-border-dark grayscale-[0.5]" data-alt="Male portrait with stubble" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn4S8Kb7tiVRkJUk0NF-tdi6icjc-aYkDWPVaS6UI6k6izDXAXzF82X5GqvMkbTLccEkukRMmH80Dd7yEDufosmQY73fa3bQMrliYCy4FlPK-8adiiEtvj7ZOFXYyGZRC7CW5ll1wCccc-HvjhgDzVYiqhpUMlWR-it9f9nYpdZr5mmfLL1_-taBhdIfZB1QlD89EE819tzaGfuEXH8ohq1GRDrR1d6RKhf0dnevB5YKDo49ZKq-4qFxsxuGIvRN2uqPh2L2QPT6g"/>
+<div class="flex flex-col justify-center h-12">
+<p class="font-bold text-base">Caner Erkin</p>
+</div>
+</div>
+<div class="relative w-20 h-8 bg-status-red rounded-full flex items-center shadow-inner cursor-pointer transition-colors duration-300">
+<div class="absolute inset-0 flex items-center justify-center pl-7">
+<span class="text-[10px] font-bold text-white uppercase tracking-wide leading-none">Gelmedi</span>
+</div>
+<div class="absolute left-1 w-6 h-6 bg-white rounded-full shadow-md z-10 slider-thumb flex items-center justify-center">
+<span class="material-symbols-outlined text-status-red text-xs font-bold">close</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-card-bg-light dark:bg-card-bg-dark rounded-xl border border-border-light dark:border-border-dark p-4 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<img alt="Male portrait casual" class="h-12 w-12 rounded-full object-cover border border-border-light dark:border-border-dark" data-alt="Male portrait casual" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7WQ--4OliQE-KV7ZHKTQXEq-Z2LAt74xKXR_bd62NE7RcJ2taRe9FwiOmE58TggU2XxvhSXTLBo5TpvkdB7r-QhHeKGX1BZjl-QLtnzpiz59bbWLlk8gW0vNxEvYNvHUWUYFEgog2vXBnETr4yo4cjY45cO6wLCshSueogm2yuU01dkYi_39xGNB-WnQhIQ0hWUOiGGLA12qcN3IBufiM3IAnTAXN1TzyFl1FpjtuVaXW8ZDuxWw1Q1fI6La82JrIkgzpMIu5Bw4"/>
+<div class="flex flex-col justify-center h-12">
+<p class="font-bold text-base">Ali Veli</p>
+</div>
+</div>
+<div class="relative w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center shadow-inner cursor-pointer transition-colors duration-300">
+<div class="absolute left-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 opacity-50"><span class="material-symbols-outlined text-xs">close</span></div>
+<div class="absolute right-2 text-[10px] font-bold text-gray-400 dark:text-gray-500 opacity-50"><span class="material-symbols-outlined text-xs">check</span></div>
+<div class="absolute left-1/2 -translate-x-1/2 w-6 h-6 bg-white rounded-full shadow-md z-10 slider-thumb flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-300 text-xs">drag_handle</span>
+</div>
+</div>
+</div>
+</div>
+<div class="h-10"></div>
+</div>
+</main>
+<div class="fixed bottom-0 left-0 w-full p-4 bg-card-bg-light dark:bg-card-bg-dark border-t border-border-light dark:border-border-dark backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 z-20">
+<button class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary hover:bg-primary-dark h-12 text-background-dark text-base font-bold transition-all transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+        Değerlendirmeyi Tamamla
+    </button>
+</div>
+
+</body></html>

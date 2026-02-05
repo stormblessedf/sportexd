@@ -1,6 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum MeetupType { football, yoga, tennis, basketball, running, other }
+enum MeetupType {
+  football,
+  basketball,
+  volleyball,
+  tennis,
+  tableTennis,
+  badminton,
+  swimming,
+  running,
+  cycling,
+  hiking,
+  yoga,
+  fitness,
+  boxing,
+  climbing,
+  skiing,
+  other,
+}
 
 extension MeetupTypeExtension on MeetupType {
   String get displayName {
@@ -9,12 +26,32 @@ extension MeetupTypeExtension on MeetupType {
         return 'Futbol';
       case MeetupType.basketball:
         return 'Basketbol';
+      case MeetupType.volleyball:
+        return 'Voleybol';
       case MeetupType.tennis:
         return 'Tenis';
-      case MeetupType.yoga:
-        return 'Yoga';
+      case MeetupType.tableTennis:
+        return 'Masa Tenisi';
+      case MeetupType.badminton:
+        return 'Badminton';
+      case MeetupType.swimming:
+        return 'Yüzme';
       case MeetupType.running:
         return 'Koşu';
+      case MeetupType.cycling:
+        return 'Bisiklet';
+      case MeetupType.hiking:
+        return 'Doğa Yürüyüşü';
+      case MeetupType.yoga:
+        return 'Yoga';
+      case MeetupType.fitness:
+        return 'Fitness';
+      case MeetupType.boxing:
+        return 'Boks';
+      case MeetupType.climbing:
+        return 'Tırmanış';
+      case MeetupType.skiing:
+        return 'Kayak';
       case MeetupType.other:
         return 'Diğer';
     }
@@ -28,17 +65,21 @@ class MeetupModel {
   final String imageUrl;
   final MeetupType type;
   final DateTime date;
+  final DateTime? endDate;
   final String locationName;
   final String locationAddress;
   final String organizerId;
   final String organizerName;
   final String? organizerImageUrl;
+  final double? organizerRating;
   final int currentParticipants;
   final int maxParticipants;
   final bool isFull;
   final List<String> participantIds;
+  final List<String> waitlistUserIds;
   final double? latitude;
   final double? longitude;
+  final bool isOrganizerOnlyChat;
   final DateTime createdAt;
 
   MeetupModel({
@@ -48,17 +89,21 @@ class MeetupModel {
     required this.imageUrl,
     required this.type,
     required this.date,
+    this.endDate,
     required this.locationName,
     required this.locationAddress,
     required this.organizerId,
     required this.organizerName,
     this.organizerImageUrl,
+    this.organizerRating,
     required this.currentParticipants,
     required this.maxParticipants,
     this.isFull = false,
     this.participantIds = const [],
+    this.waitlistUserIds = const [],
     this.latitude,
     this.longitude,
+    this.isOrganizerOnlyChat = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -72,17 +117,21 @@ class MeetupModel {
       'imageUrl': imageUrl,
       'type': type.name,
       'date': Timestamp.fromDate(date),
+      'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
       'locationName': locationName,
       'locationAddress': locationAddress,
       'organizerId': organizerId,
       'organizerName': organizerName,
       'organizerImageUrl': organizerImageUrl,
+      'organizerRating': organizerRating,
       'currentParticipants': currentParticipants,
       'maxParticipants': maxParticipants,
       'isFull': isFull,
       'participantIds': participantIds,
+      'waitlistUserIds': waitlistUserIds,
       'latitude': latitude,
       'longitude': longitude,
+      'isOrganizerOnlyChat': isOrganizerOnlyChat,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -109,17 +158,21 @@ class MeetupModel {
         orElse: () => MeetupType.other,
       ),
       date: parsedDate,
+      endDate: json['endDate'] != null ? _parseDateTime(json['endDate']) : null,
       locationName: json['locationName'] ?? '',
       locationAddress: json['locationAddress'] ?? '',
       organizerId: json['organizerId'] ?? '',
       organizerName: json['organizerName'] ?? 'Unknown',
       organizerImageUrl: json['organizerImageUrl'],
+      organizerRating: (json['organizerRating'] as num?)?.toDouble(),
       currentParticipants: json['currentParticipants'] ?? 0,
       maxParticipants: json['maxParticipants'] ?? 0,
       isFull: json['isFull'] ?? false,
       participantIds: List<String>.from(json['participantIds'] ?? []),
+      waitlistUserIds: List<String>.from(json['waitlistUserIds'] ?? []),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      isOrganizerOnlyChat: json['isOrganizerOnlyChat'] ?? false,
       createdAt: _parseDateTime(json['createdAt']),
     );
   }

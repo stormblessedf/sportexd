@@ -7,7 +7,6 @@ import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/signup_screen.dart';
-import 'features/home/presentation/home_screen.dart';
 import 'features/discovery/presentation/discovery_page.dart';
 import 'features/main/presentation/main_shell.dart';
 import 'features/profile/presentation/profile_screen.dart';
@@ -15,19 +14,33 @@ import 'features/profile/presentation/edit_profile_screen.dart';
 import 'features/profile/presentation/create_profile_screen.dart';
 import 'features/profile/presentation/settings_screen.dart';
 import 'features/profile/presentation/rate_members_screen.dart';
+import 'features/profile/presentation/user_ratings_page.dart';
+import 'features/profile/presentation/select_meetup_screen.dart';
+import 'features/profile/presentation/rate_user_screen.dart';
+import 'features/profile/presentation/partner_list_screen.dart';
+import 'features/profile/presentation/partnership_requests_screen.dart';
+import 'core/services/partnership_service.dart';
+import 'core/services/messaging_permission_service.dart';
 import 'features/meetups/presentation/create_meetup_screen.dart';
 import 'features/meetups/presentation/meetup_detail_screen.dart';
 import 'features/meetups/presentation/past_meetups_screen.dart';
+import 'features/meetups/presentation/event_evaluation_screen.dart';
 import 'features/chat/presentation/my_chats_screen.dart';
 import 'features/chat/presentation/chat_screen.dart';
 import 'core/models/user_model.dart';
 import 'core/models/meetup_model.dart';
+import 'core/models/eligible_meetup.dart';
 import 'package:provider/provider.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/meetup_service.dart';
 import 'core/services/location_service.dart';
 import 'core/services/presence_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/map_preferences_service.dart';
 import 'features/meetups/presentation/nearby_meetups_map_screen.dart';
+import 'features/notifications/presentation/notifications_screen.dart';
+import 'features/notifications/presentation/notification_settings_screen.dart';
+import 'core/utils/admin_actions.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,6 +101,18 @@ final _router = GoRouter(
           );
         }
         return MeetupDetailScreen(meetup: meetup);
+      },
+    ),
+    GoRoute(
+      path: '/evaluate-event',
+      builder: (context, state) {
+        final meetup = state.extra as MeetupModel?;
+        if (meetup == null) {
+          return const Scaffold(
+            body: Center(child: Text('Etkinlik bulunamadı')),
+          );
+        }
+        return EventEvaluationScreen(meetup: meetup);
       },
     ),
     GoRoute(
@@ -165,6 +190,77 @@ final _router = GoRouter(
         );
       },
     ),
+    GoRoute(
+      path: '/user-ratings/:userId',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId'];
+        if (userId == null || userId.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Kullanıcı bulunamadı')),
+          );
+        }
+        return UserRatingsPage(profileOwnerId: userId);
+      },
+    ),
+    GoRoute(
+      path: '/select-meetup',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) {
+          return const Scaffold(
+            body: Center(child: Text('Kullanıcı bilgisi bulunamadı')),
+          );
+        }
+        return SelectMeetupScreen(
+          currentUserId: extra['currentUserId'] ?? '',
+          profileOwnerId: extra['profileOwnerId'] ?? '',
+        );
+      },
+    ),
+    GoRoute(
+      path: '/rate-user',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        if (extra == null) {
+          return const Scaffold(
+            body: Center(child: Text('Bilgi bulunamadı')),
+          );
+        }
+        return RateUserScreen(
+          currentUserId: extra['currentUserId'] ?? '',
+          profileOwnerId: extra['profileOwnerId'] ?? '',
+          meetup: extra['meetup'] as EligibleMeetup,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/admin-actions',
+      builder: (context, state) => const AdminActionsScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/notification-settings',
+      builder: (context, state) => const NotificationSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/partners/:userId',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId'];
+        if (userId == null || userId.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Kullanıcı bulunamadı')),
+          );
+        }
+        return PartnerListScreen(userId: userId);
+      },
+    ),
+    GoRoute(
+      path: '/partnership-requests',
+      builder: (context, state) => const PartnershipRequestsScreen(),
+    ),
   ],
 );
 
@@ -178,6 +274,8 @@ class SporsalApp extends StatefulWidget {
 class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
   final PresenceService _presenceService = PresenceService();
   final AuthService _authService = AuthService();
+  final NotificationService _notificationService = NotificationService();
+  final MapPreferencesService _mapPreferencesService = MapPreferencesService();
   String? _currentUserId;
 
   @override
@@ -185,6 +283,8 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializePresence();
+    _initializeNotifications();
+    _mapPreferencesService.initialize();
   }
 
   @override
@@ -194,15 +294,21 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  Future<void> _initializeNotifications() async {
+    await _notificationService.initialize();
+  }
+
   Future<void> _initializePresence() async {
     // Listen to auth state changes
     _authService.authStateChanges.listen((user) {
       if (user != null) {
         _currentUserId = user.uid;
         _presenceService.startPresenceUpdates(user.uid);
+        _notificationService.onUserLogin();
       } else {
         if (_currentUserId != null) {
           _presenceService.stopPresenceUpdates(_currentUserId!);
+          _notificationService.onUserLogout();
           _currentUserId = null;
         }
       }
@@ -237,6 +343,10 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
         Provider<MeetupService>(create: (_) => MeetupService()),
         Provider<LocationService>(create: (_) => LocationService()),
         Provider<PresenceService>.value(value: _presenceService),
+        Provider<PartnershipService>(create: (_) => PartnershipService()),
+        Provider<MessagingPermissionService>(create: (_) => MessagingPermissionService()),
+        ChangeNotifierProvider<NotificationService>.value(value: _notificationService),
+        ChangeNotifierProvider<MapPreferencesService>.value(value: _mapPreferencesService),
       ],
       child: MaterialApp.router(
         title: 'Sporsal',

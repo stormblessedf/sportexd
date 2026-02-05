@@ -32,7 +32,7 @@ class RecommendationSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
+                  color: accentColor.withValues(alpha:0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 18, color: accentColor),
@@ -119,7 +119,7 @@ class _RecommendationCard extends StatelessWidget {
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             height: 80,
-                            color: accentColor.withOpacity(0.1),
+                            color: accentColor.withValues(alpha:0.1),
                             child: Icon(
                               Icons.sports,
                               color: accentColor,
@@ -181,7 +181,7 @@ class _RecommendationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _formatDate(meetup.date),
+                            _formatDate(meetup.date, endDate: meetup.endDate),
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[600],
@@ -214,17 +214,21 @@ class _RecommendationCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(DateTime date, {DateTime? endDate}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final meetupDate = DateTime(date.year, date.month, date.day);
+    final startTime = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final endTimeStr = endDate != null
+        ? ' - ${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}'
+        : '';
 
     if (meetupDate == today) {
-      return 'Bugün ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      return 'Bugün $startTime$endTimeStr';
     } else if (meetupDate == tomorrow) {
-      return 'Yarın ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+      return 'Yarın $startTime$endTimeStr';
     }
-    return '${date.day}/${date.month} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    return '${date.day}/${date.month} $startTime$endTimeStr';
   }
 }

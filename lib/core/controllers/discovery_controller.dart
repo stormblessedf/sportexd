@@ -3,16 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../models/filter_state.dart';
 import '../models/meetup_model.dart';
 import '../services/filter_service.dart';
-import '../services/search_service.dart';
+import '../services/search_service.dart' show Debouncer;
 import '../services/recommendation_service.dart';
 import '../services/location_service.dart';
 
 class DiscoveryController extends ChangeNotifier {
   // Services
   final FilterService _filterService = FilterService();
-  final SearchService _searchService = SearchService();
   final RecommendationService _recommendationService = RecommendationService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // State
   FilterState _filterState = FilterState.empty;

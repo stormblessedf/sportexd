@@ -6,12 +6,14 @@ class ProfileHeader extends StatelessWidget {
   final UserModel user;
   final bool isOwnProfile;
   final VoidCallback? onProfilePictureChange;
+  final VoidCallback? onPartnersTap;
 
   const ProfileHeader({
     super.key,
     required this.user,
     this.isOwnProfile = false,
     this.onProfilePictureChange,
+    this.onPartnersTap,
   });
 
   @override
@@ -22,8 +24,8 @@ class ProfileHeader extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppTheme.primary.withOpacity(0.15),
-            AppTheme.primary.withOpacity(0.05),
+            AppTheme.primary.withValues(alpha:0.15),
+            AppTheme.primary.withValues(alpha:0.05),
             AppTheme.backgroundLight,
           ],
         ),
@@ -46,7 +48,7 @@ class ProfileHeader extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.3),
+                        color: AppTheme.primary.withValues(alpha:0.3),
                         blurRadius: 12,
                         spreadRadius: 2,
                       ),
@@ -81,7 +83,7 @@ class ProfileHeader extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primary.withOpacity(0.5),
+                            color: AppTheme.primary.withValues(alpha:0.5),
                             blurRadius: 4,
                           ),
                         ],
@@ -117,7 +119,7 @@ class ProfileHeader extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Name and age
+          // Name, rating and age
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -128,6 +130,35 @@ class ProfileHeader extends StatelessWidget {
                   color: AppTheme.textDark,
                 ),
               ),
+              if (user.averageRating > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha:0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 18,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        user.averageRating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (user.age != null) ...[
                 const SizedBox(width: 8),
                 Text(
@@ -162,6 +193,33 @@ class ProfileHeader extends StatelessWidget {
               ],
             ),
           ],
+
+          // Partners count
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: onPartnersTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.handshake, size: 20, color: AppTheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${user.partners.length} Spor Partneri',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, size: 18, color: AppTheme.textMuted),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

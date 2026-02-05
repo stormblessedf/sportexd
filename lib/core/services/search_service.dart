@@ -18,7 +18,7 @@ class SearchService {
       return meetup.title.toLowerCase().contains(lowerQuery) ||
           meetup.description.toLowerCase().contains(lowerQuery) ||
           meetup.locationName.toLowerCase().contains(lowerQuery) ||
-          (meetup.locationAddress?.toLowerCase().contains(lowerQuery) ?? false) ||
+          meetup.locationAddress.toLowerCase().contains(lowerQuery) ||
           meetup.organizerName.toLowerCase().contains(lowerQuery);
     }).toList();
   }
@@ -55,7 +55,7 @@ class SearchService {
         text: text.substring(index, index + query.length),
         style: highlightStyle ??
             normalStyle?.copyWith(
-              backgroundColor: Colors.yellow.withOpacity(0.3),
+              backgroundColor: Colors.yellow.withValues(alpha: 0.3),
               fontWeight: FontWeight.bold,
             ),
       ));
@@ -83,7 +83,7 @@ class SearchService {
     return meetup.title.toLowerCase().contains(lowerQuery) ||
         meetup.description.toLowerCase().contains(lowerQuery) ||
         meetup.locationName.toLowerCase().contains(lowerQuery) ||
-        (meetup.locationAddress?.toLowerCase().contains(lowerQuery) ?? false);
+        meetup.locationAddress.toLowerCase().contains(lowerQuery);
   }
 }
 

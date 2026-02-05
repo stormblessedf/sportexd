@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/map_preferences_service.dart';
 import '../../../core/models/user_model.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -82,10 +84,21 @@ class SettingsScreen extends StatelessWidget {
                 subtitle: const Text('Hangi bildirimleri almak istersiniz?'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Bildirim ayarları yakında eklenecek!'),
-                    ),
+                  context.push('/notification-settings');
+                },
+              ),
+              const Divider(),
+
+              // Appearance Section
+              _buildSectionHeader('Görünüm'),
+              Consumer<MapPreferencesService>(
+                builder: (context, mapPrefs, _) {
+                  return ListTile(
+                    leading: const Icon(Icons.map_outlined),
+                    title: const Text('Harita Stili'),
+                    subtitle: Text(mapPrefs.currentStyle.displayName),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => _showMapStylePicker(context, mapPrefs),
                   );
                 },
               ),
@@ -122,6 +135,19 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ],
                   );
+                },
+              ),
+              const Divider(),
+
+              // Admin Section (for maintenance tasks)
+              _buildSectionHeader('Yönetim'),
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: const Text('Admin İşlemleri'),
+                subtitle: const Text('Bakım ve yönetim araçları'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  context.push('/admin-actions');
                 },
               ),
               const Divider(),
@@ -189,5 +215,65 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showMapStylePicker(BuildContext context, MapPreferencesService mapPrefs) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'Harita Stili',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            RadioGroup<MapStyleOption>(
+              groupValue: mapPrefs.currentStyle,
+              onChanged: (MapStyleOption? value) {
+                if (value != null) {
+                  mapPrefs.setMapStyle(value);
+                  Navigator.pop(context);
+                }
+              },
+              child: Column(
+                children: MapStyleOption.values.map((style) => RadioListTile<MapStyleOption>(
+                  title: Text(style.displayName),
+                  subtitle: Text(_getStyleDescription(style)),
+                  value: style,
+                  activeColor: Theme.of(context).colorScheme.primary,
+                )).toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getStyleDescription(MapStyleOption style) {
+    switch (style) {
+      case MapStyleOption.enhanced:
+        return 'Yeşil tonlarında sportif görünüm';
+      case MapStyleOption.dark:
+        return 'Gece kullanımı için karanlık tema';
+      case MapStyleOption.light:
+        return 'Klasik açık renkli harita';
+      case MapStyleOption.minimal:
+        return 'Sade ve temiz görünüm';
+    }
   }
 }
