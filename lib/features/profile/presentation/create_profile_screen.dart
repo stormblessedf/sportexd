@@ -61,7 +61,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
     if (_imageBytes == null) return null;
 
     try {
-      final ref = FirebaseStorage.instance.ref('profile_pictures/$userId.jpg');
+      final ref = FirebaseStorage.instance.ref('profile_images/$userId/$userId.jpg');
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {'uploadedBy': userId},
@@ -280,7 +280,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               _buildSectionTitle('Cinsiyet'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _selectedGender,
+                value: _selectedGender,
                 decoration: _inputDecoration('Seçiniz', Icons.wc),
                 items: _genderOptions.map((gender) {
                   return DropdownMenuItem(value: gender, child: Text(gender));

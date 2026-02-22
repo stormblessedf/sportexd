@@ -10,6 +10,7 @@ import '../../../core/services/location_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/map_preferences_service.dart';
 import '../../../core/utils/custom_marker_generator.dart';
+import '../../../core/utils/route_distance_calculator.dart';
 
 class NearbyMeetupsMapScreen extends StatefulWidget {
   /// If true, shows without AppBar (for embedding in other screens)
@@ -86,12 +87,16 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
         zoom: _currentZoom,
       );
 
+      // Selected markers use 1.6x SizedBox in buildMarkerWidget, so Marker must match
+      final markerWidth = isSelected ? size.width * 1.6 : size.width;
+      final markerHeight = isSelected ? size.height * 1.6 : size.height;
+
       markers.add(
         Marker(
           key: ValueKey(meetup.id),
           point: point,
-          width: size.width,
-          height: size.height,
+          width: markerWidth,
+          height: markerHeight,
           alignment: Alignment.center,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
@@ -118,6 +123,19 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     });
     // Rebuild markers to update selection state
     _buildMarkers(_allMeetups);
+
+    // Rota varsa haritayı rotaya sığdır
+    if (meetup.hasRoute && meetup.routeData!.hasGeometry) {
+      final routePoints = meetup.routeData!.routeGeometry
+          .map((pair) => LatLng(pair[0], pair[1]))
+          .toList();
+      if (routePoints.length >= 2) {
+        final bounds = LatLngBounds.fromPoints(routePoints);
+        _mapController.fitCamera(
+          CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(60)),
+        );
+      }
+    }
   }
 
   void _onClusterTap(List<Marker> markers) {
@@ -402,6 +420,24 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                     },
                   ),
                 ),
+                // Seçili etkinliğin rota çizgisi
+                if (_selectedMeetup != null && _selectedMeetup!.hasRoute && _selectedMeetup!.routeData!.hasGeometry)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _selectedMeetup!.routeData!.routeGeometry
+                            .map((pair) => LatLng(pair[0], pair[1]))
+                            .toList(),
+                        color: CustomMarkerGenerator.getSportColor(_selectedMeetup!.type),
+                        strokeWidth: 4,
+                      ),
+                    ],
+                  ),
+                // Seçili etkinliğin rota başlangıç/bitiş marker'ları
+                if (_selectedMeetup != null && _selectedMeetup!.hasRoute)
+                  MarkerLayer(
+                    markers: _buildRouteMarkers(_selectedMeetup!),
+                  ),
               ],
             );
           },
@@ -804,6 +840,13 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                                 Icons.group_rounded,
                                 '${meetup.currentParticipants}/${meetup.maxParticipants}',
                               ),
+                              if (meetup.hasRoute) ...[
+                                const SizedBox(width: 10),
+                                _buildInfoChip(
+                                  Icons.route_rounded,
+                                  RouteDistanceCalculator.formatDistance(meetup.routeData!.totalDistanceKm),
+                                ),
+                              ],
                             ],
                           ),
                         ],
@@ -831,6 +874,50 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
         ),
       ),
     );
+  }
+
+  List<Marker> _buildRouteMarkers(MeetupModel meetup) {
+    final markers = <Marker>[];
+    final route = meetup.routeData!;
+    final sportColor = CustomMarkerGenerator.getSportColor(meetup.type);
+
+    // Başlangıç noktası
+    markers.add(Marker(
+      point: LatLng(route.startPoint.latitude, route.startPoint.longitude),
+      width: 32, height: 32,
+      child: Icon(Icons.trip_origin, color: sportColor, size: 28),
+    ));
+
+    // Ara noktalar
+    for (int i = 0; i < route.waypoints.length; i++) {
+      final wp = route.waypoints[i];
+      markers.add(Marker(
+        point: LatLng(wp.latitude, wp.longitude),
+        width: 22, height: 22,
+        child: Container(
+          decoration: BoxDecoration(
+            color: sportColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+          ),
+          child: Center(
+            child: Text('${i + 1}',
+              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ));
+    }
+
+    // Bitiş noktası
+    if (route.endPoint != null) {
+      markers.add(Marker(
+        point: LatLng(route.endPoint!.latitude, route.endPoint!.longitude),
+        width: 32, height: 32,
+        child: Icon(Icons.location_on, color: sportColor, size: 28),
+      ));
+    }
+
+    return markers;
   }
 
   Widget _buildInfoChip(IconData icon, String text) {

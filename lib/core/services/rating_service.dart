@@ -1,12 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/rating_model.dart';
 import '../models/user_model.dart';
 import '../models/rating_distribution.dart';
 import '../models/eligible_meetup.dart';
+import 'badge_award_service.dart';
 
 class RatingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final BadgeAwardService _badgeAwardService;
+
+  RatingService({BadgeAwardService? badgeAwardService})
+      : _badgeAwardService = badgeAwardService ?? BadgeAwardService();
+
+  String _buildRatingDocId(String meetupId, String raterId, String ratedUserId) {
+    return '${meetupId}_${raterId}_$ratedUserId';
+  }
 
   /// Validates rating value (1.0 - 5.0)
   void validateRating(double rating) {
@@ -31,14 +40,39 @@ class RatingService {
         throw ArgumentError('Comment must be 200 characters or less');
       }
 
-      // Check for duplicate rating
-      final alreadyRated = await hasRatedUserInMeetup(
+      // Validate both users participated in the meetup
+      final meetupDoc = await _firestore
+          .collection('meetups')
+          .doc(rating.meetupId)
+          .get();
+      if (!meetupDoc.exists) {
+        throw StateError('Buluşma bulunamadı');
+      }
+      final participantIds = List<String>.from(
+        meetupDoc.data()?['participantIds'] ?? [],
+      );
+      if (!participantIds.contains(rating.raterId) ||
+          !participantIds.contains(rating.ratedUserId)) {
+        throw StateError('Her iki kullanıcı da bu buluşmaya katılmış olmalı');
+      }
+
+      final ratingDocId = _buildRatingDocId(
+        rating.meetupId,
         rating.raterId,
         rating.ratedUserId,
-        rating.meetupId,
       );
 
-      if (alreadyRated) {
+      // Backward-compatibility check for pre-existing legacy documents.
+      // New writes use deterministic IDs and are protected in transaction below.
+      final legacyDuplicate = await _firestore
+          .collection('ratings')
+          .where('raterId', isEqualTo: rating.raterId)
+          .where('ratedUserId', isEqualTo: rating.ratedUserId)
+          .where('meetupId', isEqualTo: rating.meetupId)
+          .limit(1)
+          .get();
+
+      if (legacyDuplicate.docs.isNotEmpty) {
         throw StateError(
           'User has already rated this participant for this meetup',
         );
@@ -81,53 +115,35 @@ class RatingService {
 
       // Create rating with all info
       final ratingWithInfo = rating.copyWith(
+        id: ratingDocId,
         raterName: raterName,
         raterPhotoUrl: raterPhotoUrl,
         meetupTitle: meetupTitle,
         sportType: sportType,
       );
 
-      // Step 1: Create rating document
-      final ratingRef = _firestore.collection('ratings').doc(rating.id);
-      await ratingRef.set(ratingWithInfo.toJson());
-      debugPrint('Rating document created: ${rating.id}');
+      final ratingRef = _firestore.collection('ratings').doc(ratingDocId);
 
-      // Step 2: Get current user stats and update
-      final userRef = _firestore.collection('users').doc(rating.ratedUserId);
-      final userDoc = await userRef.get();
+      await _firestore.runTransaction((transaction) async {
+        final existingRatingDoc = await transaction.get(ratingRef);
+        if (existingRatingDoc.exists) {
+          throw StateError(
+            'User has already rated this participant for this meetup',
+          );
+        }
 
-      if (userDoc.exists) {
-        final userData = userDoc.data()!;
-        final currentAverage = (userData['averageRating'] ?? 0.0).toDouble();
-        final currentTotal = (userData['totalRatings'] ?? 0) as int;
-
-        // Calculate new average
-        final newTotal = currentTotal + 1;
-        final newAverage =
-            ((currentAverage * currentTotal) + rating.rating) / newTotal;
-        final roundedAverage =
-            (newAverage * 10).round() / 10; // Round to 1 decimal
-
-        debugPrint('=== RATING STATS UPDATE ===');
-        debugPrint('User ID: ${rating.ratedUserId}');
-        debugPrint('Current Average: $currentAverage');
-        debugPrint('Current Total: $currentTotal');
-        debugPrint('New Rating: ${rating.rating}');
-        debugPrint('New Average: $roundedAverage');
-        debugPrint('New Total: $newTotal');
-
-        // Update user stats
-        await userRef.update({
-          'averageRating': roundedAverage,
-          'totalRatings': newTotal,
-        });
-
-        debugPrint('User stats updated successfully');
-      } else {
-        debugPrint('ERROR: User document not found for ${rating.ratedUserId}');
-      }
+        // User rating aggregates (averageRating/totalRatings) are updated server-side
+        // by Cloud Function to avoid cross-user client writes.
+        transaction.set(ratingRef, ratingWithInfo.toJson());
+      });
 
       debugPrint('Rating submitted successfully');
+
+      // Fire-and-forget badge evaluation for the rated user
+      _badgeAwardService.evaluateAndAwardBadges(rating.ratedUserId).catchError((e) {
+        debugPrint('Badge evaluation failed: $e');
+        return <Badge>[];
+      });
     } catch (e) {
       debugPrint('Error submitting rating: $e');
       rethrow;
@@ -149,35 +165,18 @@ class RatingService {
       throw ArgumentError('Users cannot rate themselves');
     }
 
-    // Check for duplicate rating
-    final exists = await hasRated(
+    final ratingModel = RatingModel(
+      id: _buildRatingDocId(meetupId, raterId, ratedUserId),
       meetupId: meetupId,
       raterId: raterId,
       ratedUserId: ratedUserId,
+      rating: rating,
+      comment: comment,
+      createdAt: DateTime.now(),
     );
-    if (exists) {
-      throw StateError('User has already rated this participant');
-    }
 
     try {
-      final ratingId = _firestore.collection('ratings').doc().id;
-      final ratingModel = RatingModel(
-        id: ratingId,
-        meetupId: meetupId,
-        raterId: raterId,
-        ratedUserId: ratedUserId,
-        rating: rating,
-        comment: comment,
-        createdAt: DateTime.now(),
-      );
-
-      await _firestore
-          .collection('ratings')
-          .doc(ratingId)
-          .set(ratingModel.toJson());
-
-      // Update the rated user's average rating
-      await updateUserAverageRating(ratedUserId);
+      await submitRating(ratingModel);
     } catch (e) {
       debugPrint('Error creating rating: $e');
       rethrow;
@@ -395,57 +394,6 @@ class RatingService {
     return calculateAverage(ratingValues);
   }
 
-  /// Updates user rating statistics after a new rating
-  Future<void> updateUserRatingStats(String userId, double newRating) async {
-    try {
-      final userRef = _firestore.collection('users').doc(userId);
-      final userDoc = await userRef.get();
-
-      if (!userDoc.exists) {
-        throw StateError('User not found');
-      }
-
-      final userData = userDoc.data()!;
-      final currentAverage = (userData['averageRating'] ?? 0.0).toDouble();
-      final currentTotal = (userData['totalRatings'] ?? 0) as int;
-
-      // Calculate new average
-      final newTotal = currentTotal + 1;
-      final newAverage =
-          ((currentAverage * currentTotal) + newRating) / newTotal;
-      final roundedAverage =
-          (newAverage * 10).round() / 10; // Round to 1 decimal place
-
-      // Update user document
-      await userRef.update({
-        'averageRating': roundedAverage,
-        'totalRatings': newTotal,
-      });
-    } catch (e) {
-      debugPrint('Error updating user rating stats: $e');
-      rethrow;
-    }
-  }
-
-  /// Updates user's average rating in Firestore
-  Future<void> updateUserAverageRating(String userId) async {
-    try {
-      final ratings = await getUserRatings(userId);
-      final totalRatings = ratings.length;
-      final averageRating = totalRatings > 0
-          ? calculateAverage(ratings.map((r) => r.rating).toList())
-          : 0.0;
-
-      await _firestore.collection('users').doc(userId).update({
-        'averageRating': averageRating,
-        'totalRatings': totalRatings,
-      });
-    } catch (e) {
-      debugPrint('Error updating user average rating: $e');
-      rethrow;
-    }
-  }
-
   /// Gets eligible meetups for rating between two users
   Future<List<EligibleMeetup>> getEligibleMeetups(
     String currentUserId,
@@ -550,6 +498,13 @@ class RatingService {
     String meetupId,
   ) async {
     try {
+      final deterministicDoc = await _firestore
+          .collection('ratings')
+          .doc(_buildRatingDocId(meetupId, raterId, ratedUserId))
+          .get();
+      if (deterministicDoc.exists) return true;
+
+      // Fallback query for legacy random-ID rating docs.
       final snapshot = await _firestore
           .collection('ratings')
           .where('raterId', isEqualTo: raterId)
@@ -572,6 +527,13 @@ class RatingService {
     required String ratedUserId,
   }) async {
     try {
+      final deterministicDoc = await _firestore
+          .collection('ratings')
+          .doc(_buildRatingDocId(meetupId, raterId, ratedUserId))
+          .get();
+      if (deterministicDoc.exists) return true;
+
+      // Fallback query for legacy random-ID rating docs.
       final snapshot = await _firestore
           .collection('ratings')
           .where('meetupId', isEqualTo: meetupId)
@@ -630,7 +592,7 @@ class RatingService {
       final meetupsSnapshot = await _firestore
           .collection('meetups')
           .where('participantIds', arrayContains: userId)
-          .where('date', isLessThan: DateTime.now().toIso8601String())
+          .where('date', isLessThan: Timestamp.fromDate(DateTime.now()))
           .get();
 
       final pendingMeetupIds = <String>[];
@@ -735,9 +697,10 @@ class RatingService {
 
       debugPrint('Users with ratings: ${userRatings.length}');
 
-      // Update each user
+      // Update each user (chunked to 500 per batch - Firestore limit)
       int updatedCount = 0;
-      final batch = _firestore.batch();
+      WriteBatch batch = _firestore.batch();
+      int batchCount = 0;
 
       for (final entry in userRatings.entries) {
         final userId = entry.key;
@@ -754,10 +717,20 @@ class RatingService {
 
         debugPrint('  $userId: $totalRatings ratings, avg: $averageRating');
         updatedCount++;
+        batchCount++;
+
+        // Firestore batch limit is 500 writes
+        if (batchCount >= 500) {
+          await batch.commit();
+          batch = _firestore.batch();
+          batchCount = 0;
+        }
       }
 
-      // Commit batch
-      await batch.commit();
+      // Commit remaining
+      if (batchCount > 0) {
+        await batch.commit();
+      }
 
       debugPrint('=== RECALCULATION COMPLETE: $updatedCount users updated ===');
 

@@ -45,7 +45,10 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
 
   Future<void> _loadIncomingRequests() async {
     final userId = _currentUserId;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoadingIncoming = false);
+      return;
+    }
 
     setState(() => _isLoadingIncoming = true);
 
@@ -90,7 +93,10 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
 
   Future<void> _loadOutgoingRequests() async {
     final userId = _currentUserId;
-    if (userId == null) return;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoadingOutgoing = false);
+      return;
+    }
 
     setState(() => _isLoadingOutgoing = true);
 
@@ -147,7 +153,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e')),
+        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
       );
     } finally {
       if (mounted) {
@@ -170,7 +176,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e')),
+        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
       );
     } finally {
       if (mounted) {
@@ -193,7 +199,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hata: $e')),
+        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
       );
     } finally {
       if (mounted) {

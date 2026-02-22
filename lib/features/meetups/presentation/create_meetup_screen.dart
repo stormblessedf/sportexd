@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart' hide RouteData;
 import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/models/location_data.dart';
+import '../../../core/models/formation_config.dart';
+import '../../../core/models/position_slot.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/places_service.dart';
 import '../../../core/services/map_preferences_service.dart';
+import '../../../core/models/route_data.dart';
+import 'widgets/formation_picker_widget.dart';
+import 'widgets/route_planner_widget.dart';
 
 class CreateMeetupScreen extends StatefulWidget {
   const CreateMeetupScreen({super.key});
@@ -23,6 +28,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _rulesController = TextEditingController();
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   final PlacesService _placesService = PlacesService();
@@ -38,6 +44,17 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   bool _isLoading = false;
   LocationData? _selectedLocation;
   LatLng? _mapCenter;
+
+  // Football formation state
+  String _selectedFormat = FormationData.defaultFormat;
+  String _selectedFormation =
+      FormationData.getDefaultFormation(
+        FormationData.defaultFormat,
+      )?.formation ??
+      '1-2-1-1';
+
+  // Route planning state
+  RouteData? _routeData;
 
   // Autocomplete
   List<PlaceAutocompleteResult> _suggestions = [];
@@ -72,7 +89,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   @override
   void initState() {
     super.initState();
-    _mapCenter = LatLng(LocationService.defaultLatitude, LocationService.defaultLongitude);
+    _mapCenter = LatLng(
+      LocationService.defaultLatitude,
+      LocationService.defaultLongitude,
+    );
     _searchFocusNode.addListener(_onFocusChange);
   }
 
@@ -81,6 +101,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     _hideOverlay();
     _titleController.dispose();
     _descriptionController.dispose();
+    _rulesController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _debounceTimer?.cancel();
@@ -93,6 +114,35 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         _hideOverlay();
       });
     }
+  }
+
+  void _onSportTypeChanged(MeetupType type) {
+    setState(() {
+      _selectedType = type;
+      // If football selected, update maxParticipants to match format
+      if (type == MeetupType.football) {
+        _maxParticipants = FormationData.totalPlayers(_selectedFormat);
+      }
+    });
+  }
+
+  void _onFormatChanged(String format) {
+    setState(() {
+      _selectedFormat = format;
+      // Update formation to first option for new format
+      final defaultFormation = FormationData.getDefaultFormation(format);
+      if (defaultFormation != null) {
+        _selectedFormation = defaultFormation.formation;
+      }
+      // Update maxParticipants
+      _maxParticipants = FormationData.totalPlayers(format);
+    });
+  }
+
+  void _onFormationChanged(String formation) {
+    setState(() {
+      _selectedFormation = formation;
+    });
   }
 
   // Autocomplete methods
@@ -128,10 +178,17 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   final suggestion = _suggestions[index];
                   return ListTile(
                     dense: true,
-                    leading: Icon(Icons.location_on_outlined, color: textMuted, size: 20),
+                    leading: Icon(
+                      Icons.location_on_outlined,
+                      color: textMuted,
+                      size: 20,
+                    ),
                     title: Text(
                       suggestion.mainText,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -244,9 +301,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       initialTime: _startTime,
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: primary),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: primary)),
           child: child!,
         );
       },
@@ -257,7 +314,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         final startMinutes = picked.hour * 60 + picked.minute;
         final endMinutes = _endTime.hour * 60 + _endTime.minute;
         if (endMinutes <= startMinutes) {
-          _endTime = TimeOfDay(hour: (picked.hour + 1) % 24, minute: picked.minute);
+          _endTime = TimeOfDay(
+            hour: (picked.hour + 1) % 24,
+            minute: picked.minute,
+          );
         }
       });
     }
@@ -270,9 +330,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       initialTime: _endTime,
       builder: (dialogContext, child) {
         return Theme(
-          data: Theme.of(dialogContext).copyWith(
-            colorScheme: const ColorScheme.light(primary: primary),
-          ),
+          data: Theme.of(
+            dialogContext,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: primary)),
           child: child!,
         );
       },
@@ -282,7 +342,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       final endMinutes = picked.hour * 60 + picked.minute;
       if (endMinutes <= startMinutes) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('Bitiş saati başlangıç saatinden sonra olmalı'), backgroundColor: Colors.orange),
+          const SnackBar(
+            content: Text('Bitiş saati başlangıç saatinden sonra olmalı'),
+            backgroundColor: Colors.orange,
+          ),
         );
         return;
       }
@@ -295,7 +358,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen konum seçin'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Lütfen konum seçin'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -310,21 +376,54 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       if (user == null) throw Exception("Oturum açık değil");
 
       final meetupStartDateTime = DateTime(
-        _selectedDate.year, _selectedDate.month, _selectedDate.day,
-        _startTime.hour, _startTime.minute,
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _startTime.hour,
+        _startTime.minute,
       );
       final meetupEndDateTime = DateTime(
-        _selectedDate.year, _selectedDate.month, _selectedDate.day,
-        _endTime.hour, _endTime.minute,
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _endTime.hour,
+        _endTime.minute,
       );
+
+      // Prepare football-specific data
+      String? teamFormat;
+      String? formation;
+      List<PositionSlot>? teamASlots;
+      List<PositionSlot>? teamBSlots;
+
+      if (_selectedType == MeetupType.football) {
+        teamFormat = _selectedFormat;
+        formation = _selectedFormation;
+        final formationConfig = FormationData.getFormation(
+          _selectedFormat,
+          _selectedFormation,
+        );
+        if (formationConfig != null) {
+          teamASlots = formationConfig.generateSlots();
+          teamBSlots = formationConfig.generateSlots();
+        }
+      }
+
+      // Prepare route data for route-applicable types
+      RouteData? routeDataToSave;
+      if (_selectedType.supportsRoute && _routeData != null) {
+        routeDataToSave = _routeData;
+      }
 
       await meetupService.createMeetup(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
+        rules: _rulesController.text.trim(),
         type: _selectedType,
         date: meetupStartDateTime,
         endDate: meetupEndDateTime,
-        locationName: _selectedLocation?.name ?? _selectedLocation?.address ?? '',
+        locationName:
+            _selectedLocation?.name ?? _selectedLocation?.address ?? '',
         locationAddress: _selectedLocation?.address ?? '',
         maxParticipants: _maxParticipants,
         organizerId: user.id,
@@ -332,11 +431,19 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         organizerImageUrl: user.profileImageUrl,
         latitude: _selectedLocation?.latitude,
         longitude: _selectedLocation?.longitude,
+        teamFormat: teamFormat,
+        formation: formation,
+        teamASlots: teamASlots,
+        teamBSlots: teamBSlots,
+        routeData: routeDataToSave,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Etkinlik oluşturuldu!'), backgroundColor: primary),
+          const SnackBar(
+            content: Text('Etkinlik oluşturuldu!'),
+            backgroundColor: primary,
+          ),
         );
         context.go('/home');
       }
@@ -360,11 +467,15 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: textDark),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: const Text(
           'Etkinlik Oluştur',
-          style: TextStyle(color: textDark, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            color: textDark,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         centerTitle: true,
       ),
@@ -384,12 +495,27 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   const SizedBox(height: 32),
                   _buildLocationSection(),
                   const SizedBox(height: 32),
+                  // Football formation section (only shown for football)
+                  if (_selectedType == MeetupType.football) ...[
+                    _buildFormationSection(),
+                    const SizedBox(height: 32),
+                  ],
+                  // Route planning section (only shown for running, cycling, hiking)
+                  if (_selectedType.supportsRoute) ...[
+                    _buildRouteSection(),
+                    const SizedBox(height: 32),
+                  ],
                   _buildDetailsSection(),
                   const SizedBox(height: 24),
                 ],
               ),
             ),
-            Positioned(left: 0, right: 0, bottom: 0, child: _buildBottomButton()),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildBottomButton(),
+            ),
           ],
         ),
       ),
@@ -404,7 +530,11 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           padding: EdgeInsets.symmetric(horizontal: 20),
           child: Text(
             'Spor Seç',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textDark),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: textDark,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -418,7 +548,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               final sport = _sportTypes[index];
               final isSelected = _selectedType == sport.type;
               return Padding(
-                padding: EdgeInsets.only(right: index < _sportTypes.length - 1 ? 16 : 0),
+                padding: EdgeInsets.only(
+                  right: index < _sportTypes.length - 1 ? 16 : 0,
+                ),
                 child: _buildSportChip(sport, isSelected),
               );
             },
@@ -430,7 +562,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   Widget _buildSportChip(_SportTypeData sport, bool isSelected) {
     return GestureDetector(
-      onTap: () => setState(() => _selectedType = sport.type),
+      onTap: () => _onSportTypeChanged(sport.type),
       child: Column(
         children: [
           AnimatedContainer(
@@ -440,12 +572,24 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
             decoration: BoxDecoration(
               color: isSelected ? primary : surfaceLight,
               borderRadius: BorderRadius.circular(16),
-              border: isSelected ? null : Border.all(color: const Color(0xFFF1F5F9)),
+              border: isSelected
+                  ? null
+                  : Border.all(color: const Color(0xFFF1F5F9)),
               boxShadow: isSelected
-                  ? [BoxShadow(color: primary.withValues(alpha:0.3), blurRadius: 12, offset: const Offset(0, 4))]
+                  ? [
+                      BoxShadow(
+                        color: primary.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
                   : null,
             ),
-            child: Icon(sport.icon, size: 30, color: isSelected ? Colors.black : textMuted),
+            child: Icon(
+              sport.icon,
+              size: 30,
+              color: isSelected ? Colors.black : textMuted,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -469,7 +613,11 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         children: [
           const Text(
             'Tarih & Saat',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textDark),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textDark,
+            ),
           ),
           const SizedBox(height: 16),
           Container(
@@ -477,7 +625,13 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               color: surfaceLight,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 8, offset: const Offset(0, 2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -496,7 +650,20 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildMonthNavigation() {
-    final months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    final months = [
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık',
+    ];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -504,19 +671,31 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           icon: Icon(Icons.chevron_left, color: textMuted),
           onPressed: () {
             setState(() {
-              _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month - 1, 1);
+              _displayedMonth = DateTime(
+                _displayedMonth.year,
+                _displayedMonth.month - 1,
+                1,
+              );
             });
           },
         ),
         Text(
           '${months[_displayedMonth.month - 1]} ${_displayedMonth.year}',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textDark),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: textDark,
+          ),
         ),
         IconButton(
           icon: Icon(Icons.chevron_right, color: textMuted),
           onPressed: () {
             setState(() {
-              _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 1);
+              _displayedMonth = DateTime(
+                _displayedMonth.year,
+                _displayedMonth.month + 1,
+                1,
+              );
             });
           },
         ),
@@ -526,8 +705,16 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   Widget _buildCalendarGrid() {
     final days = ['P', 'S', 'Ç', 'P', 'C', 'C', 'P'];
-    final firstDayOfMonth = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
-    final daysInMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 0).day;
+    final firstDayOfMonth = DateTime(
+      _displayedMonth.year,
+      _displayedMonth.month,
+      1,
+    );
+    final daysInMonth = DateTime(
+      _displayedMonth.year,
+      _displayedMonth.month + 1,
+      0,
+    ).day;
     final startWeekday = (firstDayOfMonth.weekday - 1) % 7;
     final today = DateTime.now();
 
@@ -535,10 +722,22 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: days.map((d) => SizedBox(
-            width: 36,
-            child: Text(d, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textMuted)),
-          )).toList(),
+          children: days
+              .map(
+                (d) => SizedBox(
+                  width: 36,
+                  child: Text(
+                    d,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textMuted,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: 8),
         ...List.generate(6, (weekIndex) {
@@ -550,14 +749,23 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 return const SizedBox(width: 36, height: 36);
               }
 
-              final date = DateTime(_displayedMonth.year, _displayedMonth.month, dayNum);
-              final isSelected = _selectedDate.year == date.year &&
+              final date = DateTime(
+                _displayedMonth.year,
+                _displayedMonth.month,
+                dayNum,
+              );
+              final isSelected =
+                  _selectedDate.year == date.year &&
                   _selectedDate.month == date.month &&
                   _selectedDate.day == date.day;
-              final isPast = date.isBefore(DateTime(today.year, today.month, today.day));
+              final isPast = date.isBefore(
+                DateTime(today.year, today.month, today.day),
+              );
 
               return GestureDetector(
-                onTap: isPast ? null : () => setState(() => _selectedDate = date),
+                onTap: isPast
+                    ? null
+                    : () => setState(() => _selectedDate = date),
                 child: Container(
                   width: 36,
                   height: 36,
@@ -565,7 +773,13 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                     color: isSelected ? primary : Colors.transparent,
                     shape: BoxShape.circle,
                     boxShadow: isSelected
-                        ? [BoxShadow(color: primary.withValues(alpha:0.4), blurRadius: 8, offset: const Offset(0, 2))]
+                        ? [
+                            BoxShadow(
+                              color: primary.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
                         : null,
                   ),
                   child: Center(
@@ -573,8 +787,12 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       '$dayNum',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isPast ? textMuted.withValues(alpha:0.4) : (isSelected ? Colors.black : textDark),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: isPast
+                            ? textMuted.withValues(alpha: 0.4)
+                            : (isSelected ? Colors.black : textDark),
                       ),
                     ),
                   ),
@@ -606,9 +824,24 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('BAŞLANGIÇ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textMuted, letterSpacing: 0.5)),
+                      Text(
+                        'BAŞLANGIÇ',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: textMuted,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(_formatTime(_startTime), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textDark)),
+                      Text(
+                        _formatTime(_startTime),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -625,9 +858,24 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('BİTİŞ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textMuted, letterSpacing: 0.5)),
+                      Text(
+                        'BİTİŞ',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: textMuted,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(_formatTime(_endTime), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textDark)),
+                      Text(
+                        _formatTime(_endTime),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -654,7 +902,14 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Konum', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textDark)),
+          const Text(
+            'Konum',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textDark,
+            ),
+          ),
           const SizedBox(height: 16),
 
           // Search field
@@ -672,7 +927,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 style: const TextStyle(fontSize: 14, color: textDark),
                 decoration: InputDecoration(
                   hintText: 'Konum veya mekan ara...',
-                  hintStyle: TextStyle(color: textMuted.withValues(alpha:0.6)),
+                  hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
                   prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -685,7 +940,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                 ),
                 onChanged: _onSearchChanged,
               ),
@@ -707,7 +965,12 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _mapCenter ?? LatLng(LocationService.defaultLatitude, LocationService.defaultLongitude),
+                      initialCenter:
+                          _mapCenter ??
+                          LatLng(
+                            LocationService.defaultLatitude,
+                            LocationService.defaultLongitude,
+                          ),
                       initialZoom: 14,
                       onTap: _onMapTap,
                     ),
@@ -727,7 +990,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withValues(alpha:0.1)],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.1),
+                          ],
                         ),
                       ),
                     ),
@@ -743,7 +1009,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                           width: 12,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha:0.3),
+                            color: Colors.black.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
@@ -758,11 +1024,19 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       left: 12,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: surfaceLight,
                           borderRadius: BorderRadius.circular(8),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.1), blurRadius: 8)],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -770,8 +1044,14 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _selectedLocation?.name ?? _selectedLocation?.address ?? '',
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textDark),
+                                _selectedLocation?.name ??
+                                    _selectedLocation?.address ??
+                                    '',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: textDark,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -786,7 +1066,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                     Positioned.fill(
                       child: Container(
                         color: Colors.black26,
-                        child: const Center(child: CircularProgressIndicator(color: primary)),
+                        child: const Center(
+                          child: CircularProgressIndicator(color: primary),
+                        ),
                       ),
                     ),
                 ],
@@ -798,13 +1080,85 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     );
   }
 
+  Widget _buildFormationSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: FormationPickerWidget(
+          selectedFormat: _selectedFormat,
+          selectedFormation: _selectedFormation,
+          onFormatChanged: _onFormatChanged,
+          onFormationChanged: _onFormationChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRouteSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: RoutePlannerWidget(
+          initialRoute: _routeData,
+          meetupType: _selectedType,
+          onRouteChanged: (route) {
+            setState(() {
+              _routeData = route;
+              // Rota başlangıç noktasını konum alanına yansıt
+              if (route != null) {
+                _selectedLocation = route.startPoint;
+                _mapCenter = LatLng(
+                  route.startPoint.latitude,
+                  route.startPoint.longitude,
+                );
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildDetailsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Detaylar', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textDark)),
+          const Text(
+            'Detaylar',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textDark,
+            ),
+          ),
           const SizedBox(height: 16),
 
           // Event Title
@@ -812,14 +1166,25 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
             label: 'Etkinlik Başlığı',
             child: TextFormField(
               controller: _titleController,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textDark),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textDark,
+              ),
               decoration: InputDecoration(
                 hintText: 'Sabah Koşusu 5K',
-                hintStyle: TextStyle(color: textMuted.withValues(alpha:0.5), fontWeight: FontWeight.normal),
+                hintStyle: TextStyle(
+                  color: textMuted.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.normal,
+                ),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
-              validator: (val) => val == null || val.isEmpty ? 'Başlık gerekli' : null,
+              validator: (val) =>
+                  val == null || val.isEmpty ? 'Başlık gerekli' : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -833,41 +1198,89 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               style: const TextStyle(fontSize: 14, color: textDark),
               decoration: InputDecoration(
                 hintText: 'Etkinlik hakkında detay...',
-                hintStyle: TextStyle(color: textMuted.withValues(alpha:0.5)),
+                hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5)),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Participant Limit
           _buildFloatingLabelField(
-            label: 'Katılımcı Sınırı',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Maks. Katılımcı', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textDark)),
-                  Row(
-                    children: [
-                      _buildCounterButton(Icons.remove, () {
-                        if (_maxParticipants > 2) setState(() => _maxParticipants--);
-                      }, false),
-                      SizedBox(
-                        width: 32,
-                        child: Text('$_maxParticipants', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textDark)),
-                      ),
-                      _buildCounterButton(Icons.add, () {
-                        if (_maxParticipants < 50) setState(() => _maxParticipants++);
-                      }, true),
-                    ],
-                  ),
-                ],
+            label: 'Kurallar',
+            child: TextFormField(
+              controller: _rulesController,
+              maxLines: 4,
+              style: const TextStyle(fontSize: 14, color: textDark),
+              decoration: InputDecoration(
+                hintText: 'Orn: Sert mudahale yok, gec gelen yedek olur...',
+                hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5)),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
+              validator: (val) =>
+                  val == null || val.trim().isEmpty ? 'Kurallar gerekli' : null,
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Participant Limit (not shown for football - auto-calculated from format)
+          if (_selectedType != MeetupType.football)
+            _buildFloatingLabelField(
+              label: 'Katılımcı Sınırı',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Maks. Katılımcı',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: textDark,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _buildCounterButton(Icons.remove, () {
+                          if (_maxParticipants > 2) {
+                            setState(() => _maxParticipants--);
+                          }
+                        }, false),
+                        SizedBox(
+                          width: 32,
+                          child: Text(
+                            '$_maxParticipants',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textDark,
+                            ),
+                          ),
+                        ),
+                        _buildCounterButton(Icons.add, () {
+                          if (_maxParticipants < 50) {
+                            setState(() => _maxParticipants++);
+                          }
+                        }, true),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_selectedType != MeetupType.football) const SizedBox(height: 16),
           const SizedBox(height: 16),
 
           // Skill Level
@@ -891,7 +1304,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     );
   }
 
-  Widget _buildFloatingLabelField({required String label, required Widget child}) {
+  Widget _buildFloatingLabelField({
+    required String label,
+    required Widget child,
+  }) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -908,14 +1324,25 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             color: backgroundLight,
-            child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textMuted)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: textMuted,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCounterButton(IconData icon, VoidCallback onTap, bool isPrimary) {
+  Widget _buildCounterButton(
+    IconData icon,
+    VoidCallback onTap,
+    bool isPrimary,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -925,9 +1352,21 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           color: isPrimary ? primary : const Color(0xFFE5E7EB),
           shape: BoxShape.circle,
           border: isPrimary ? null : Border.all(color: const Color(0xFFD1D5DB)),
-          boxShadow: isPrimary ? [BoxShadow(color: primary.withValues(alpha:0.3), blurRadius: 8, offset: const Offset(0, 2))] : null,
+          boxShadow: isPrimary
+              ? [
+                  BoxShadow(
+                    color: primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
-        child: Icon(icon, size: 18, color: isPrimary ? Colors.black : const Color(0xFF374151)),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isPrimary ? Colors.black : const Color(0xFF374151),
+        ),
       ),
     );
   }
@@ -942,8 +1381,17 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           decoration: BoxDecoration(
             color: isSelected ? primary : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isSelected ? primary : const Color(0xFFE5E7EB)),
-            boxShadow: isSelected ? [BoxShadow(color: primary.withValues(alpha:0.2), blurRadius: 8)] : null,
+            border: Border.all(
+              color: isSelected ? primary : const Color(0xFFE5E7EB),
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             label,
@@ -963,7 +1411,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: backgroundLight.withValues(alpha:0.8),
+        color: backgroundLight.withValues(alpha: 0.8),
         border: Border(top: BorderSide(color: const Color(0xFFF1F5F9))),
       ),
       child: SafeArea(
@@ -975,14 +1423,33 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
             decoration: BoxDecoration(
               color: primary,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: primary.withValues(alpha:0.2), blurRadius: 12, offset: const Offset(0, 4))],
+              boxShadow: [
+                BoxShadow(
+                  color: primary.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: _isLoading
-                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black)))
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    ),
+                  )
                 : const Text(
                     'Etkinliği Yayınla',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
           ),
         ),

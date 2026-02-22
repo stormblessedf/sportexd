@@ -133,18 +133,43 @@ class ChatService {
     }
   }
 
-  // Get Messages Stream
-  Stream<List<MessageModel>> getMessages(String chatId) {
+  // Get Messages Stream (paginated — latest 50 by default)
+  Stream<List<MessageModel>> getMessages(String chatId, {int limit = 50}) {
     return _chatsRef
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((doc) {
             return MessageModel.fromJson(doc.data());
           }).toList();
         });
+  }
+
+  // Load older messages for pagination
+  Future<List<MessageModel>> loadOlderMessages(
+    String chatId, {
+    required DateTime beforeTimestamp,
+    int limit = 30,
+  }) async {
+    try {
+      final snapshot = await _chatsRef
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .where('timestamp', isLessThan: Timestamp.fromDate(beforeTimestamp))
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => MessageModel.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading older messages: $e');
+      return [];
+    }
   }
 
   /// Get the last message for a chat.

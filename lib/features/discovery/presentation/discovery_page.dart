@@ -11,6 +11,9 @@ import 'widgets/recommendation_section.dart';
 import '../../home/presentation/widgets/meetup_card.dart';
 import '../../meetups/presentation/nearby_meetups_map_screen.dart';
 import '../../notifications/presentation/widgets/notification_bell.dart';
+import '../../live_event/presentation/live_feed_page.dart';
+
+enum _FeedMode { discovery, live }
 
 class DiscoveryPage extends StatefulWidget {
   const DiscoveryPage({super.key});
@@ -23,6 +26,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   late DiscoveryController _controller;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  _FeedMode _feedMode = _FeedMode.discovery;
 
   @override
   void initState() {
@@ -91,28 +95,30 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
               // App Bar
               _buildAppBar(),
 
-              // Search Bar
-              _buildSearchBar(),
-
-              // Quick Filters
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Consumer<DiscoveryController>(
-                  builder: (context, controller, _) => QuickFilterChips(
-                    filterState: controller.filterState,
-                    hasLocationPermission: controller.hasLocationPermission,
-                    onTodayTap: () => controller.setDateRange(DateRangeFilter.today),
-                    onThisWeekTap: () => controller.setDateRange(DateRangeFilter.thisWeek),
-                    onNearMeTap: () => controller.filterNearMe(),
-                    onSportTypeTap: (type) => controller.toggleSportType(type),
-                    onClearFilters: () => controller.clearFilters(),
+              // Search Bar & Quick Filters (hidden in live mode)
+              if (_feedMode != _FeedMode.live) ...[
+                _buildSearchBar(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Consumer<DiscoveryController>(
+                    builder: (context, controller, _) => QuickFilterChips(
+                      filterState: controller.filterState,
+                      hasLocationPermission: controller.hasLocationPermission,
+                      onTodayTap: () => controller.setDateRange(DateRangeFilter.today),
+                      onThisWeekTap: () => controller.setDateRange(DateRangeFilter.thisWeek),
+                      onNearMeTap: () => controller.filterNearMe(),
+                      onSportTypeTap: (type) => controller.toggleSportType(type),
+                      onClearFilters: () => controller.clearFilters(),
+                    ),
                   ),
                 ),
-              ),
+              ],
 
               // Content
               Expanded(
-                child: Consumer<DiscoveryController>(
+                child: _feedMode == _FeedMode.live
+                    ? const LiveFeedPage()
+                    : Consumer<DiscoveryController>(
                   builder: (context, controller, _) {
                     if (controller.isLoading) {
                       return _buildLoadingState();
@@ -147,7 +153,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Keşfet',
+                _feedMode == _FeedMode.live ? 'Canlı' : 'Keşfet',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textDark,
@@ -155,7 +161,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Yakınındaki aktiviteleri bul',
+                _feedMode == _FeedMode.live
+                    ? 'Aktif etkinliklerden canlı paylaşımlar'
+                    : 'Yakınındaki aktiviteleri bul',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.textMuted,
                       fontWeight: FontWeight.w500,
@@ -165,6 +173,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           ),
           Row(
             children: [
+              // Live mode toggle button
+              _buildLiveToggle(),
+              const SizedBox(width: 8),
               // View mode toggle
               Consumer<DiscoveryController>(
                 builder: (context, controller, _) => Container(
@@ -373,6 +384,57 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLiveToggle() {
+    final isLive = _feedMode == _FeedMode.live;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _feedMode = isLive ? _FeedMode.discovery : _FeedMode.live;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isLive ? AppTheme.primary : AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isLive ? AppTheme.primary : AppTheme.borderLight,
+          ),
+          boxShadow: isLive
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.videocam,
+              size: 18,
+              color: isLive ? Colors.white : AppTheme.textMuted,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Canlı',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isLive ? Colors.white : AppTheme.textMuted,
+              ),
+            ),
+            const SizedBox(width: 4),
+            _LivePulsingDot(isActive: !isLive),
+          ],
+        ),
       ),
     );
   }
@@ -652,6 +714,65 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+/// Yanıp sönen yeşil nokta - canlı içerik olduğunu belirtir.
+class _LivePulsingDot extends StatefulWidget {
+  final bool isActive;
+  const _LivePulsingDot({required this.isActive});
+
+  @override
+  State<_LivePulsingDot> createState() => _LivePulsingDotState();
+}
+
+class _LivePulsingDotState extends State<_LivePulsingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isActive) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: const Color(0xFF22C55E).withValues(alpha: _animation.value),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF22C55E).withValues(alpha: _animation.value * 0.5),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

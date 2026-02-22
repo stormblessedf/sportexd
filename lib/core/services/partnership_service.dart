@@ -123,31 +123,35 @@ class PartnershipService {
 
     final partnershipId = generatePartnershipId(requesterId, receiverId);
 
-    // Check for existing partnership
-    final existing = await _partnersRef.doc(partnershipId).get();
-    if (existing.exists) {
-      final data = existing.data() as Map<String, dynamic>;
-      final status = data['status'];
-      if (status == 'blocked') {
-        throw StateError('Bu kullanıcıya istek gönderemezsiniz');
-      }
-      if (status == 'pending' || status == 'accepted') {
-        throw StateError('Bu kullanıcıyla zaten bir partner isteğiniz var');
-      }
-    }
+    // Atomic check-and-set via transaction to prevent race conditions
+    await _firestore.runTransaction((transaction) async {
+      final docRef = _partnersRef.doc(partnershipId);
+      final existing = await transaction.get(docRef);
 
-    final now = DateTime.now();
-    final partnership = PartnershipModel(
-      id: partnershipId,
-      userId: requesterId,
-      partnerId: receiverId,
-      status: PartnershipStatus.pending,
-      sharedMeetupIds: sharedMeetupIds,
-      requestedAt: now,
-      createdAt: now,
-    );
+      if (existing.exists) {
+        final data = existing.data() as Map<String, dynamic>;
+        final status = data['status'];
+        if (status == 'blocked') {
+          throw StateError('Bu kullanıcıya istek gönderemezsiniz');
+        }
+        if (status == 'pending' || status == 'accepted') {
+          throw StateError('Bu kullanıcıyla zaten bir partner isteğiniz var');
+        }
+      }
 
-    await _partnersRef.doc(partnershipId).set(partnership.toJson());
+      final now = DateTime.now();
+      final partnership = PartnershipModel(
+        id: partnershipId,
+        userId: requesterId,
+        partnerId: receiverId,
+        status: PartnershipStatus.pending,
+        sharedMeetupIds: sharedMeetupIds,
+        requestedAt: now,
+        createdAt: now,
+      );
+
+      transaction.set(docRef, partnership.toJson());
+    });
 
     // Send notification to receiver
     try {
@@ -167,49 +171,43 @@ class PartnershipService {
     }
   }
 
-  /// Accept a partnership request
+  /// Accept a partnership request (atomic transaction)
   Future<void> acceptPartnershipRequest(String partnershipId) async {
     try {
-      final doc = await _partnersRef.doc(partnershipId).get();
-      if (!doc.exists) throw StateError('Partner isteği bulunamadı');
+      final partnershipData = await _firestore.runTransaction((transaction) async {
+        final docRef = _partnersRef.doc(partnershipId);
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) throw StateError('Partner isteği bulunamadı');
 
-      final partnership = PartnershipModel.fromJson(doc.data() as Map<String, dynamic>);
-      if (partnership.status != PartnershipStatus.pending) {
-        throw StateError('Bu istek zaten yanıtlanmış');
-      }
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['status'] != 'pending') {
+          throw StateError('Bu istek zaten yanıtlanmış');
+        }
 
-      final batch = _firestore.batch();
+        final userId = data['userId'] as String;
+        final partnerId = data['partnerId'] as String;
 
-      // Update partnership status
-      batch.update(_partnersRef.doc(partnershipId), {
-        'status': 'accepted',
-        'respondedAt': Timestamp.fromDate(DateTime.now()),
+        // Update partnership status
+        transaction.update(docRef, {
+          'status': 'accepted',
+          'respondedAt': Timestamp.fromDate(DateTime.now()),
+        });
+
+        return {'userId': userId, 'partnerId': partnerId};
       });
 
-      // Update both users' partners arrays and counts
-      batch.update(_usersRef.doc(partnership.userId), {
-        'partners': FieldValue.arrayUnion([partnership.partnerId]),
-        'partnersCount': FieldValue.increment(1),
-      });
-      batch.update(_usersRef.doc(partnership.partnerId), {
-        'partners': FieldValue.arrayUnion([partnership.userId]),
-        'partnersCount': FieldValue.increment(1),
-      });
-
-      await batch.commit();
-
-      // Send notification to requester
+      // Send notification to requester (outside transaction)
       try {
-        final accepterDoc = await _usersRef.doc(partnership.partnerId).get();
+        final accepterDoc = await _usersRef.doc(partnershipData['partnerId']!).get();
         final accepterName = (accepterDoc.data() as Map<String, dynamic>?)?['username'] ?? 'Bir kullanıcı';
 
         await _notificationService.createNotification(
-          userId: partnership.userId,
+          userId: partnershipData['userId']!,
           type: NotificationType.partnershipAccepted,
           title: 'Partner İsteği Kabul Edildi',
           message: '$accepterName partner isteğini kabul etti',
           relatedId: partnershipId,
-          metadata: {'accepterId': partnership.partnerId},
+          metadata: {'accepterId': partnershipData['partnerId']!},
         );
       } catch (e) {
         debugPrint('Error sending acceptance notification: $e');
@@ -220,12 +218,23 @@ class PartnershipService {
     }
   }
 
-  /// Reject a partnership request
+  /// Reject a partnership request (with state validation)
   Future<void> rejectPartnershipRequest(String partnershipId) async {
     try {
-      await _partnersRef.doc(partnershipId).update({
-        'status': 'rejected',
-        'respondedAt': Timestamp.fromDate(DateTime.now()),
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _partnersRef.doc(partnershipId);
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) throw StateError('Partner isteği bulunamadı');
+
+        final status = (doc.data() as Map<String, dynamic>)['status'];
+        if (status != 'pending') {
+          throw StateError('Bu istek zaten yanıtlanmış');
+        }
+
+        transaction.update(docRef, {
+          'status': 'rejected',
+          'respondedAt': Timestamp.fromDate(DateTime.now()),
+        });
       });
     } catch (e) {
       debugPrint('Error rejecting partnership: $e');
@@ -233,12 +242,23 @@ class PartnershipService {
     }
   }
 
-  /// Block a partnership request
+  /// Block a partnership request (with state validation)
   Future<void> blockPartnershipRequest(String partnershipId) async {
     try {
-      await _partnersRef.doc(partnershipId).update({
-        'status': 'blocked',
-        'respondedAt': Timestamp.fromDate(DateTime.now()),
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _partnersRef.doc(partnershipId);
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) throw StateError('Partner isteği bulunamadı');
+
+        final status = (doc.data() as Map<String, dynamic>)['status'];
+        if (status != 'pending') {
+          throw StateError('Bu istek zaten yanıtlanmış');
+        }
+
+        transaction.update(docRef, {
+          'status': 'blocked',
+          'respondedAt': Timestamp.fromDate(DateTime.now()),
+        });
       });
     } catch (e) {
       debugPrint('Error blocking partnership: $e');
@@ -246,42 +266,38 @@ class PartnershipService {
     }
   }
 
-  /// Delete a partnership
+  /// Delete a partnership document (user aggregates are synced by Cloud Function)
   Future<void> deletePartnership(String partnershipId) async {
     try {
-      final doc = await _partnersRef.doc(partnershipId).get();
-      if (!doc.exists) return;
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _partnersRef.doc(partnershipId);
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) return;
 
-      final partnership = PartnershipModel.fromJson(doc.data() as Map<String, dynamic>);
-
-      final batch = _firestore.batch();
-
-      // Remove partnership document
-      batch.delete(_partnersRef.doc(partnershipId));
-
-      // Update both users if partnership was accepted
-      if (partnership.status == PartnershipStatus.accepted) {
-        batch.update(_usersRef.doc(partnership.userId), {
-          'partners': FieldValue.arrayRemove([partnership.partnerId]),
-          'partnersCount': FieldValue.increment(-1),
-        });
-        batch.update(_usersRef.doc(partnership.partnerId), {
-          'partners': FieldValue.arrayRemove([partnership.userId]),
-          'partnersCount': FieldValue.increment(-1),
-        });
-      }
-
-      await batch.commit();
+        // Delete partnership document
+        transaction.delete(docRef);
+      });
     } catch (e) {
       debugPrint('Error deleting partnership: $e');
       rethrow;
     }
   }
 
-  /// Cancel a pending outgoing request
+  /// Cancel a pending outgoing request (with state validation)
   Future<void> cancelRequest(String partnershipId) async {
     try {
-      await _partnersRef.doc(partnershipId).delete();
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _partnersRef.doc(partnershipId);
+        final doc = await transaction.get(docRef);
+        if (!doc.exists) return;
+
+        final status = (doc.data() as Map<String, dynamic>)['status'];
+        if (status != 'pending') {
+          throw StateError('Sadece bekleyen istekler iptal edilebilir');
+        }
+
+        transaction.delete(docRef);
+      });
     } catch (e) {
       debugPrint('Error cancelling request: $e');
       rethrow;

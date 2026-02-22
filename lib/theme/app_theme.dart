@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
 
 class AppTheme {
-  // Primary colors from HTML design
-  static const Color primary = Color(0xFF13EC5B);
-  static const Color primaryHover = Color(0xFF10D952);
-
-  // Background colors
-  static const Color backgroundLight = Color(0xFFF6F8F6);
-  static const Color surfaceLight = Color(0xFFFFFFFF);
-
-  // Text colors
-  static const Color textDark = Color(0xFF0F172A);
-  static const Color textMuted = Color(0xFF64748B);
-  static const Color textLight = Color(0xFF94A3B8);
-
-  // Border colors
-  static const Color borderLight = Color(0xFFE2E8F0);
+  // Delegate all colors to AppColors (single source of truth)
+  static const Color primary = AppColors.primary;
+  static const Color primaryHover = AppColors.primaryHover;
+  static const Color backgroundLight = AppColors.backgroundLight;
+  static const Color surfaceLight = AppColors.surfaceLight;
+  static const Color textDark = AppColors.textDark;
+  static const Color textMuted = AppColors.textMuted;
+  static const Color textLight = AppColors.textLight;
+  static const Color borderLight = AppColors.borderLight;
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -173,6 +168,29 @@ class AppTheme {
 
   // Keep dark theme for future use but make it match the new design
   static ThemeData get darkTheme {
-    return lightTheme; // For now, use light theme only
+    final light = lightTheme;
+    return light.copyWith(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      colorScheme: light.colorScheme.copyWith(
+        brightness: Brightness.dark,
+        surface: const Color(0xFF1E293B),
+        onSurface: Colors.white,
+      ),
+      cardTheme: light.cardTheme.copyWith(
+        color: const Color(0xFF1E293B),
+      ),
+      appBarTheme: light.appBarTheme.copyWith(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+      ),
+      bottomNavigationBarTheme: light.bottomNavigationBarTheme.copyWith(
+        backgroundColor: const Color(0xFF1E293B),
+        unselectedItemColor: const Color(0xFF94A3B8),
+      ),
+      dividerTheme: light.dividerTheme.copyWith(
+        color: const Color(0xFF334155),
+      ),
+    );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'position_slot.dart';
+import 'route_data.dart';
 
 enum MeetupType {
   football,
@@ -56,12 +58,19 @@ extension MeetupTypeExtension on MeetupType {
         return 'Diğer';
     }
   }
+
+  /// Bu etkinlik türü rota planlama destekliyor mu?
+  bool get supportsRoute =>
+      this == MeetupType.running ||
+      this == MeetupType.cycling ||
+      this == MeetupType.hiking;
 }
 
 class MeetupModel {
   final String id;
   final String title;
   final String description;
+  final String rules;
   final String imageUrl;
   final MeetupType type;
   final DateTime date;
@@ -82,10 +91,23 @@ class MeetupModel {
   final bool isOrganizerOnlyChat;
   final DateTime createdAt;
 
+  // Football-specific fields (null = not a football meetup with teams)
+  final String? teamFormat; // "4v4", "5v5", "6v6", "7v7"
+  final String? formation; // "1-2-1-1"
+  final List<PositionSlot>? teamASlots; // Team A position slots
+  final List<PositionSlot>? teamBSlots; // Team B position slots
+
+  // Route-specific fields (for running, cycling, hiking)
+  final RouteData? routeData;
+
+  bool get hasRoute => routeData != null && routeData!.isValid;
+  bool get isRouteApplicable => type.supportsRoute;
+
   MeetupModel({
     required this.id,
     required this.title,
     required this.description,
+    this.rules = '',
     required this.imageUrl,
     required this.type,
     required this.date,
@@ -105,15 +127,29 @@ class MeetupModel {
     this.longitude,
     this.isOrganizerOnlyChat = false,
     DateTime? createdAt,
+    this.teamFormat,
+    this.formation,
+    this.teamASlots,
+    this.teamBSlots,
+    this.routeData,
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get hasCoordinates => latitude != null && longitude != null;
+
+  /// Is this a football meetup with team formations?
+  bool get isFootballWithTeams =>
+      type == MeetupType.football &&
+      teamFormat != null &&
+      formation != null &&
+      teamASlots != null &&
+      teamBSlots != null;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'description': description,
+      'rules': rules,
       'imageUrl': imageUrl,
       'type': type.name,
       'date': Timestamp.fromDate(date),
@@ -133,6 +169,11 @@ class MeetupModel {
       'longitude': longitude,
       'isOrganizerOnlyChat': isOrganizerOnlyChat,
       'createdAt': Timestamp.fromDate(createdAt),
+      'teamFormat': teamFormat,
+      'formation': formation,
+      'teamASlots': teamASlots?.map((slot) => slot.toJson()).toList(),
+      'teamBSlots': teamBSlots?.map((slot) => slot.toJson()).toList(),
+      'routeData': routeData?.toJson(),
     };
   }
 
@@ -152,6 +193,7 @@ class MeetupModel {
       id: json['id'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
+      rules: json['rules'] ?? '',
       imageUrl: json['imageUrl'] ?? '',
       type: MeetupType.values.firstWhere(
         (e) => e.name == json['type'],
@@ -174,7 +216,22 @@ class MeetupModel {
       longitude: (json['longitude'] as num?)?.toDouble(),
       isOrganizerOnlyChat: json['isOrganizerOnlyChat'] ?? false,
       createdAt: _parseDateTime(json['createdAt']),
+      teamFormat: json['teamFormat'] as String?,
+      formation: json['formation'] as String?,
+      teamASlots: _parsePositionSlots(json['teamASlots']),
+      teamBSlots: _parsePositionSlots(json['teamBSlots']),
+      routeData: json['routeData'] != null
+          ? RouteData.tryFromJson(json['routeData'] as Map<String, dynamic>)
+          : null,
     );
+  }
+
+  static List<PositionSlot>? _parsePositionSlots(dynamic value) {
+    if (value == null) return null;
+    if (value is! List) return null;
+    return value
+        .map((item) => PositionSlot.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   static DateTime _parseDateTime(dynamic value) {

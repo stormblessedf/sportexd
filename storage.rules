@@ -1,8 +1,59 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Profile images - only owner can write, all authenticated can read
+    match /profile_images/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Meetup images - only meetup creator can write, all can read
+    match /meetup_images/{meetupId}/{fileName} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024; // 10MB limit
+      allow update: if request.auth != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024
+        && resource.metadata.uploadedBy == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    // Event photos - participants can write, authenticated can read
+    match /event_photos/{meetupId}/{photoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+        && request.resource.metadata.uploadedBy == request.auth.uid
+        && request.resource.metadata.meetupId == meetupId;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    // Chat attachments - only chat participants can write
+    match /chat_attachments/{chatId}/{fileName} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.contentType.matches('(image|application/pdf|video)/.*')
+        && request.resource.size < 10 * 1024 * 1024 // 10MB limit
+        && request.resource.metadata.uploadedBy == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.metadata.uploadedBy == request.auth.uid;
+    }
+
+    // Profile photos - only owner can write to their folder, all authenticated can read
+    match /profile_photos/{userId}/{photoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    // Deny all other paths by default
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

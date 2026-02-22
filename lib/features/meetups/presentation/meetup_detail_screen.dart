@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/models/formation_config.dart';
 import '../../../core/models/meetup_model.dart';
+import '../../../core/models/position_slot.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../chat/presentation/chat_screen.dart';
 import 'widgets/meetup_map_widget.dart';
+import 'widgets/join_celebration_overlay.dart';
+import 'widgets/route_map_display_widget.dart';
 
 class MeetupDetailScreen extends StatefulWidget {
   final MeetupModel meetup;
@@ -23,9 +27,16 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   bool _isParticipating = false;
   bool _isLoading = true;
   bool _isOnWaitlist = false;
+  int _selectedFootballTab = 0;
   String? _currentUserId;
+  String? _selectedTeam;
+  int? _selectedSlotIndex;
   late MeetupModel _currentMeetup;
   List<UserModel> _participants = [];
+
+  bool get _isOrganizer =>
+      _currentUserId != null &&
+      _currentUserId == _currentMeetup.organizerId;
 
   @override
   void initState() {
@@ -34,6 +45,13 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
     _checkParticipation();
     _checkWaitlistStatus();
     _loadParticipants();
+  }
+
+  Future<void> _autoFillTeams() async {
+    // TODO: Implement auto-fill logic - assign waiting participants to random empty slots
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Otomatik doldurma yakında eklenecek.')),
+    );
   }
 
   Future<void> _loadParticipants() async {
@@ -111,6 +129,76 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
       return;
     }
 
+    // For football meetups with teams, use the selected slot from Takım tab
+    if (_currentMeetup.isFootballWithTeams) {
+      if (_selectedTeam == null || _selectedSlotIndex == null) {
+        // Switch to Takım tab and show warning
+        setState(() => _selectedFootballTab = 1);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Önce Takım sekmesinden bir pozisyon seçin'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final currentUser = await _authService.getCurrentUser();
+      if (currentUser == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kullanıcı bilgisi alınamadı')),
+          );
+        }
+        return;
+      }
+
+      try {
+        setState(() => _isLoading = true);
+        await _meetupService.joinMeetupWithPosition(
+          meetupId: _currentMeetup.id,
+          userId: _currentUserId!,
+          userName: currentUser.username,
+          team: _selectedTeam!,
+          slotIndex: _selectedSlotIndex!,
+          userImageUrl: currentUser.profileImageUrl,
+        );
+
+        final updatedMeetup = await _meetupService.getMeetupById(
+          _currentMeetup.id,
+        );
+        if (mounted) {
+          setState(() {
+            if (updatedMeetup != null) {
+              _currentMeetup = updatedMeetup;
+            }
+            _isParticipating = true;
+            _isLoading = false;
+            _selectedTeam = null;
+            _selectedSlotIndex = null;
+          });
+          _loadParticipants();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Buluşmaya başarıyla katıldınız!'),
+            ),
+          );
+          JoinCelebrationOverlay.show(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // Standard join for non-football meetups
     try {
       setState(() => _isLoading = true);
       await _meetupService.joinMeetup(_currentMeetup.id, _currentUserId!);
@@ -133,6 +221,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Buluşmaya başarıyla katıldınız!')),
         );
+        JoinCelebrationOverlay.show(context);
       }
     } catch (e) {
       if (mounted) {
@@ -248,15 +337,19 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
           _isLoading = false;
         });
         _loadParticipants();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Etkinlikten ayrıldınız')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Etkinlikten ayrıldınız')));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}')),
+          SnackBar(
+            content: Text(
+              'Hata: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+          ),
         );
       }
     }
@@ -284,14 +377,6 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
     final bool isFull =
         _currentMeetup.currentParticipants >= _currentMeetup.maxParticipants;
     final bool isPast = _meetupService.isMeetupPast(_currentMeetup);
-
-    // Debug logging
-    debugPrint(
-      'DEBUG: isFull=$isFull, isPast=$isPast, isParticipating=$_isParticipating, isOnWaitlist=$_isOnWaitlist, isLoading=$_isLoading',
-    );
-    debugPrint(
-      'DEBUG: current=${_currentMeetup.currentParticipants}, max=${_currentMeetup.maxParticipants}',
-    );
 
     return Scaffold(
       body: CustomScrollView(
@@ -359,156 +444,177 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Info Cards
-                  _buildDetailRow(
-                    icon: Icons.calendar_today,
-                    title: 'Tarih & Saat',
-                    subtitle:
-                        '${_currentMeetup.date.day} ${_getMonth(_currentMeetup.date.month)} • ${_formatTime(_currentMeetup.date, endDate: _currentMeetup.endDate)}',
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    icon: Icons.location_on_outlined,
-                    title: 'Buluşma Yeri',
-                    subtitle: _currentMeetup.locationName,
-                    description: _currentMeetup.locationAddress,
-                  ),
-                  const SizedBox(height: 16),
+                  if (_currentMeetup.type == MeetupType.football) ...[
+                    _buildFootballTabSelector(),
+                    const SizedBox(height: 24),
+                  ],
 
-                  // Map Widget
-                  MeetupMapWidget(
-                    latitude: _currentMeetup.latitude,
-                    longitude: _currentMeetup.longitude,
-                    locationName: _currentMeetup.locationName,
-                    locationAddress: _currentMeetup.locationAddress,
-                  ),
-                  const SizedBox(height: 24),
+                  if (_currentMeetup.type != MeetupType.football ||
+                      _selectedFootballTab == 0) ...[
+                    // Info Cards
+                    _buildDetailRow(
+                      icon: Icons.calendar_today,
+                      title: 'Tarih & Saat',
+                      subtitle:
+                          '${_currentMeetup.date.day} ${_getMonth(_currentMeetup.date.month)} • ${_formatTime(_currentMeetup.date, endDate: _currentMeetup.endDate)}',
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDetailRow(
+                      icon: Icons.location_on_outlined,
+                      title: 'Buluşma Yeri',
+                      subtitle: _currentMeetup.locationName,
+                      description: _currentMeetup.locationAddress,
+                    ),
+                    const SizedBox(height: 16),
 
-                  // Organizer Info
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          context.push(
-                            '/user-profile/${_currentMeetup.organizerId}',
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              backgroundImage:
-                                  _currentMeetup.organizerImageUrl != null
-                                  ? NetworkImage(
-                                      _currentMeetup.organizerImageUrl!,
-                                    )
-                                  : null,
-                              child: _currentMeetup.organizerImageUrl == null
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Organizatör',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                FutureBuilder<double>(
-                                  future: _getOrganizerRating(
-                                    _currentMeetup.organizerId,
+                    // Map Widget - show route map if route data exists, otherwise regular map
+                    if (_currentMeetup.hasRoute)
+                      RouteMapDisplayWidget(routeData: _currentMeetup.routeData!)
+                    else
+                      MeetupMapWidget(
+                        latitude: _currentMeetup.latitude,
+                        longitude: _currentMeetup.longitude,
+                        locationName: _currentMeetup.locationName,
+                        locationAddress: _currentMeetup.locationAddress,
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Organizer Info
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            context.push(
+                              '/user-profile/${_currentMeetup.organizerId}',
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                backgroundImage:
+                                    _currentMeetup.organizerImageUrl != null
+                                    ? NetworkImage(
+                                        _currentMeetup.organizerImageUrl!,
+                                      )
+                                    : null,
+                                child: _currentMeetup.organizerImageUrl == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Organizatör',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
-                                  builder: (context, snapshot) {
-                                    final rating = snapshot.data ?? 0.0;
-                                    return Row(
-                                      children: [
-                                        Text(
-                                          _currentMeetup.organizerName,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                decoration:
-                                                    TextDecoration.underline,
-                                              ),
-                                        ),
-                                        if (rating > 0) ...[
-                                          const SizedBox(width: 6),
+                                  FutureBuilder<double>(
+                                    future: _getOrganizerRating(
+                                      _currentMeetup.organizerId,
+                                    ),
+                                    builder: (context, snapshot) {
+                                      final rating = snapshot.data ?? 0.0;
+                                      return Row(
+                                        children: [
                                           Text(
-                                            rating.toStringAsFixed(1),
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.amber.withValues(
-                                                alpha: 0.9,
+                                            _currentMeetup.organizerName,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                ),
+                                          ),
+                                          if (rating > 0) ...[
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              rating.toStringAsFixed(1),
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.amber.withValues(
+                                                  alpha: 0.9,
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ],
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      OutlinedButton(
-                        onPressed: () {
-                          context.push(
-                            '/user-profile/${_currentMeetup.organizerId}',
-                          );
-                        },
-                        child: const Text('Profil'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  // About Section
-                  Text(
-                    'Açıklama',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                        const Spacer(),
+                        OutlinedButton(
+                          onPressed: () {
+                            context.push(
+                              '/user-profile/${_currentMeetup.organizerId}',
+                            );
+                          },
+                          child: const Text('Profil'),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _currentMeetup.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Participants Preview
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Katılımcılar (${_currentMeetup.currentParticipants}/${_currentMeetup.maxParticipants})',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                    // About Section
+                    Text(
+                      'Açıklama',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      TextButton(
-                        onPressed: () => _showAllParticipants(),
-                        child: const Text('Tümünü Gör'),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _currentMeetup.description,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.black87,
+                        height: 1.5,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildParticipantAvatars(),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Participants Preview
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Katılımcılar (${_currentMeetup.currentParticipants}/${_currentMeetup.maxParticipants})',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () => _showAllParticipants(),
+                          child: const Text('Tümünü Gör'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildParticipantAvatars(),
+                  ],
+                  if (_currentMeetup.type == MeetupType.football &&
+                      _selectedFootballTab == 1) ...[
+                    _buildFootballTeamTab(),
+                  ],
+                  if (_currentMeetup.type == MeetupType.football &&
+                      _selectedFootballTab == 2) ...[
+                    _buildFootballRulesTab(),
+                  ],
                   const SizedBox(height: 100), // Extra space for action button
                 ],
               ),
@@ -679,6 +785,701 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
               ),
       ),
     );
+  }
+
+  Widget _buildFootballTabSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          _buildFootballTabButton(index: 0, label: 'Genel'),
+          _buildFootballTabButton(index: 1, label: 'Takim'),
+          _buildFootballTabButton(index: 2, label: 'Kurallar'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFootballTabButton({required int index, required String label}) {
+    final bool isSelected = _selectedFootballTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedFootballTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF13EC5B) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF13EC5B).withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.black : Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFootballTeamTab() {
+    final String selectedFormat = _currentMeetup.teamFormat ?? '';
+    final String selectedFormation = _currentMeetup.formation ?? '';
+    final List<FormationConfig> availableFormations =
+        FormationData.formations[selectedFormat] ?? const <FormationConfig>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Mac Formati',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const Spacer(),
+            const _FootballRequiredTag(),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: FormationData.formats.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final format = FormationData.formats[index];
+              final isSelected = format == selectedFormat;
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF13EC5B) : Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF13EC5B)
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  format,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? Colors.black : Colors.grey.shade700,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Formasyon',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        if (availableFormations.isEmpty)
+          _buildFootballEmptyState(
+            icon: Icons.sports_soccer_outlined,
+            text: 'Bu etkinlikte formasyon bilgisi bulunmuyor.',
+          )
+        else
+          SizedBox(
+            height: 156,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: availableFormations.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final config = availableFormations[index];
+                final isSelected = config.formation == selectedFormation;
+                return Container(
+                  width: 240,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF13EC5B)
+                          : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(
+                                      0xFF13EC5B,
+                                    ).withValues(alpha: 0.2)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Icon(
+                              isSelected ? Icons.check_circle : Icons.shield,
+                              size: 18,
+                              color: isSelected
+                                  ? Colors.green.shade700
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              config.formation,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? Colors.green.shade800
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _buildFormationCountChips(config),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Text(
+              'Kadro Düzeni',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const Spacer(),
+            if (_isOrganizer)
+              GestureDetector(
+                onTap: _autoFillTeams,
+                child: Text(
+                  'Otomatik Doldur',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildFootballPitchBoard(),
+      ],
+    );
+  }
+
+  List<Widget> _buildFormationCountChips(FormationConfig config) {
+    final entries = <MapEntry<FootballPosition, int>>[
+      MapEntry(
+        FootballPosition.goalkeeper,
+        config.positionCounts[FootballPosition.goalkeeper] ?? 0,
+      ),
+      MapEntry(
+        FootballPosition.defender,
+        config.positionCounts[FootballPosition.defender] ?? 0,
+      ),
+      MapEntry(
+        FootballPosition.midfielder,
+        config.positionCounts[FootballPosition.midfielder] ?? 0,
+      ),
+      MapEntry(
+        FootballPosition.forward,
+        config.positionCounts[FootballPosition.forward] ?? 0,
+      ),
+    ];
+
+    return entries.where((entry) => entry.value > 0).map((entry) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '${entry.value} ${_positionLabel(entry.key)}',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildFootballPitchBoard() {
+    final teamASlots = _currentMeetup.teamASlots ?? const <PositionSlot>[];
+    final teamBSlots = _currentMeetup.teamBSlots ?? const <PositionSlot>[];
+
+    if (teamASlots.isEmpty && teamBSlots.isEmpty) {
+      return _buildFootballEmptyState(
+        icon: Icons.groups_outlined,
+        text: 'Takım kadrosu henüz oluşturulmamış.',
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFE8FAEE), Color(0xFFF5FCF8)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF13EC5B).withValues(alpha: 0.2),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  width: 1.2,
+                  color: const Color(0xFF13EC5B).withValues(alpha: 0.22),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF13EC5B).withValues(alpha: 0.22),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildTeamColumn('Takım A', teamASlots, 'A')),
+              const SizedBox(width: 12),
+              Expanded(child: _buildTeamColumn('Takım B', teamBSlots, 'B')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamColumn(String teamName, List<PositionSlot> slots, String team) {
+    final positionCounters = <String, int>{};
+    final bool canSelect = !_isParticipating && _currentMeetup.isFootballWithTeams;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                teamName,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...slots.asMap().entries.map((entry) {
+            final index = entry.key;
+            final slot = entry.value;
+            positionCounters[slot.position] =
+                (positionCounters[slot.position] ?? 0) + 1;
+            final slotOrder = positionCounters[slot.position]!;
+            final isSelected = _selectedTeam == team && _selectedSlotIndex == index;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GestureDetector(
+                onTap: (canSelect && slot.isEmpty)
+                    ? () {
+                        setState(() {
+                          _selectedTeam = team;
+                          _selectedSlotIndex = index;
+                        });
+                      }
+                    : null,
+                child: _buildTeamSlotTile(
+                  slot: slot,
+                  slotOrder: slotOrder,
+                  isSelected: isSelected,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamSlotTile({
+    required PositionSlot slot,
+    required int slotOrder,
+    bool isSelected = false,
+  }) {
+    final bool isOrganizer = slot.assignedUserId == _currentMeetup.organizerId;
+    final Color accent = _positionColor(slot.position);
+
+    if (slot.isFilled) {
+      final initial = (slot.assignedUserName ?? '?').trim().isNotEmpty
+          ? slot.assignedUserName!.trim()[0].toUpperCase()
+          : '?';
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: isOrganizer
+                  ? Colors.amber.withValues(alpha: 0.3)
+                  : accent.withValues(alpha: 0.2),
+              backgroundImage: slot.assignedUserImageUrl != null
+                  ? NetworkImage(slot.assignedUserImageUrl!)
+                  : null,
+              child: slot.assignedUserImageUrl == null
+                  ? Text(
+                      isOrganizer ? 'K' : initial,
+                      style: TextStyle(
+                        color: isOrganizer ? Colors.amber.shade800 : accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    slot.assignedUserName ?? 'Bilinmeyen',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    isOrganizer
+                        ? 'Kaptan'
+                        : _slotDisplayName(slot.position, slotOrder),
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Empty slot - selected state
+    if (isSelected) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF13EC5B).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFF13EC5B),
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: const Color(0xFF13EC5B).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Icon(Icons.check, size: 16, color: Color(0xFF13EC5B)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _slotDisplayName(slot.position, slotOrder),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.green.shade800,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Empty slot with dashed border
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: Colors.grey.shade400,
+        borderRadius: 999,
+        strokeWidth: 1.2,
+        dashWidth: 5,
+        dashSpace: 3,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Icon(Icons.add, size: 16, color: Colors.grey.shade500),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _slotDisplayName(slot.position, slotOrder),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFootballRulesTab() {
+    final rulesText = _currentMeetup.rules.trim();
+    if (rulesText.isEmpty) {
+      return _buildFootballEmptyState(
+        icon: Icons.rule_folder_outlined,
+        text: 'Bu etkinlik için kural eklenmemiş.',
+      );
+    }
+
+    final lines = rulesText
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.gavel, size: 18, color: Colors.green.shade700),
+              const SizedBox(width: 8),
+              const Text(
+                'Etkinlik Kurallari',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...lines.map((line) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      line,
+                      style: TextStyle(
+                        height: 1.4,
+                        color: Colors.grey.shade800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFootballEmptyState({
+    required IconData icon,
+    required String text,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 26, color: Colors.grey.shade500),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _positionLabel(FootballPosition position) {
+    switch (position) {
+      case FootballPosition.goalkeeper:
+        return 'Kaleci';
+      case FootballPosition.defender:
+        return 'Defans';
+      case FootballPosition.midfielder:
+        return 'Orta';
+      case FootballPosition.forward:
+        return 'Forvet';
+    }
+  }
+
+  String _slotDisplayName(String position, int slotOrder) {
+    final base = switch (position) {
+      'goalkeeper' => 'Kaleci',
+      'defender' => 'Defans',
+      'midfielder' => 'Orta',
+      'forward' => 'Forvet',
+      _ => 'Pozisyon',
+    };
+    if (position == 'goalkeeper') {
+      return base;
+    }
+    return '$base $slotOrder';
+  }
+
+  Color _positionColor(String position) {
+    switch (position) {
+      case 'goalkeeper':
+        return Colors.orange.shade700;
+      case 'defender':
+        return Colors.blue.shade700;
+      case 'midfielder':
+        return Colors.green.shade700;
+      case 'forward':
+        return Colors.red.shade700;
+      default:
+        return Colors.grey.shade700;
+    }
   }
 
   Widget _buildDetailRow({
@@ -1071,11 +1872,88 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   }
 
   String _formatTime(DateTime date, {DateTime? endDate}) {
-    final startTime = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final startTime =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     if (endDate != null) {
-      final endTime = '${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}';
       return '$startTime - $endTime';
     }
     return startTime;
   }
+}
+
+class _FootballRequiredTag extends StatelessWidget {
+  const _FootballRequiredTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF13EC5B).withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Zorunlu',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.green.shade800,
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom painter for dashed stadium-shaped borders on empty position slots
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double borderRadius;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+
+  _DashedBorderPainter({
+    required this.color,
+    required this.borderRadius,
+    this.strokeWidth = 1.0,
+    this.dashWidth = 5.0,
+    this.dashSpace = 3.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(size.height / 2), // stadium shape
+    );
+
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics();
+
+    for (final metric in metrics) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final end = distance + dashWidth;
+        canvas.drawPath(
+          metric.extractPath(distance, end.clamp(0, metric.length)),
+          paint,
+        );
+        distance = end + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      color != oldDelegate.color ||
+      strokeWidth != oldDelegate.strokeWidth ||
+      dashWidth != oldDelegate.dashWidth ||
+      dashSpace != oldDelegate.dashSpace;
 }

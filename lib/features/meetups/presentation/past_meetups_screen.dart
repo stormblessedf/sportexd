@@ -239,41 +239,11 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                         const SizedBox(height: 16),
                     itemBuilder: (context, index) {
                       final meetup = sortedMeetups[index];
-                      return Column(
-                        children: [
-                          MeetupCard(
-                            meetup: meetup,
-                            onTap: () {
-                              context.push('/detail', extra: meetup);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                context.push(
-                                    '/evaluate-event', extra: meetup);
-                              },
-                              icon:
-                                  const Icon(Icons.star_outline, size: 18),
-                              label: const Text(
-                                  'Katılımcıları Değerlendir'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: primary,
-                                side: BorderSide(
-                                    color:
-                                        primary.withValues(alpha: 0.5)),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      return MeetupCard(
+                        meetup: meetup,
+                        onTap: () {
+                          context.push('/detail', extra: meetup);
+                        },
                       );
                     },
                   ),

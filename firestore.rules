@@ -2,85 +2,604 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Users collection
-    match /users/{userId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+    function isOwnUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Meetups collection
+    function meetupExists(meetupId) {
+      return exists(/databases/$(database)/documents/meetups/$(meetupId));
+    }
+
+    function isMeetupParticipantById(meetupId) {
+      return meetupExists(meetupId)
+        && get(/databases/$(database)/documents/meetups/$(meetupId))
+          .data
+          .participantIds
+          .hasAny([request.auth.uid]);
+    }
+
+    function isMeetupOrganizerById(meetupId) {
+      return meetupExists(meetupId)
+        && get(/databases/$(database)/documents/meetups/$(meetupId))
+          .data
+          .organizerId
+          == request.auth.uid;
+    }
+
+    function isParticipantIdInMeetup(meetupId, userId) {
+      return meetupExists(meetupId)
+        && get(/databases/$(database)/documents/meetups/$(meetupId))
+          .data
+          .participantIds
+          .hasAny([userId]);
+    }
+
+    function sameList(listA, listB) {
+      return listA.size() == listB.size()
+        && listA.hasAll(listB)
+        && listB.hasAll(listA);
+    }
+
+    function hasMeetupMutableShape() {
+      return request.resource.data.participantIds is list
+        && request.resource.data.waitlistUserIds is list
+        && request.resource.data.currentParticipants is int
+        && request.resource.data.maxParticipants is int;
+    }
+
+    function hasConsistentParticipants() {
+      return request.resource.data.currentParticipants
+          == request.resource.data.participantIds.size()
+        && request.resource.data.currentParticipants >= 1
+        && request.resource.data.currentParticipants <= request.resource.data.maxParticipants
+        && request.resource.data.participantIds.hasAny([resource.data.organizerId])
+        && request.resource.data.isFull
+          == (request.resource.data.currentParticipants >= request.resource.data.maxParticipants);
+    }
+
+    function isSelfRemovedFromWaitlistOnJoin() {
+      return resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && !request.resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && request.resource.data.waitlistUserIds.size()
+          == resource.data.waitlistUserIds.size() - 1
+        && resource.data.waitlistUserIds.hasAll(request.resource.data.waitlistUserIds);
+    }
+
+    function isSelfJoinUpdate() {
+      return !resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.size()
+          == resource.data.participantIds.size() + 1
+        && request.resource.data.participantIds.hasAll(resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants + 1
+        && request.resource.data.teamFormat == resource.data.teamFormat
+        && request.resource.data.formation == resource.data.formation
+        && request.resource.data.teamASlots == resource.data.teamASlots
+        && request.resource.data.teamBSlots == resource.data.teamBSlots
+        && (
+          sameList(request.resource.data.waitlistUserIds, resource.data.waitlistUserIds)
+          || isSelfRemovedFromWaitlistOnJoin()
+        );
+    }
+
+    function isSelfLeaveUpdate() {
+      return request.auth.uid != resource.data.organizerId
+        && resource.data.participantIds.hasAny([request.auth.uid])
+        && !request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.size()
+          == resource.data.participantIds.size() - 1
+        && resource.data.participantIds.hasAll(request.resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants - 1
+        && request.resource.data.teamFormat == resource.data.teamFormat
+        && request.resource.data.formation == resource.data.formation
+        && request.resource.data.teamASlots == resource.data.teamASlots
+        && request.resource.data.teamBSlots == resource.data.teamBSlots
+        && sameList(request.resource.data.waitlistUserIds, resource.data.waitlistUserIds);
+    }
+
+    function isSelfWaitlistAddUpdate() {
+      return !resource.data.participantIds.hasAny([request.auth.uid])
+        && resource.data.isFull == true
+        && !resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && request.resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && request.resource.data.waitlistUserIds.size()
+          == resource.data.waitlistUserIds.size() + 1
+        && request.resource.data.waitlistUserIds.hasAll(resource.data.waitlistUserIds)
+        && sameList(request.resource.data.participantIds, resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants
+        && request.resource.data.isFull == resource.data.isFull
+        && request.resource.data.teamFormat == resource.data.teamFormat
+        && request.resource.data.formation == resource.data.formation
+        && request.resource.data.teamASlots == resource.data.teamASlots
+        && request.resource.data.teamBSlots == resource.data.teamBSlots;
+    }
+
+    function isSelfWaitlistRemoveUpdate() {
+      return resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && !request.resource.data.waitlistUserIds.hasAny([request.auth.uid])
+        && request.resource.data.waitlistUserIds.size()
+          == resource.data.waitlistUserIds.size() - 1
+        && resource.data.waitlistUserIds.hasAll(request.resource.data.waitlistUserIds)
+        && sameList(request.resource.data.participantIds, resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants
+        && request.resource.data.isFull == resource.data.isFull
+        && request.resource.data.teamFormat == resource.data.teamFormat
+        && request.resource.data.formation == resource.data.formation
+        && request.resource.data.teamASlots == resource.data.teamASlots
+        && request.resource.data.teamBSlots == resource.data.teamBSlots;
+    }
+
+    // Football team slot updates
+    function isFootballMeetup() {
+      return resource.data.teamFormat != null
+        && resource.data.formation != null
+        && resource.data.teamASlots != null
+        && resource.data.teamBSlots != null;
+    }
+
+    function areFootballMetaFieldsUnchanged() {
+      return request.resource.data.teamFormat == resource.data.teamFormat
+        && request.resource.data.formation == resource.data.formation;
+    }
+
+    function areFootballSlotListsValidAndSized() {
+      return request.resource.data.teamASlots is list
+        && request.resource.data.teamBSlots is list
+        && request.resource.data.teamASlots.size() == resource.data.teamASlots.size()
+        && request.resource.data.teamBSlots.size() == resource.data.teamBSlots.size();
+    }
+
+    function isExactlyOneTeamSlotListChanged() {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+      return (
+        changed.hasAny(['teamASlots'])
+        && !changed.hasAny(['teamBSlots'])
+      ) || (
+        !changed.hasAny(['teamASlots'])
+        && changed.hasAny(['teamBSlots'])
+      );
+    }
+
+    function isSelfFootballJoinUpdate() {
+      return isFootballMeetup()
+        && !resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.size()
+          == resource.data.participantIds.size() + 1
+        && request.resource.data.participantIds.hasAll(resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants + 1
+        && areFootballMetaFieldsUnchanged()
+        && areFootballSlotListsValidAndSized()
+        && isExactlyOneTeamSlotListChanged()
+        && (
+          sameList(request.resource.data.waitlistUserIds, resource.data.waitlistUserIds)
+          || isSelfRemovedFromWaitlistOnJoin()
+        );
+    }
+
+    function isSelfFootballLeaveUpdate() {
+      return isFootballMeetup()
+        && request.auth.uid != resource.data.organizerId
+        && resource.data.participantIds.hasAny([request.auth.uid])
+        && !request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.participantIds.size()
+          == resource.data.participantIds.size() - 1
+        && resource.data.participantIds.hasAll(request.resource.data.participantIds)
+        && request.resource.data.currentParticipants == resource.data.currentParticipants - 1
+        && areFootballMetaFieldsUnchanged()
+        && areFootballSlotListsValidAndSized()
+        && isExactlyOneTeamSlotListChanged()
+        && sameList(request.resource.data.waitlistUserIds, resource.data.waitlistUserIds);
+    }
+
+    function isParticipantSafeMeetupUpdate() {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+      return hasMeetupMutableShape()
+        && changed.hasOnly([
+          'currentParticipants',
+          'isFull',
+          'participantIds',
+          'waitlistUserIds',
+          'teamASlots',
+          'teamBSlots',
+        ])
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.maxParticipants == resource.data.maxParticipants
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.endDate == resource.data.endDate
+        && hasConsistentParticipants()
+        && (
+          isSelfJoinUpdate()
+          || isSelfLeaveUpdate()
+          || isSelfWaitlistAddUpdate()
+          || isSelfWaitlistRemoveUpdate()
+          || isSelfFootballJoinUpdate()
+          || isSelfFootballLeaveUpdate()
+        );
+    }
+
+    function isSafeOwnUserUpdate(userId) {
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+      return isOwnUser(userId)
+        && changed.hasOnly([
+          'username',
+          'profileImageUrl',
+          'bio',
+          'location',
+          'gender',
+          'birthDate',
+          'height',
+          'weight',
+          'interestedSports',
+          'level',
+          'preferredTimes',
+          'playStyle',
+          'teamPreference',
+          'lastSeen',
+          'isOnline',
+          'fcmTokens',
+          'notificationPreferences',
+          'processedAttendanceIds',
+        ])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.email == resource.data.email;
+    }
+
+    function isDmChat(chatId) {
+      return chatId.matches('^dm_.*');
+    }
+
+    function isDmParticipant(chatId) {
+      return exists(/databases/$(database)/documents/chats/$(chatId))
+        && get(/databases/$(database)/documents/chats/$(chatId)).data.participants is list
+        && get(/databases/$(database)/documents/chats/$(chatId))
+          .data
+          .participants
+          .hasAny([request.auth.uid]);
+    }
+
+    function canAccessChat(chatId) {
+      return isSignedIn() && (isDmParticipant(chatId) || isMeetupParticipantById(chatId));
+    }
+
+    function isPartnershipNotificationType(type) {
+      return [
+        'partnership_request',
+        'partnership_accepted',
+        'partnership_rejected',
+        'partnership_suggestion',
+      ].hasAny([type]);
+    }
+
+    function isValidPartnershipNotificationTarget() {
+      return request.resource.data.relatedId is string
+        && exists(/databases/$(database)/documents/partners/$(request.resource.data.relatedId))
+        && (
+          (
+            get(/databases/$(database)/documents/partners/$(request.resource.data.relatedId))
+              .data
+              .userId
+              == request.auth.uid
+            && get(/databases/$(database)/documents/partners/$(request.resource.data.relatedId))
+              .data
+              .partnerId
+              == request.resource.data.userId
+          )
+          || (
+            get(/databases/$(database)/documents/partners/$(request.resource.data.relatedId))
+              .data
+              .partnerId
+              == request.auth.uid
+            && get(/databases/$(database)/documents/partners/$(request.resource.data.relatedId))
+              .data
+              .userId
+              == request.resource.data.userId
+          )
+        );
+    }
+
+    function isValidAttendanceRecordCreate(meetupId, userId) {
+      return isSignedIn()
+        && isMeetupParticipantById(meetupId)
+        && userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'status',
+          'detectedAt',
+          'distanceMeters',
+          'method',
+        ])
+        && request.resource.data.status is string
+        && ['attended', 'not_attended'].hasAny([request.resource.data.status])
+        && (request.resource.data.detectedAt is string || request.resource.data.detectedAt is timestamp)
+        && request.resource.data.method == 'gps_proximity'
+        && (
+          request.resource.data.status == 'attended'
+            ? request.resource.data.distanceMeters is number
+              && request.resource.data.distanceMeters >= 0
+              && request.resource.data.distanceMeters <= 1000
+            : !request.resource.data.keys().hasAny(['distanceMeters'])
+              || request.resource.data.distanceMeters == null
+        );
+    }
+
+    function isValidOrganizerLocationWrite(meetupId, docId) {
+      return isSignedIn()
+        && isMeetupParticipantById(meetupId)
+        && isMeetupOrganizerById(meetupId)
+        && docId == 'current'
+        && request.resource.data.keys().hasOnly([
+          'latitude',
+          'longitude',
+          'updatedAt',
+        ])
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && (request.resource.data.updatedAt is string || request.resource.data.updatedAt is timestamp);
+    }
+
+    function isMeetupEnded(meetupId) {
+      let meetup = get(/databases/$(database)/documents/meetups/$(meetupId)).data;
+      let effectiveEnd = meetup.endDate != null ? meetup.endDate : meetup.date;
+      return effectiveEnd < request.time;
+    }
+
+    function isValidRatingId(ratingId, meetupId, raterId, ratedUserId) {
+      return ratingId == meetupId + '_' + raterId + '_' + ratedUserId;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnUser(userId);
+      allow update: if isSafeOwnUserUpdate(userId);
+      allow delete: if isOwnUser(userId);
+    }
+
     match /meetups/{meetupId} {
       allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() == 1
+        && request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.currentParticipants == 1
+        && request.resource.data.maxParticipants is int
+        && request.resource.data.maxParticipants >= 1;
+      allow update: if isSignedIn()
+        && (
+          resource.data.organizerId == request.auth.uid
+          || isParticipantSafeMeetupUpdate()
+        );
+      allow delete: if isSignedIn() && resource.data.organizerId == request.auth.uid;
 
-      // Participants subcollection
       match /participants/{participantId} {
-        allow read: if true;
-        allow create, update, delete: if isSignedIn();
+        allow read: if isSignedIn();
+        // Create: Only self-registration allowed (no proxy joins)
+        allow create: if isSignedIn() && participantId == request.auth.uid;
+        // Update: Only own record
+        allow update: if isSignedIn() && participantId == request.auth.uid;
+        // Delete: Own record or organizer can remove others
+        allow delete: if isSignedIn()
+          && (participantId == request.auth.uid || isMeetupOrganizerById(meetupId));
       }
 
-      // Chats subcollection
       match /chats/{chatId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isSignedIn() && isMeetupParticipantById(meetupId);
 
-        // Messages subcollection
         match /messages/{messageId} {
-          allow read, write: if isSignedIn();
+          allow read: if isSignedIn() && isMeetupParticipantById(meetupId);
+          allow create: if isSignedIn()
+            && isMeetupParticipantById(meetupId)
+            && request.resource.data.senderId == request.auth.uid;
+          allow update, delete: if isSignedIn()
+            && isMeetupParticipantById(meetupId)
+            && resource.data.senderId == request.auth.uid;
         }
       }
-    }
 
-    // Chats collection (top-level for group chats)
-    match /chats/{chatId} {
-      allow read, write: if isSignedIn();
+      match /photos/{photoId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && isMeetupParticipantById(meetupId)
+          && !isMeetupEnded(meetupId)
+          && request.resource.data.keys().hasAll(['id', 'meetupId', 'userId', 'userName', 'photoUrl', 'createdAt'])
+          && request.resource.data.id == photoId
+          && request.resource.data.meetupId == meetupId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.userName is string
+          && request.resource.data.photoUrl is string;
+        allow update: if isSignedIn()
+          && isMeetupParticipantById(meetupId)
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.meetupId == resource.data.meetupId
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isSignedIn()
+          && isMeetupParticipantById(meetupId)
+          && resource.data.userId == request.auth.uid;
+      }
 
-      // Messages subcollection
-      match /messages/{messageId} {
-        allow read, write: if isSignedIn();
+      match /attendance_records/{userId} {
+        allow read: if isSignedIn() && isMeetupParticipantById(meetupId);
+        allow create: if isValidAttendanceRecordCreate(meetupId, userId);
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      match /organizer_location/{docId} {
+        allow read: if isSignedIn() && isMeetupParticipantById(meetupId);
+        allow create, update: if isValidOrganizerLocationWrite(meetupId, docId);
+        allow delete: if false;
       }
     }
 
-    // Ratings collection
+    match /chats/{chatId} {
+      allow read: if canAccessChat(chatId);
+      allow create: if isSignedIn()
+        && (
+          (
+            isDmChat(chatId)
+            && request.resource.data.type == 'dm'
+            && request.resource.data.participants is list
+            && request.resource.data.participants.size() == 2
+            && request.resource.data.participants.hasAny([request.auth.uid])
+          )
+          || isMeetupParticipantById(chatId)
+        );
+      // Update: Only allow metadata fields (lastMessage, timestamps, etc.)
+      allow update: if canAccessChat(chatId)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          'lastMessage',
+          'lastMessageTime',
+          'lastMessageSenderId',
+          'updatedAt',
+          'isOrganizerOnlyMode',
+        ]);
+      // Delete: Only DM creator or meetup organizer can delete
+      allow delete: if canAccessChat(chatId)
+        && (
+          (isDmChat(chatId) && resource.data.participants[0] == request.auth.uid)
+          || (!isDmChat(chatId) && isMeetupOrganizerById(chatId))
+        );
+
+      match /messages/{messageId} {
+        allow read: if canAccessChat(chatId);
+        allow create: if canAccessChat(chatId)
+          && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if canAccessChat(chatId)
+          && resource.data.senderId == request.auth.uid;
+      }
+
+      match /unread/{userId} {
+        allow read: if canAccessChat(chatId) && userId == request.auth.uid;
+        allow create, update, delete: if canAccessChat(chatId);
+      }
+    }
+
     match /ratings/{ratingId} {
-      allow read: if true;
-      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.raterId == request.auth.uid
+        && request.resource.data.ratedUserId != request.auth.uid
+        && request.resource.data.meetupId is string
+        // Enforce document ID format for uniqueness: meetupId_raterId_ratedUserId
+        && isValidRatingId(
+          ratingId,
+          request.resource.data.meetupId,
+          request.auth.uid,
+          request.resource.data.ratedUserId
+        )
+        // Meetup must have ended before rating
+        && isMeetupEnded(request.resource.data.meetupId)
+        && isParticipantIdInMeetup(request.resource.data.meetupId, request.auth.uid)
+        && isParticipantIdInMeetup(
+          request.resource.data.meetupId,
+          request.resource.data.ratedUserId
+        );
       allow update, delete: if false;
     }
 
-    // Notifications collection
     match /notifications/{notificationId} {
-      // Allow read if signed in - query will filter by userId anyway
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && (
+          request.resource.data.userId == request.auth.uid
+          || (
+            isPartnershipNotificationType(request.resource.data.type)
+            && isValidPartnershipNotificationTarget()
+          )
+        );
       allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // Partners collection
     match /partners/{partnershipId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.partnerId is string
+        && request.resource.data.partnerId != request.auth.uid
+        && request.resource.data.sharedMeetupIds is list
+        && request.resource.data.sharedMeetupIds.size() > 0;
       allow update: if isSignedIn()
-        && (resource.data.userId == request.auth.uid
-            || resource.data.partnerId == request.auth.uid);
+        && (
+          resource.data.userId == request.auth.uid
+          || resource.data.partnerId == request.auth.uid
+        );
       allow delete: if isSignedIn()
-        && (resource.data.userId == request.auth.uid
-            || resource.data.partnerId == request.auth.uid);
+        && (
+          resource.data.userId == request.auth.uid
+          || resource.data.partnerId == request.auth.uid
+        );
     }
 
-    // Presence collection (if used separately)
     match /presence/{userId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isOwnUser(userId);
     }
 
-    // Deny all other paths
+    // Live Broadcast streams
+    match /streams/{streamId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.broadcasterId == request.auth.uid;
+      allow update: if isSignedIn()
+        && (
+          resource.data.broadcasterId == request.auth.uid
+          || request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            'currentViewers',
+            'peakViewers',
+            'totalReactions',
+          ])
+        );
+      allow delete: if isSignedIn() && resource.data.broadcasterId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isSignedIn()
+          && resource.data.userId == request.auth.uid;
+      }
+
+      match /reactions/{reactionId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /viewers/{userId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn() && userId == request.auth.uid;
+        allow delete: if isSignedIn() && userId == request.auth.uid;
+      }
+
+      match /statistics/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn()
+          && get(/databases/$(database)/documents/streams/$(streamId))
+            .data
+            .broadcasterId
+            == request.auth.uid;
+      }
+    }
+
+    // Profile photos - authenticated users can read, only owner can create/delete, no updates
+    match /profile_photos/{photoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

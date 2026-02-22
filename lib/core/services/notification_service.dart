@@ -174,10 +174,15 @@ class NotificationService extends ChangeNotifier {
     final data = message.data;
     final type = data['type'] ?? 'system';
     final relatedId = data['relatedId'] ?? '';
+    final title = message.notification?.title ?? data['title'] ?? '';
 
     // Navigate to relevant screen
     final route = _getRouteForNotificationType(type, relatedId);
-    onNavigate?.call(route, {'relatedId': relatedId});
+    onNavigate?.call(route, {
+      'relatedId': relatedId,
+      'title': title,
+      'type': type,
+    });
   }
 
   /// Check if user is on relevant screen
@@ -199,7 +204,7 @@ class NotificationService extends ChangeNotifier {
   String _getRouteForNotificationType(String type, String relatedId) {
     switch (type) {
       case 'chat_message':
-        return '/chat/$relatedId';
+        return '/chat';
       case 'meetup_reminder':
       case 'meetup_update':
       case 'meetup_cancelled':
@@ -230,20 +235,18 @@ class NotificationService extends ChangeNotifier {
       return Stream.value([]);
     }
 
-    // Use simple query without orderBy to avoid index requirement
-    // Sort locally instead
+    // Use orderBy to ensure we get the most recent notifications
+    // This requires a composite index: userId (ASC) + timestamp (DESC)
     return _firestore
         .collection('notifications')
         .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
         .limit(100)
         .snapshots()
         .map((snapshot) {
-      final notifications = snapshot.docs
+      return snapshot.docs
           .map((doc) => NotificationModel.fromFirestore(doc))
           .toList();
-      // Sort locally by timestamp descending
-      notifications.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      return notifications;
     });
   }
 

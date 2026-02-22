@@ -3,9 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/models/meetup_model.dart';
 import '../../../../core/services/meetup_service.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../features/live_event/presentation/live_feed_page.dart';
 import 'widgets/meetup_card.dart';
 
-enum FeedMode { explore, following }
+enum FeedMode { explore, following, live }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -89,7 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             _feedMode == FeedMode.explore
                                 ? 'Keşfet'
-                                : 'Takip Edilenler',
+                                : _feedMode == FeedMode.following
+                                    ? 'Takip Edilenler'
+                                    : 'Canlı',
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -100,7 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             _feedMode == FeedMode.explore
                                 ? 'Yakınındaki aktiviteleri keşfet'
-                                : 'Takip ettiğin kişilerin aktiviteleri',
+                                : _feedMode == FeedMode.following
+                                    ? 'Takip ettiğin kişilerin aktiviteleri'
+                                    : 'Aktif etkinliklerden canlı paylaşımlar',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: textMuted,
@@ -187,6 +192,56 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          // Live button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: _feedMode == FeedMode.live
+                                  ? primary
+                                  : surfaceLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _feedMode == FeedMode.live
+                                    ? primary
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                              boxShadow: [
+                                if (_feedMode == FeedMode.live)
+                                  BoxShadow(
+                                    color: primary.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(
+                                    Icons.videocam,
+                                    size: 20,
+                                    color: _feedMode == FeedMode.live
+                                        ? Colors.white
+                                        : textMuted,
+                                  ),
+                                  Positioned(
+                                    top: -2,
+                                    right: -2,
+                                    child: _PulsingDot(
+                                      isActive: _feedMode != FeedMode.live,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _feedMode = FeedMode.live;
+                                });
+                              },
+                              tooltip: 'Canlı',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           // Filter button
                           Container(
                             width: 40,
@@ -222,7 +277,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Scrollable Content
             Expanded(
-              child: _isLoadingPartners
+              child: _feedMode == FeedMode.live
+                  ? const LiveFeedPage()
+                  : _isLoadingPartners
                   ? const Center(
                       child: CircularProgressIndicator(color: primary),
                     )
@@ -319,6 +376,67 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Yanıp sönen yeşil nokta göstergesi - canlı içerik olduğunu belirtir.
+class _PulsingDot extends StatefulWidget {
+  final bool isActive;
+
+  const _PulsingDot({required this.isActive});
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isActive) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: const Color(0xFF22C55E).withValues(alpha: _animation.value),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color:
+                    const Color(0xFF22C55E).withValues(alpha: _animation.value * 0.5),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

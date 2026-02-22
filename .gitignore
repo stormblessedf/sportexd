@@ -51,10 +51,16 @@ app.*.map.json
 **/apikeys.properties
 **/secrets.properties
 .claude/settings.local.json
+.claude/worktrees/
 
 # Firebase
 firebase-debug.log
 .firebase/
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Build artifacts (may contain embedded keys)
+.dart_tool/
 
 # Temporary files
 *.tmp
@@ -66,3 +72,16 @@ build_log.txt
 .kiro/
 Mainpage.html
 MeetingDiscoveryPage.html
+FootballEventCreationPAge.html
+profile_mockup.html
+profile_social.html
+profile_social_v2.html
+profile_variations.html
+
+# Review/analysis files
+CODEBASE_REVIEW_FINDINGS.md
+EVENT_PHOTO_SHARE_REVIEW.md
+PROJE_OZET.md
+
+# IDE
+.vscode/

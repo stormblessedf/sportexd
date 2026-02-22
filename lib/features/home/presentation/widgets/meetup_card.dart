@@ -5,6 +5,7 @@ import '../../../../core/models/meetup_model.dart';
 import '../../../../core/services/meetup_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/user_rating_badge.dart';
+import '../../../meetups/presentation/widgets/join_celebration_overlay.dart';
 
 class MeetupCard extends StatefulWidget {
   final MeetupModel meetup;
@@ -78,6 +79,19 @@ class _MeetupCardState extends State<MeetupCard> {
       return;
     }
 
+    if (widget.meetup.isFootballWithTeams) {
+      widget.onTap();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pozisyon secimi icin detay ekranindan katilin'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isJoining = true;
     });
@@ -100,6 +114,7 @@ class _MeetupCardState extends State<MeetupCard> {
             backgroundColor: primary,
           ),
         );
+        JoinCelebrationOverlay.show(context);
       }
     } catch (e) {
       setState(() {
@@ -305,7 +320,10 @@ class _MeetupCardState extends State<MeetupCard> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _formatDateTime(widget.meetup.date, endDate: widget.meetup.endDate),
+                              _formatDateTime(
+                                widget.meetup.date,
+                                endDate: widget.meetup.endDate,
+                              ),
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,

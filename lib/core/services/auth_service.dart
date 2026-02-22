@@ -1,8 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
 class AuthService {
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -203,6 +209,21 @@ class AuthService {
 
   // Sign Out
   Future<void> signOut() async {
+    // Remove FCM token before signing out
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId != null) {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await _firestore.collection('users').doc(userId).update({
+            'fcmTokens': FieldValue.arrayRemove([token]),
+          });
+        }
+      }
+    } catch (e) {
+      // Don't block logout if token removal fails
+      debugPrint('Error removing FCM token on logout: $e');
+    }
     await _auth.signOut();
   }
 

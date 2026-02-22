@@ -182,66 +182,62 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 28),
 
                           // Email Field
-                          Text(
-                            'E-posta',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _emailController,
-                            style: const TextStyle(color: AppTheme.textDark),
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'E-posta adresi gerekli';
-                              }
-                              if (!value.contains('@') || !value.contains('.')) {
-                                return 'Geçerli bir e-posta girin';
-                              }
-                              return null;
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'ornek@email.com',
-                              hintStyle: TextStyle(color: AppTheme.textLight),
-                              prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.borderLight),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.primary, width: 2),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.redAccent),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.redAccent),
-                              ),
-                              filled: true,
-                              fillColor: AppTheme.backgroundLight,
+                          Semantics(
+                            label: 'E-posta adresi giriş alanı',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'E-posta',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: _emailController,
+                                  style: const TextStyle(color: AppTheme.textDark),
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'E-posta adresi gerekli';
+                                    }
+                                    if (!value.contains('@') || !value.contains('.')) {
+                                      return 'Geçerli bir e-posta girin';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'ornek@email.com',
+                                    prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                                    filled: true,
+                                    fillColor: AppTheme.backgroundLight,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 20),
 
                           // Password Field
-                          Text(
-                            'Şifre',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
+                          Semantics(
+                            label: 'Şifre giriş alanı',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Şifre',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             style: const TextStyle(color: AppTheme.textDark),
@@ -258,37 +254,26 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             decoration: InputDecoration(
                               hintText: '••••••••',
-                              hintStyle: TextStyle(color: AppTheme.textLight),
                               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                  color: AppTheme.textMuted,
+                              suffixIcon: Semantics(
+                                label: _obscurePassword ? 'Şifreyi göster' : 'Şifreyi gizle',
+                                child: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.borderLight),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.primary, width: 2),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.redAccent),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.redAccent),
                               ),
                               filled: true,
                               fillColor: AppTheme.backgroundLight,
+                            ),
+                          ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 28),

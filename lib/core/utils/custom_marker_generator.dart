@@ -24,11 +24,64 @@ class CustomMarkerGenerator {
     final color = getSportColor(type);
     final icon = getSportIcon(type);
 
+    if (selected) {
+      // Selected state: filled circle + white border + glow halo
+      return SizedBox(
+        width: size.width * 1.6,
+        height: size.height * 1.6,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Outer glow halo
+            Container(
+              width: size.width * 1.5,
+              height: size.height * 1.5,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.18),
+              ),
+            ),
+            // White border ring
+            Container(
+              width: size.width * 1.05,
+              height: size.height * 1.05,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+            // Filled sport color circle
+            Container(
+              width: size.width * 0.88,
+              height: size.height * 0.88,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+              ),
+              child: Icon(
+                icon,
+                size: size.width * 0.45,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Normal (unselected) state: pin marker
     return SizedBox(
       width: size.width,
       height: size.height,
       child: CustomPaint(
-        painter: _MarkerPainter(color: color, selected: selected),
+        painter: _MarkerPainter(color: color, selected: false),
         child: Center(
           child: Padding(
             padding: EdgeInsets.only(bottom: size.height * 0.15),

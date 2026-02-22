@@ -100,7 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       final ref = FirebaseStorage.instance.ref(
-        'profile_pictures/${widget.user.id}.jpg',
+        'profile_images/${widget.user.id}/${widget.user.id}.jpg',
       );
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',

@@ -131,6 +131,41 @@ extension SportTypeExtension on SportType {
   }
 }
 
+extension SportTypeEmojiExtension on SportType {
+  String get emoji {
+    switch (this) {
+      case SportType.football:
+        return '⚽';
+      case SportType.basketball:
+        return '🏀';
+      case SportType.volleyball:
+        return '🏐';
+      case SportType.tennis:
+        return '🎾';
+      case SportType.swimming:
+        return '🏊';
+      case SportType.running:
+        return '🏃';
+      case SportType.cycling:
+        return '🚴';
+      case SportType.yoga:
+        return '🧘';
+      case SportType.fitness:
+        return '💪';
+      case SportType.boxing:
+        return '🥊';
+      case SportType.tableTennis:
+        return '🏓';
+      case SportType.badminton:
+        return '🏸';
+      case SportType.other:
+        return '🏅';
+    }
+  }
+
+  String get label => '$emoji ${displayName}';
+}
+
 class UserModel {
   final String id;
   final String username;
