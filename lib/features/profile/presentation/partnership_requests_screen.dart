@@ -23,16 +23,65 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
 
   List<_RequestWithUser> _incomingRequests = [];
   List<_RequestWithUser> _outgoingRequests = [];
+  List<UserModel> _suggestedUsers = [];
   bool _isLoadingIncoming = true;
   bool _isLoadingOutgoing = true;
+  bool _isLoadingSuggestions = true;
   final Set<String> _processingIds = {};
+
+  String? _suggestionsError;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _loadIncomingRequests();
-    _loadOutgoingRequests();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    try {
+      // Load incoming and outgoing in parallel, with individual timeouts
+      await Future.wait([
+        _loadIncomingRequests().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('_loadIncomingRequests timed out');
+            if (mounted) setState(() => _isLoadingIncoming = false);
+          },
+        ),
+        _loadOutgoingRequests().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('_loadOutgoingRequests timed out');
+            if (mounted) setState(() => _isLoadingOutgoing = false);
+          },
+        ),
+      ]);
+      await _loadSuggestedUsers().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          debugPrint('_loadSuggestedUsers timed out');
+          if (mounted) {
+            setState(() {
+              _suggestedUsers = [];
+              _isLoadingSuggestions = false;
+              _suggestionsError = 'Zaman aşımı — lütfen tekrar deneyin';
+            });
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Error in _loadAllData: $e');
+      // Ensure all loading states are cleared even on unexpected errors
+      if (mounted) {
+        setState(() {
+          _isLoadingIncoming = false;
+          _isLoadingOutgoing = false;
+          _isLoadingSuggestions = false;
+          _suggestionsError ??= e.toString();
+        });
+      }
+    }
   }
 
   @override
@@ -53,8 +102,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     setState(() => _isLoadingIncoming = true);
 
     try {
-      final requests =
-          await _partnershipService.getIncomingRequests(userId);
+      final requests = await _partnershipService.getIncomingRequests(userId);
       final requestsWithUsers = <_RequestWithUser>[];
 
       for (final partnership in requests) {
@@ -68,11 +116,13 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
           user = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
         }
 
-        requestsWithUsers.add(_RequestWithUser(
-          partnership: partnership,
-          user: user,
-          sharedMeetupCount: partnership.sharedMeetupIds.length,
-        ));
+        requestsWithUsers.add(
+          _RequestWithUser(
+            partnership: partnership,
+            user: user,
+            sharedMeetupCount: partnership.sharedMeetupIds.length,
+          ),
+        );
       }
 
       if (mounted) {
@@ -101,8 +151,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     setState(() => _isLoadingOutgoing = true);
 
     try {
-      final requests =
-          await _partnershipService.getOutgoingRequests(userId);
+      final requests = await _partnershipService.getOutgoingRequests(userId);
       final requestsWithUsers = <_RequestWithUser>[];
 
       for (final partnership in requests) {
@@ -116,11 +165,13 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
           user = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
         }
 
-        requestsWithUsers.add(_RequestWithUser(
-          partnership: partnership,
-          user: user,
-          sharedMeetupCount: partnership.sharedMeetupIds.length,
-        ));
+        requestsWithUsers.add(
+          _RequestWithUser(
+            partnership: partnership,
+            user: user,
+            sharedMeetupCount: partnership.sharedMeetupIds.length,
+          ),
+        );
       }
 
       if (mounted) {
@@ -208,13 +259,160 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     }
   }
 
+  Future<void> _loadSuggestedUsers() async {
+    final userId = _currentUserId;
+    if (userId == null) {
+      if (mounted) setState(() => _isLoadingSuggestions = false);
+      return;
+    }
+
+    if (mounted) setState(() => _isLoadingSuggestions = true);
+
+    try {
+      // Get current user's partners list
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      final currentPartners =
+          (currentUserDoc.data()?['partners'] as List<dynamic>?)
+              ?.cast<String>()
+              .toSet() ??
+          <String>{};
+
+      // Get pending request user IDs (both incoming and outgoing)
+      final pendingUserIds = <String>{};
+      for (final r in _incomingRequests) {
+        pendingUserIds.add(r.partnership.userId);
+      }
+      for (final r in _outgoingRequests) {
+        pendingUserIds.add(r.partnership.partnerId);
+      }
+
+      // Get users who participated in same meetups
+      final myMeetups = await FirebaseFirestore.instance
+          .collection('meetups')
+          .where('participantIds', arrayContains: userId)
+          .limit(20)
+          .get();
+
+      final candidateIds = <String>{};
+      for (final doc in myMeetups.docs) {
+        final participants =
+            (doc.data()['participantIds'] as List<dynamic>?)?.cast<String>() ??
+            [];
+        candidateIds.addAll(participants);
+      }
+
+      // Remove self, existing partners, and pending requests
+      candidateIds.remove(userId);
+      candidateIds.removeAll(currentPartners);
+      candidateIds.removeAll(pendingUserIds);
+
+      if (candidateIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _suggestedUsers = [];
+            _isLoadingSuggestions = false;
+          });
+        }
+        return;
+      }
+
+      // Fetch user models (limit to 20)
+      final limitedIds = candidateIds.take(20).toList();
+      final users = <UserModel>[];
+      for (var i = 0; i < limitedIds.length; i += 10) {
+        final end = (i + 10).clamp(0, limitedIds.length);
+        final batch = limitedIds.sublist(i, end);
+        if (batch.isEmpty) continue;
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+        for (final doc in snapshot.docs) {
+          users.add(UserModel.fromJson(doc.data()));
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _suggestedUsers = users;
+          _isLoadingSuggestions = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading suggested users: $e');
+      if (mounted) {
+        setState(() {
+          _suggestedUsers = [];
+          _isLoadingSuggestions = false;
+          _suggestionsError = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _sendPartnerRequest(UserModel user) async {
+    final userId = _currentUserId;
+    if (userId == null) return;
+    if (_processingIds.contains(user.id)) return;
+
+    setState(() => _processingIds.add(user.id));
+
+    try {
+      final sharedMeetupIds = await _partnershipService.getSharedMeetupIds(
+        userId,
+        user.id,
+      );
+
+      if (sharedMeetupIds.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ortak etkinliğiniz olmadan istek gönderemezsiniz'),
+          ),
+        );
+        return;
+      }
+
+      await _partnershipService.sendPartnershipRequest(
+        requesterId: userId,
+        receiverId: user.id,
+        sharedMeetupIds: sharedMeetupIds,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${user.username} adlı kullanıcıya istek gönderildi'),
+        ),
+      );
+
+      // Remove from suggestions and reload outgoing
+      setState(() {
+        _suggestedUsers.removeWhere((u) => u.id == user.id);
+      });
+      await _loadOutgoingRequests();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('İstek gönderilemedi: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _processingIds.remove(user.id));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Partner Istekleri'),
-        backgroundColor: AppTheme.backgroundLight,
+        title: const Text('Partnerlik Yap'),
+        backgroundColor: Colors.white,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
         bottom: TabBar(
@@ -222,9 +420,15 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.textMuted,
           indicatorColor: AppTheme.primary,
-          tabs: [
-            Tab(text: 'Gelen Istekler (${_incomingRequests.length})'),
-            Tab(text: 'Gonderilen Istekler (${_outgoingRequests.length})'),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelStyle: const TextStyle(fontSize: 13),
+          tabs: const [
+            Tab(text: 'Gelen'),
+            Tab(text: 'Gönderilen'),
+            Tab(text: 'Keşfet'),
           ],
         ),
       ),
@@ -233,6 +437,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
         children: [
           _buildIncomingTab(),
           _buildOutgoingTab(),
+          _buildDiscoverTab(),
         ],
       ),
     );
@@ -273,7 +478,9 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
 
     if (_outgoingRequests.isEmpty) {
       return _buildEmptyState(
-          'Gonderilen partner istegi yok', Icons.outbox_outlined);
+        'Gonderilen partner istegi yok',
+        Icons.outbox_outlined,
+      );
     }
 
     return RefreshIndicator(
@@ -291,6 +498,198 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     );
   }
 
+  Widget _buildDiscoverTab() {
+    if (_isLoadingSuggestions) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.primary),
+      );
+    }
+
+    if (_suggestionsError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: AppTheme.textMuted.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Öneriler yüklenemedi',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppTheme.textDark,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() => _suggestionsError = null);
+                  _loadSuggestedUsers();
+                },
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Tekrar Dene'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_suggestedUsers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.explore_outlined,
+                size: 64,
+                color: AppTheme.textMuted.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Öneri bulunamadı',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppTheme.textDark,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ortak etkinliklere katılarak\nyeni partnerler keşfedin',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadSuggestedUsers,
+      color: AppTheme.primary,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _suggestedUsers.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final user = _suggestedUsers[index];
+          return _buildSuggestedUserCard(user);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSuggestedUserCard(UserModel user) {
+    final isProcessing = _processingIds.contains(user.id);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => context.push('/user-profile/${user.id}'),
+            child: CircleAvatar(
+              radius: 28,
+              backgroundColor: AppTheme.primary,
+              backgroundImage: user.profileImageUrl != null
+                  ? NetworkImage(user.profileImageUrl!)
+                  : null,
+              child: user.profileImageUrl == null
+                  ? Text(
+                      user.username[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.username,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                if (user.interestedSports != null &&
+                    user.interestedSports!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    user.interestedSports!
+                        .take(3)
+                        .map((s) => s.displayName)
+                        .join(', '),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textMuted.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 36,
+            child: ElevatedButton(
+              onPressed: isProcessing ? null : () => _sendPartnerRequest(user),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: AppTheme.textDark,
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: isProcessing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.textDark,
+                      ),
+                    )
+                  : const Text(
+                      'İstek Gönder',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(String message, IconData icon) {
     return Center(
       child: Column(
@@ -304,10 +703,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
           const SizedBox(height: 16),
           Text(
             message,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 16),
           ),
         ],
       ),
@@ -530,8 +926,9 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
           SizedBox(
             height: 36,
             child: OutlinedButton(
-              onPressed:
-                  isProcessing ? null : () => _cancelRequest(partnership),
+              onPressed: isProcessing
+                  ? null
+                  : () => _cancelRequest(partnership),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 minimumSize: Size.zero,

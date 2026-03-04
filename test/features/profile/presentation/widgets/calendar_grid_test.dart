@@ -7,6 +7,8 @@ Widget _buildGrid({
   required int year,
   required int month,
   Set<int> eventDays = const {},
+  Set<int> pastEventDays = const {},
+  Set<int> activeEventDays = const {},
   DateTime? today,
 }) {
   return MaterialApp(
@@ -15,9 +17,19 @@ Widget _buildGrid({
         year: year,
         month: month,
         eventDays: eventDays,
+        pastEventDays: pastEventDays,
+        activeEventDays: activeEventDays,
         today: today ?? DateTime(2000, 1, 1),
       ),
     ),
+  );
+}
+
+/// Finds the Container wrapping a given day number text.
+Container _findDayContainer(WidgetTester tester, String dayText) {
+  final textFinder = find.text(dayText);
+  return tester.widget<Container>(
+    find.ancestor(of: textFinder, matching: find.byType(Container)).first,
   );
 }
 
@@ -49,91 +61,135 @@ void main() {
   });
 
   group('CalendarGrid today highlighting', () {
-    testWidgets('highlights today with green-tinted circular bg',
+    testWidgets('highlights today with primary bg and white text',
         (tester) async {
       final today = DateTime(2025, 6, 15);
       await tester.pumpWidget(
         _buildGrid(year: 2025, month: 6, today: today),
       );
 
-      // Find the Container wrapping today's text
-      final todayText = find.text('15');
-      expect(todayText, findsOneWidget);
-
-      // The parent Container of today should have a green-tinted decoration
-      final container = tester.widget<Container>(
-        find.ancestor(of: todayText, matching: find.byType(Container)).first,
-      );
+      final container = _findDayContainer(tester, '15');
       final decoration = container.decoration as BoxDecoration;
-      expect(decoration.shape, BoxShape.circle);
-      expect(decoration.color, AppTheme.primary.withValues(alpha: 0.1));
+      expect(decoration.color, AppTheme.primary);
     });
 
-    testWidgets('does not highlight non-today days with circular bg',
-        (tester) async {
+    testWidgets('non-today days have transparent bg', (tester) async {
       final today = DateTime(2025, 6, 15);
       await tester.pumpWidget(
         _buildGrid(year: 2025, month: 6, today: today),
       );
 
-      // Day 10 should not have a circular bg decoration
-      final dayText = find.text('10');
-      expect(dayText, findsOneWidget);
-
-      final container = tester.widget<Container>(
-        find.ancestor(of: dayText, matching: find.byType(Container)).first,
-      );
-      expect(container.decoration, isNull);
+      final container = _findDayContainer(tester, '10');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, Colors.transparent);
     });
   });
 
   group('CalendarGrid event day rendering', () {
-    testWidgets('renders green dot for event days', (tester) async {
+    testWidgets('upcoming event days have blue bg', (tester) async {
       await tester.pumpWidget(
         _buildGrid(year: 2025, month: 6, eventDays: {5, 20}),
       );
 
-      // Find 4px green dot containers (event indicators)
-      final greenDots = find.byWidgetPredicate((widget) {
-        if (widget is Container && widget.decoration is BoxDecoration) {
-          final dec = widget.decoration as BoxDecoration;
-          return dec.color == AppTheme.primary &&
-              dec.shape == BoxShape.circle &&
-              widget.constraints?.maxWidth == 4;
-        }
-        return false;
-      });
+      final container5 = _findDayContainer(tester, '5');
+      final dec5 = container5.decoration as BoxDecoration;
+      expect(dec5.color, const Color(0xFF2196F3));
 
-      expect(greenDots, findsNWidgets(2));
+      final container20 = _findDayContainer(tester, '20');
+      final dec20 = container20.decoration as BoxDecoration;
+      expect(dec20.color, const Color(0xFF2196F3));
     });
 
-    testWidgets('today + event day combines both styles', (tester) async {
+    testWidgets('past event days have light blue bg', (tester) async {
+      await tester.pumpWidget(
+        _buildGrid(year: 2025, month: 6, pastEventDays: {3}),
+      );
+
+      final container = _findDayContainer(tester, '3');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFFBBDEFB));
+    });
+
+    testWidgets('today takes priority over event day', (tester) async {
       final today = DateTime(2025, 6, 10);
       await tester.pumpWidget(
         _buildGrid(year: 2025, month: 6, eventDays: {10}, today: today),
       );
 
-      final dayText = find.text('10');
-      expect(dayText, findsOneWidget);
+      final container = _findDayContainer(tester, '10');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, AppTheme.primary);
+    });
+  });
 
-      // Should have circular bg (today)
-      final bgContainer = tester.widget<Container>(
-        find.ancestor(of: dayText, matching: find.byType(Container)).first,
+  group('CalendarGrid active event day rendering', () {
+    testWidgets('active event days have green bg with white text',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildGrid(year: 2025, month: 6, activeEventDays: {12}),
       );
-      final decoration = bgContainer.decoration as BoxDecoration;
-      expect(decoration.shape, BoxShape.circle);
 
-      // Should also have a green dot (event)
-      final greenDots = find.byWidgetPredicate((widget) {
-        if (widget is Container && widget.decoration is BoxDecoration) {
-          final dec = widget.decoration as BoxDecoration;
-          return dec.color == AppTheme.primary &&
-              dec.shape == BoxShape.circle &&
-              widget.constraints?.maxWidth == 4;
-        }
-        return false;
-      });
-      expect(greenDots, findsOneWidget);
+      final container = _findDayContainer(tester, '12');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF4CAF50));
+    });
+
+    testWidgets('today takes priority over active event day', (tester) async {
+      final today = DateTime(2025, 6, 12);
+      await tester.pumpWidget(
+        _buildGrid(
+          year: 2025,
+          month: 6,
+          activeEventDays: {12},
+          today: today,
+        ),
+      );
+
+      final container = _findDayContainer(tester, '12');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, AppTheme.primary);
+    });
+
+    testWidgets('active event takes priority over upcoming event',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildGrid(
+          year: 2025,
+          month: 6,
+          eventDays: {15},
+          activeEventDays: {15},
+        ),
+      );
+
+      final container = _findDayContainer(tester, '15');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF4CAF50));
+    });
+
+    testWidgets('active event takes priority over past event', (tester) async {
+      await tester.pumpWidget(
+        _buildGrid(
+          year: 2025,
+          month: 6,
+          pastEventDays: {8},
+          activeEventDays: {8},
+        ),
+      );
+
+      final container = _findDayContainer(tester, '8');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF4CAF50));
+    });
+
+    testWidgets('non-active days are unaffected by activeEventDays',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildGrid(year: 2025, month: 6, activeEventDays: {12}),
+      );
+
+      final container = _findDayContainer(tester, '10');
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, Colors.transparent);
     });
   });
 }

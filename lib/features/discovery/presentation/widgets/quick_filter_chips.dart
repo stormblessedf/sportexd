@@ -197,7 +197,7 @@ class _QuickChip extends StatelessWidget {
               ),
               if (showLocationIcon) ...[
                 const SizedBox(width: 4),
-                Icon(
+                const Icon(
                   Icons.location_off,
                   size: 12,
                   color: Colors.orange,

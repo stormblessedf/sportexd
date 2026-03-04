@@ -69,7 +69,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
       _selectedAddress = widget.initialLocation!.address;
       _selectedName = widget.initialLocation!.name;
     } else {
-      _selectedPosition = LatLng(
+      _selectedPosition = const LatLng(
         LocationService.defaultLatitude,
         LocationService.defaultLongitude,
       );
@@ -368,7 +368,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                       FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
-                          initialCenter: _selectedPosition ?? LatLng(
+                          initialCenter: _selectedPosition ?? const LatLng(
                             LocationService.defaultLatitude,
                             LocationService.defaultLongitude,
                           ),

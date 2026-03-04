@@ -163,7 +163,7 @@ extension SportTypeEmojiExtension on SportType {
     }
   }
 
-  String get label => '$emoji ${displayName}';
+  String get label => '$emoji $displayName';
 }
 
 class UserModel {

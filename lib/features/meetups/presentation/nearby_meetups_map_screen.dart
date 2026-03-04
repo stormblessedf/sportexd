@@ -53,7 +53,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
       _userLocation = LatLng(userLoc.latitude, userLoc.longitude);
     } else {
       // Default to Istanbul
-      _userLocation = LatLng(
+      _userLocation = const LatLng(
         LocationService.defaultLatitude,
         LocationService.defaultLongitude,
       );
@@ -387,7 +387,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
             return FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: _userLocation ?? LatLng(
+                initialCenter: _userLocation ?? const LatLng(
                   LocationService.defaultLatitude,
                   LocationService.defaultLongitude,
                 ),

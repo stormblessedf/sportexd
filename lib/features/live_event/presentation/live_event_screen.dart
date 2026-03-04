@@ -16,7 +16,6 @@ import '../../../core/services/event_photo_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../theme/app_theme.dart';
 import '../utils/progress_utils.dart';
-import '../../live_broadcast/live_broadcast.dart';
 
 class LiveEventScreen extends StatefulWidget {
   final String meetupId;
@@ -145,8 +144,6 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                     children: [
                       _buildPhotoGallery(meetup, isCompleted),
                       const SizedBox(height: 32),
-                      _buildLiveBroadcastSection(meetup),
-                      const SizedBox(height: 32),
                       _buildParticipantsSection(meetup),
                     ],
                   ),
@@ -210,7 +207,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.zero,
                 itemCount: cards.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
                 itemBuilder: (_, i) => SizedBox(
                   width: MediaQuery.of(context).size.width * 0.85,
                   child: cards[i],
@@ -257,135 +254,6 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
     );
   }
 
-  // ── Live Broadcast Section ──
-  Widget _buildLiveBroadcastSection(MeetupModel meetup) {
-    final liveService = LiveBroadcastService();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Canlı Yayınlar',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Yayın Başlat Butonu
-        GestureDetector(
-          onTap: () => _startBroadcast(meetup),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceLight,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.borderLight),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Colors.red, Colors.redAccent],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.videocam, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Yayın Başlat', style: TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.textDark)),
-                    SizedBox(height: 2),
-                    Text('Maçı canlı paylaş', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                  ]),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.play_arrow, color: Colors.white, size: 18),
-                      SizedBox(width: 4),
-                      Text('Başlat',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Aktif Yayınlar Listesi
-        StreamBuilder<List<StreamSession>>(
-          stream: liveService.watchActiveStreams(),
-          builder: (context, snapshot) {
-            final allStreams = snapshot.data ?? [];
-            // Bu etkinliğe ait yayınları filtrele
-            final eventStreams = allStreams.where((s) => s.eventId == meetup.id).toList();
-
-            if (eventStreams.isEmpty) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppTheme.borderLight.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.videocam_off, color: AppTheme.textMuted, size: 20),
-                    SizedBox(width: 8),
-                    Text('Henüz aktif yayın yok',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
-                  ],
-                ),
-              );
-            }
-
-            return SizedBox(
-              height: 100,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: eventStreams.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                itemBuilder: (_, i) {
-                  final stream = eventStreams[i];
-                  return _LiveStreamCard(
-                    stream: stream,
-                    onTap: () => context.push('/live-broadcast/viewer/${stream.id}'),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  void _startBroadcast(MeetupModel meetup) {
-    context.push('/live-broadcast/create', extra: {
-      'eventId': meetup.id,
-      'eventName': meetup.title,
-    });
-  }
-
   // ── Participants Section ──
   Widget _buildParticipantsSection(MeetupModel meetup) {
     return Column(
@@ -412,7 +280,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                   : ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _participants.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
                       itemBuilder: (_, i) => _ParticipantCard(
                         user: _participants[i],
                         isOrganizer: _participants[i].id == meetup.organizerId,
@@ -589,7 +457,7 @@ class _LiveHeaderDelegate extends SliverPersistentHeaderDelegate {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Container(width: 4, height: 4,
-                      decoration: BoxDecoration(color: AppTheme.borderLight, shape: BoxShape.circle)),
+                      decoration: const BoxDecoration(color: AppTheme.borderLight, shape: BoxShape.circle)),
                   ),
                   const Icon(Icons.schedule, size: 15, color: AppTheme.textMuted),
                   const SizedBox(width: 3),
@@ -644,7 +512,7 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
   Widget build(BuildContext context) {
     if (widget.isCompleted) {
       return Container(width: 8, height: 8,
-        decoration: BoxDecoration(color: AppTheme.textMuted, shape: BoxShape.circle));
+        decoration: const BoxDecoration(color: AppTheme.textMuted, shape: BoxShape.circle));
     }
     return SizedBox(
       width: 10, height: 10,
@@ -656,12 +524,12 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
             child: Opacity(
               opacity: _opacityAnim.value,
               child: Container(width: 10, height: 10,
-                decoration: BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
+                decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
             ),
           ),
         ),
         Container(width: 8, height: 8,
-          decoration: BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
+          decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
       ]),
     );
   }
@@ -695,9 +563,9 @@ class _GalleryCard extends StatelessWidget {
           CachedNetworkImage(
             imageUrl: imageUrl,
             fit: BoxFit.cover,
-            placeholder: (_, __) => Container(color: AppTheme.borderLight,
+            placeholder: (_, _) => Container(color: AppTheme.borderLight,
               child: const Center(child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2))),
-            errorWidget: (_, __, ___) => Container(color: AppTheme.borderLight,
+            errorWidget: (_, _, _) => Container(color: AppTheme.borderLight,
               child: const Icon(Icons.broken_image, color: AppTheme.textLight, size: 40)),
           ),
           Container(
@@ -848,98 +716,3 @@ class _ParticipantCard extends StatelessWidget {
 }
 
 
-// ── Live Stream Card ──
-class _LiveStreamCard extends StatelessWidget {
-  final StreamSession stream;
-  final VoidCallback onTap;
-
-  const _LiveStreamCard({
-    required this.stream,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Colors.red, Colors.redAccent, Colors.orange],
-                  ),
-                ),
-                child: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppTheme.borderLight,
-                  backgroundImage: stream.broadcasterAvatar.isNotEmpty
-                      ? NetworkImage(stream.broadcasterAvatar)
-                      : null,
-                  child: stream.broadcasterAvatar.isEmpty
-                      ? Text(
-                          stream.broadcasterName.isNotEmpty
-                              ? stream.broadcasterName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textMuted,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              Positioned(
-                bottom: -4,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppTheme.surfaceLight, width: 2),
-                    ),
-                    child: const Text(
-                      'CANLI',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            stream.broadcasterName,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textDark, fontWeight: FontWeight.w500),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.visibility, size: 12, color: AppTheme.textMuted),
-              const SizedBox(width: 3),
-              Text(
-                '${stream.currentViewers}',
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -170,7 +170,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Email
-                            Text(
+                            const Text(
                               'E-posta',
                               style: TextStyle(
                                 fontSize: 14,
@@ -185,15 +185,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
                                 hintText: 'ornek@email.com',
-                                hintStyle: TextStyle(color: AppTheme.textLight),
-                                prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
+                                hintStyle: const TextStyle(color: AppTheme.textLight),
+                                prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.borderLight),
+                                  borderSide: const BorderSide(color: AppTheme.borderLight),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -219,7 +219,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             const SizedBox(height: 20),
 
                             // Password
-                            Text(
+                            const Text(
                               'Şifre',
                               style: TextStyle(
                                 fontSize: 14,
@@ -234,8 +234,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
                                 hintText: 'En az 6 karakter',
-                                hintStyle: TextStyle(color: AppTheme.textLight),
-                                prefixIcon: Icon(Icons.lock_outlined, color: AppTheme.textMuted),
+                                hintStyle: const TextStyle(color: AppTheme.textLight),
+                                prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.textMuted),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -249,11 +249,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.borderLight),
+                                  borderSide: const BorderSide(color: AppTheme.borderLight),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -276,7 +276,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             const SizedBox(height: 20),
 
                             // Confirm Password
-                            Text(
+                            const Text(
                               'Şifre Tekrar',
                               style: TextStyle(
                                 fontSize: 14,
@@ -291,8 +291,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
                                 hintText: 'Şifrenizi tekrar girin',
-                                hintStyle: TextStyle(color: AppTheme.textLight),
-                                prefixIcon: Icon(Icons.lock_outlined, color: AppTheme.textMuted),
+                                hintStyle: const TextStyle(color: AppTheme.textLight),
+                                prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.textMuted),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscureConfirmPassword
@@ -306,11 +306,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.borderLight),
+                                  borderSide: const BorderSide(color: AppTheme.borderLight),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                                  borderSide: const BorderSide(color: AppTheme.primary, width: 2),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -374,13 +374,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           'Zaten hesabın var mı?',
                           style: TextStyle(color: AppTheme.textMuted),
                         ),
                         TextButton(
                           onPressed: () => context.go('/login'),
-                          child: Text(
+                          child: const Text(
                             'Giriş Yap',
                             style: TextStyle(
                               color: AppTheme.primary,

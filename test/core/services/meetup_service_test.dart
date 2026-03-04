@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:sporsal/core/services/meetup_service.dart';
 import 'package:sporsal/core/models/meetup_model.dart';
 import '../../helpers/factories.dart';
+import '../../mock_firebase.dart';
 
 void main() {
   group('MeetupService', () {
     late MeetupService service;
+
+    setUpAll(() async {
+      setupFirebaseCoreMocks();
+      await Firebase.initializeApp();
+    });
 
     setUp(() {
       service = MeetupService();

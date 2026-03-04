@@ -121,4 +121,102 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get selectPositionForFootball =>
       'Bu futbol etkinligine katilmak icin pozisyon secmelisiniz';
+
+  @override
+  String get sectionAccount => 'Hesap';
+
+  @override
+  String get editProfileSubtitle => 'Bilgilerinizi güncelleyin';
+
+  @override
+  String get sectionPrivacy => 'Gizlilik';
+
+  @override
+  String get changePassword => 'Şifre Değiştir';
+
+  @override
+  String get changePasswordSubtitle => 'Hesap güvenliğinizi koruyun';
+
+  @override
+  String get privacySettings => 'Gizlilik Ayarları';
+
+  @override
+  String get privacySettingsSubtitle => 'Kim sizi görebilir?';
+
+  @override
+  String get sectionNotifications => 'Bildirimler';
+
+  @override
+  String get notificationSettingsSubtitle =>
+      'Hangi bildirimleri almak istersiniz?';
+
+  @override
+  String get sectionAppearance => 'Görünüm';
+
+  @override
+  String get mapStyle => 'Harita Stili';
+
+  @override
+  String get appLanguage => 'Uygulama Dili';
+
+  @override
+  String get appLanguageSubtitle => 'Uygulamanın görüntülendiği dili seçin.';
+
+  @override
+  String get sectionSupport => 'Destek';
+
+  @override
+  String get helpSupport => 'Yardım & Destek';
+
+  @override
+  String get aboutApp => 'Hakkında';
+
+  @override
+  String get sectionAdmin => 'Yönetim';
+
+  @override
+  String get adminActions => 'Admin İşlemleri';
+
+  @override
+  String get adminActionsSubtitle => 'Bakım ve yönetim araçları';
+
+  @override
+  String get logout => 'Çıkış Yap';
+
+  @override
+  String get logoutConfirmTitle => 'Çıkış Yap';
+
+  @override
+  String get logoutConfirmContent =>
+      'Hesabınızdan çıkmak istediğinize emin misiniz?';
+
+  @override
+  String get cancel => 'İptal';
+
+  @override
+  String get passwordChangeSoon => 'Şifre değiştirme yakında eklenecek!';
+
+  @override
+  String get privacySettingsSoon => 'Gizlilik ayarları yakında eklenecek!';
+
+  @override
+  String get helpSoon => 'Yardım sayfası yakında eklenecek!';
+
+  @override
+  String get navFeed => 'Akış';
+
+  @override
+  String get navChats => 'Sohbetler';
+
+  @override
+  String get navCreate => 'Oluştur';
+
+  @override
+  String get navVenues => 'Mekanlar';
+
+  @override
+  String get navProfile => 'Profil';
+
+  @override
+  String get navPhoto => 'Fotoğraf';
 }

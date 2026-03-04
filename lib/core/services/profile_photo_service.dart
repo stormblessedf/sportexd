@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image/image.dart' as img;
 
 import '../models/profile_photo_model.dart';
@@ -17,7 +18,10 @@ class ProfilePhotoService {
         _storage = storage ?? FirebaseStorage.instance;
 
   /// Görseli 1080x1080 / %85 JPEG olarak sıkıştırır.
+  /// Web'de `image` paketi çok yavaş/sorunlu olduğundan sıkıştırma atlanır.
   Uint8List compressImage(Uint8List imageBytes) {
+    if (kIsWeb) return imageBytes;
+
     final decoded = img.decodeImage(imageBytes);
     if (decoded == null) return imageBytes;
 

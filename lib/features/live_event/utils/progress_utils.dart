@@ -1,7 +1,7 @@
-/// İlerleme hesaplama ve süre formatlama saf fonksiyonları.
-///
-/// Bu fonksiyonlar canlı etkinlik sayfasındaki ilerleme sayacı
-/// tarafından kullanılır.
+// İlerleme hesaplama ve süre formatlama saf fonksiyonları.
+//
+// Bu fonksiyonlar canlı etkinlik sayfasındaki ilerleme sayacı
+// tarafından kullanılır.
 
 /// Etkinliğin ilerleme yüzdesini hesaplar.
 ///

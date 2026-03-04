@@ -32,9 +32,9 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(find.text('95%'), findsOneWidget);
     expect(find.text('4.7⭐'), findsOneWidget);
-    expect(find.text('Etkinlik'), findsOneWidget);
-    expect(find.text('Partner'), findsOneWidget);
-    expect(find.text('Güvenilir'), findsOneWidget);
+    expect(find.text('Etkinlikler'), findsOneWidget);
+    expect(find.text('Partnerler'), findsOneWidget);
+    expect(find.text('Güvenilirlik'), findsOneWidget);
     expect(find.text('Puan'), findsOneWidget);
   });
 
@@ -81,10 +81,10 @@ void main() {
       onCounterTap: (type) => tappedType = type,
     ));
 
-    await tester.tap(find.text('Etkinlik'));
+    await tester.tap(find.text('Etkinlikler'));
     expect(tappedType, CounterType.events);
 
-    await tester.tap(find.text('Partner'));
+    await tester.tap(find.text('Partnerler'));
     expect(tappedType, CounterType.partners);
   });
 }

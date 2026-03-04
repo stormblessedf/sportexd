@@ -181,7 +181,7 @@ class MeetupService {
       final snapshot = await transaction.get(docRef);
       final participantSnapshot = await transaction.get(participantRef);
 
-      if (!snapshot.exists) throw Exception("Meetup not found");
+      if (!snapshot.exists) throw Exception('Meetup not found');
       if (participantSnapshot.exists) return false; // Already joined
 
       final meetup = MeetupModel.fromJson(
@@ -195,12 +195,12 @@ class MeetupService {
 
       if (meetup.isFootballWithTeams) {
         throw Exception(
-          "Bu futbol etkinligine katilmak icin pozisyon secmelisiniz",
+          'Bu futbol etkinligine katilmak icin pozisyon secmelisiniz',
         );
       }
 
       if (meetup.currentParticipants >= meetup.maxParticipants) {
-        throw Exception("Meetup is full");
+        throw Exception('Meetup is full');
       }
 
       // Add user to participants subcollection
@@ -241,7 +241,7 @@ class MeetupService {
       final docRef = _meetupsRef.doc(meetupId);
       final snapshot = await transaction.get(docRef);
 
-      if (!snapshot.exists) throw Exception("Meetup not found");
+      if (!snapshot.exists) throw Exception('Meetup not found');
 
       final meetup = MeetupModel.fromJson(
         snapshot.data() as Map<String, dynamic>,
@@ -249,7 +249,7 @@ class MeetupService {
 
       // Don't allow joining waitlist if user is already a participant
       if (meetup.participantIds.contains(userId)) {
-        throw Exception("You are already a participant");
+        throw Exception('You are already a participant');
       }
 
       // Don't allow joining waitlist if already on it
@@ -288,7 +288,7 @@ class MeetupService {
 
       final snapshot = await transaction.get(docRef);
 
-      if (!snapshot.exists) throw Exception("Meetup not found");
+      if (!snapshot.exists) throw Exception('Meetup not found');
 
       final meetup = MeetupModel.fromJson(
         snapshot.data() as Map<String, dynamic>,
@@ -296,12 +296,12 @@ class MeetupService {
 
       // Organizer cannot leave their own meetup
       if (meetup.organizerId == userId) {
-        throw Exception("Organizatör kendi etkinliğinden ayrılamaz");
+        throw Exception('Organizatör kendi etkinliğinden ayrılamaz');
       }
 
       // Check if user is actually a participant
       if (!meetup.participantIds.contains(userId)) {
-        throw Exception("Bu etkinliğe katılmadınız");
+        throw Exception('Bu etkinliğe katılmadınız');
       }
 
       // Remove user from participants subcollection
@@ -374,7 +374,7 @@ class MeetupService {
       final snapshot = await transaction.get(docRef);
       final participantSnapshot = await transaction.get(participantRef);
 
-      if (!snapshot.exists) throw Exception("Etkinlik bulunamadı");
+      if (!snapshot.exists) throw Exception('Etkinlik bulunamadı');
 
       final meetup = MeetupModel.fromJson(
         snapshot.data() as Map<String, dynamic>,
@@ -383,12 +383,12 @@ class MeetupService {
       // Check if already a participant
       if (participantSnapshot.exists ||
           meetup.participantIds.contains(userId)) {
-        throw Exception("Zaten bu etkinliğe katıldınız");
+        throw Exception('Zaten bu etkinliğe katıldınız');
       }
 
       // Check if meetup is full
       if (meetup.currentParticipants >= meetup.maxParticipants) {
-        throw Exception("Etkinlik dolu");
+        throw Exception('Etkinlik dolu');
       }
 
       // Validate team and slot
@@ -402,11 +402,11 @@ class MeetupService {
         slots = meetup.teamBSlots;
         slotsField = 'teamBSlots';
       } else {
-        throw Exception("Geçersiz takım seçimi");
+        throw Exception('Geçersiz takım seçimi');
       }
 
       if (slots == null || slotIndex < 0 || slotIndex >= slots.length) {
-        throw Exception("Geçersiz pozisyon seçimi");
+        throw Exception('Geçersiz pozisyon seçimi');
       }
 
       final selectedSlot = slots[slotIndex];
@@ -414,7 +414,7 @@ class MeetupService {
       // Check if slot is already taken (concurrent access protection)
       if (selectedSlot.isFilled) {
         throw Exception(
-          "Bu pozisyon zaten dolu. Lütfen başka bir pozisyon seçin.",
+          'Bu pozisyon zaten dolu. Lütfen başka bir pozisyon seçin.',
         );
       }
 

@@ -50,7 +50,7 @@ class RecommendationService {
     final now = DateTime.now();
     final snapshot = await _firestore
         .collection('meetups')
-        .where('date', isGreaterThanOrEqualTo: now.toIso8601String())
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
         .orderBy('date')
         .limit(100)
         .get();

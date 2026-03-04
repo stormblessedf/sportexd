@@ -223,8 +223,6 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
 
         return CustomScrollView(
           slivers: [
-            if (widget.isOwnProfile)
-              SliverToBoxAdapter(child: _buildAddPhotoButton()),
             if (_isUploading)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -260,29 +258,6 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildAddPhotoButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: OutlinedButton.icon(
-        onPressed: _isUploading ? null : _pickAndUploadPhoto,
-        icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-        label: Text(
-          'Fotoğraf Ekle',
-          style: GoogleFonts.lexend(fontSize: 13, fontWeight: FontWeight.w500),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.primary,
-          side: const BorderSide(color: AppTheme.primary),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          minimumSize: const Size(double.infinity, 40),
-        ),
-      ),
     );
   }
 

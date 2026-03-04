@@ -47,6 +47,14 @@ lib/
 - `flutter-dev` - Flutter geliştirme best practices
 - `firebase-flutter` - Firebase entegrasyon kalıpları
 - `sporsal` - Proje-spesifik konvansiyonlar
+- `frontend-design` - Özgün, üretim kalitesi UI/UX tasarımı (**her zaman kullan**)
+
+## UI/UX Tasarım Kuralı
+UI, widget veya ekran tasarımı yapılırken `frontend-design` skill'i **her zaman** uygulanmalıdır:
+- Jenerik, klişe "AI estetiği"nden kaçın
+- Her tasarım için net bir estetik yön belirle
+- Özgün tipografi, cesur renk paleti, ilgi çekici kompozisyon kullan
+- Flutter'da Material Design 3 ile birlikte uygula
 
 ## Önemli Dosyalar
 - `lib/main.dart` - Uygulama giriş noktası, routing, providers

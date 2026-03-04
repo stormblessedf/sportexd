@@ -220,7 +220,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha:0.1),
-            border: Border(
+            border: const Border(
               bottom: BorderSide(color: AppTheme.borderLight),
             ),
           ),
@@ -455,11 +455,11 @@ class _ParticipantRatingCard extends StatelessWidget {
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppTheme.borderLight),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppTheme.borderLight),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

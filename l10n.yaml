@@ -4,3 +4,8 @@ output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 preferred-supported-locales:
   - tr
+  - en
+  - de
+  - fr
+  - es
+  - ar

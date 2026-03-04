@@ -49,7 +49,7 @@ class AuthService {
   // Sign In
   Future<UserModel> signIn(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
+      final UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -59,7 +59,7 @@ class AuthService {
       }
 
       // Fetch user data from Firestore with timeout
-      DocumentSnapshot doc = await _firestore
+      final DocumentSnapshot doc = await _firestore
           .collection('users')
           .doc(result.user!.uid)
           .get()
@@ -109,7 +109,7 @@ class AuthService {
       }
 
       // 2. Create User Model
-      UserModel newUser = UserModel(
+      final UserModel newUser = UserModel(
         id: result.user!.uid,
         username: username,
         email: email,
@@ -229,11 +229,11 @@ class AuthService {
 
   // Get Current User Data
   Future<UserModel?> getCurrentUser() async {
-    User? user = _auth.currentUser;
+    final User? user = _auth.currentUser;
     if (user == null) return null;
 
     try {
-      DocumentSnapshot doc = await _firestore
+      final DocumentSnapshot doc = await _firestore
           .collection('users')
           .doc(user.uid)
           .get()

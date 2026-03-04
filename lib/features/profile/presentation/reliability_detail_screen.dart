@@ -119,18 +119,18 @@ class _ReliabilityDetailScreenState extends State<ReliabilityDetailScreen> {
                 child: Column(
                   children: [
                     _buildScoreHeader(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                     _buildStatsRow(),
                     if (_isOwnProfile) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _buildFilterChips(),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildMeetupList(),
                     ] else ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       _buildPublicInfoCard(),
                     ],
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -148,7 +148,7 @@ class _ReliabilityDetailScreenState extends State<ReliabilityDetailScreen> {
 
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
@@ -160,30 +160,30 @@ class _ReliabilityDetailScreenState extends State<ReliabilityDetailScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.verified_user, color: color, size: 48),
-          const SizedBox(height: 12),
+          Icon(Icons.verified_user, color: color, size: 36),
+          const SizedBox(height: 8),
           Text(
             '%${score.round()}',
             style: TextStyle(
-              fontSize: 42,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             'Guvenilirlik Puani',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             _getScoreDescription(score),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,
@@ -238,7 +238,7 @@ class _ReliabilityDetailScreenState extends State<ReliabilityDetailScreen> {
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

@@ -6,7 +6,7 @@ import 'package:sporsal/features/profile/presentation/widgets/trophy_card.dart';
 import 'package:sporsal/features/profile/presentation/widgets/trophies_tab.dart';
 
 void main() {
-  final testTrophies = const [
+  const testTrophies = [
     TrophyDefinition(
       id: 'organizer',
       emoji: '🏆',

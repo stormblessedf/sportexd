@@ -125,7 +125,7 @@ class EventPhotoService {
     final controller = StreamController<List<EventPhotoModel>>.broadcast();
     StreamSubscription? activeMeetupsSubscription;
     final innerSubscriptions = <StreamSubscription>[];
-    var latestValues = <String, List<EventPhotoModel>>{};
+    final latestValues = <String, List<EventPhotoModel>>{};
 
     void cancelInnerSubscriptions() {
       for (final sub in innerSubscriptions) {
@@ -163,9 +163,12 @@ class EventPhotoService {
       }
     }, onError: controller.addError);
 
-    controller.onCancel = () {
+    controller.onCancel = () async {
       cancelInnerSubscriptions();
-      activeMeetupsSubscription?.cancel();
+      if (activeMeetupsSubscription != null) {
+        await activeMeetupsSubscription.cancel();
+      }
+      await controller.close();
     };
 
     return controller.stream;

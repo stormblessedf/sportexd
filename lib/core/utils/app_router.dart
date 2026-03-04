@@ -25,12 +25,16 @@ import '../../features/notifications/presentation/notification_settings_screen.d
 import '../../features/profile/presentation/reliability_detail_screen.dart';
 import '../../features/profile/presentation/user_meetups_screen.dart';
 import '../../features/live_event/presentation/live_event_screen.dart';
-import '../../features/live_broadcast/live_broadcast.dart';
 import '../../features/statistics/presentation/statistics_screen.dart';
 import '../../core/models/user_model.dart';
 import '../../core/models/meetup_model.dart';
+import '../../core/models/venue_model.dart';
 import '../../core/models/eligible_meetup.dart';
 import '../../core/utils/admin_actions.dart';
+
+import '../../features/venue_recommendations/presentation/venue_onboarding_screen.dart';
+import '../../features/venue_recommendations/presentation/venue_detail_screen.dart';
+import '../../core/services/meetup_service.dart' as meetup_svc;
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -60,6 +64,16 @@ final appRouter = GoRouter(
           return const Scaffold(body: Center(child: Text('Buluşma bulunamadı')));
         }
         return MeetupDetailScreen(meetup: meetup);
+      },
+    ),
+    GoRoute(
+      path: '/meetup/:meetupId',
+      builder: (context, state) {
+        final meetupId = state.pathParameters['meetupId'];
+        if (meetupId == null || meetupId.isEmpty) {
+          return const Scaffold(body: Center(child: Text('Etkinlik bulunamadı')));
+        }
+        return _MeetupLoaderScreen(meetupId: meetupId);
       },
     ),
     GoRoute(
@@ -219,36 +233,58 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/partnership-requests', builder: (context, state) => const PartnershipRequestsScreen()),
-    GoRoute(path: '/live-streams', builder: (context, state) => const LiveStreamsScreen()),
     GoRoute(
-      path: '/live-broadcast/create',
+      path: '/venue-onboarding',
+      builder: (context, state) => const VenueOnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/venue-detail/:placeId',
       builder: (context, state) {
+        final placeId = state.pathParameters['placeId'];
+        if (placeId == null || placeId.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Mekan bulunamadı')),
+          );
+        }
         final extra = state.extra as Map<String, dynamic>?;
-        return BroadcastScreen(
-          eventId: extra?['eventId'] as String?,
-          eventName: extra?['eventName'] as String?,
+        final sportType = extra?['sportType'] as MeetupType?;
+        final initialVenue = extra?['initialVenue'] as VenueModel?;
+        final distanceKm = extra?['distanceKm'] as double?;
+        return VenueDetailScreen(
+          placeId: placeId,
+          sportType: sportType,
+          initialVenue: initialVenue,
+          distanceKm: distanceKm,
         );
-      },
-    ),
-    GoRoute(
-      path: '/live-broadcast/viewer/:streamId',
-      builder: (context, state) {
-        final streamId = state.pathParameters['streamId'];
-        if (streamId == null || streamId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Yayın bulunamadı')));
-        }
-        return ViewerScreen(streamId: streamId);
-      },
-    ),
-    GoRoute(
-      path: '/stream-history/:userId',
-      builder: (context, state) {
-        final userId = state.pathParameters['userId'];
-        if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
-        }
-        return UserStreamHistoryScreen(userId: userId);
       },
     ),
   ],
 );
+
+
+class _MeetupLoaderScreen extends StatelessWidget {
+  final String meetupId;
+  const _MeetupLoaderScreen({required this.meetupId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<MeetupModel?>(
+      future: meetup_svc.MeetupService().getMeetup(meetupId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final meetup = snapshot.data;
+        if (meetup == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Etkinlik')),
+            body: const Center(child: Text('Etkinlik bulunamadı')),
+          );
+        }
+        return MeetupDetailScreen(meetup: meetup);
+      },
+    );
+  }
+}

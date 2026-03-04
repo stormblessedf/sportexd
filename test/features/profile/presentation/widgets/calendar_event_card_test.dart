@@ -44,12 +44,6 @@ void main() {
       ),
     );
 
-    // Find the status dot container (8x8 circle)
-    final dotFinder = find.byWidgetPredicate((widget) =>
-        widget is Container &&
-        widget.constraints?.maxWidth == 8 &&
-        widget.constraints?.maxHeight == 8);
-
     // Verify the dot exists by checking decoration
     final containers = tester.widgetList<Container>(find.byType(Container));
     final dotContainer = containers.where((c) {

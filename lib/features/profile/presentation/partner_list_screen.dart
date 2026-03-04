@@ -25,11 +25,19 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
   Map<String, int> _sharedMeetupCounts = {};
   bool _isLoading = true;
   _SortOption _currentSort = _SortOption.recent;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadPartners();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPartners() async {
@@ -110,6 +118,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
               ? _buildEmptyState()
               : Column(
                   children: [
+                    _buildSearchBar(),
                     _buildSortBar(),
                     Expanded(child: _buildPartnerList()),
                   ],
@@ -137,7 +146,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Etkinliklere katılarak yeni partnerler edinebilirsin',
             style: TextStyle(
               color: AppTheme.textLight,
@@ -145,6 +154,45 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<UserModel> get _filteredPartners {
+    if (_searchQuery.isEmpty) return _partners;
+    final q = _searchQuery.toLowerCase();
+    return _partners.where((p) => p.username.toLowerCase().contains(q)).toList();
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (v) => setState(() => _searchQuery = v),
+        decoration: InputDecoration(
+          hintText: 'İsim ara...',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
+          ),
+        ),
       ),
     );
   }
@@ -199,15 +247,24 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
   }
 
   Widget _buildPartnerList() {
+    final list = _filteredPartners;
+    if (list.isEmpty) {
+      return const Center(
+        child: Text(
+          'Sonuç bulunamadı',
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+        ),
+      );
+    }
     return RefreshIndicator(
       onRefresh: _loadPartners,
       color: AppTheme.primary,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _partners.length,
+        itemCount: list.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final partner = _partners[index];
+          final partner = list[index];
           final sharedCount = _sharedMeetupCounts[partner.id] ?? 0;
           return _buildPartnerCard(partner, sharedCount);
         },

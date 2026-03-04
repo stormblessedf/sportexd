@@ -280,7 +280,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               _buildSectionTitle('Cinsiyet'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 decoration: _inputDecoration('Seçiniz', Icons.wc),
                 items: _genderOptions.map((gender) {
                   return DropdownMenuItem(value: gender, child: Text(gender));

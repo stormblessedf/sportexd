@@ -63,7 +63,7 @@ class FullScreenPhotoViewer extends StatelessWidget {
                   ),
                 );
               },
-              errorBuilder: (_, __, ___) => Column(
+              errorBuilder: (context, error, stackTrace) => Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(

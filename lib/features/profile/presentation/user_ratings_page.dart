@@ -351,8 +351,8 @@ class _UserRatingsPageState extends State<UserRatingsPage>
       children: [
         // Summary for given ratings
         Container(
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppTheme.surfaceLight,
             borderRadius: BorderRadius.circular(12),
@@ -361,7 +361,7 @@ class _UserRatingsPageState extends State<UserRatingsPage>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.rate_review, color: AppTheme.primary, size: 32),
+              const Icon(Icons.rate_review, color: AppTheme.primary, size: 32),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -33,7 +33,7 @@ class ShareService {
         await Clipboard.setData(
           ClipboardData(text: generateProfileLink(userId)),
         );
-        return ShareResult('Panoya kopyalandı', ShareResultStatus.success);
+        return const ShareResult('Panoya kopyalandı', ShareResultStatus.success);
       }
       rethrow;
     }

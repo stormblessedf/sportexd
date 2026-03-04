@@ -7,14 +7,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/share_service.dart';
+import '../../../core/services/meetup_service.dart';
 import '../../../core/services/badge_award_service.dart';
 import '../../../core/services/proximity_attendance_service.dart';
 import '../../../features/profile/presentation/models/trophy_definition.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/profile_header_row.dart';
 import 'widgets/name_section.dart';
-import 'widgets/action_buttons_row.dart';
 import 'widgets/mutual_partners_bar.dart';
 import 'widgets/highlights_row.dart';
 import 'widgets/photo_grid_tab.dart';
@@ -338,13 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       // Name section (name, bio, location, sport tags)
                       NameSection(user: user),
                       const SizedBox(height: 12),
-                      // Action buttons (own) or mutual partners (other)
-                      if (isOwnProfile)
-                        ActionButtonsRow(
-                          onEditTap: () => context.push('/edit-profile'),
-                          onShareTap: () => ShareService.shareProfile(user.id),
-                        )
-                      else if (_authService.currentUserId != null)
+                      // Action buttons removed - edit is in settings
+                      if (!isOwnProfile && _authService.currentUserId != null)
                         MutualPartnersBar(
                           currentUserId: _authService.currentUserId!,
                           profileUserId: user.id,
@@ -418,29 +412,17 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           IconButton(
             icon: const Icon(Icons.handshake, color: AppTheme.primary),
-            tooltip: 'Partner İstekleri',
+            tooltip: 'Partnerlik Yap',
             onPressed: () => context.push('/partnership-requests'),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'edit') {
-                context.push('/edit-profile');
-              } else if (value == 'settings') {
+              if (value == 'settings') {
                 context.push('/settings');
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_outlined, size: 20),
-                    SizedBox(width: 8),
-                    Text('Profili Düzenle'),
-                  ],
-                ),
-              ),
               const PopupMenuItem(
                 value: 'settings',
                 child: Row(
@@ -481,6 +463,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: CalendarTab(
         meetups: _allMeetups,
         onMeetupTap: (meetup) => context.push('/meetup/${meetup.id}'),
+        meetupService: MeetupService(),
       ),
     );
   }

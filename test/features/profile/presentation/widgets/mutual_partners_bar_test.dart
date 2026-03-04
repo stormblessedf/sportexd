@@ -24,7 +24,7 @@ void main() {
           body: MutualPartnersBar(
             currentUserId: 'user1',
             profileUserId: 'user2',
-            loader: (_, __) async => <UserModel>[],
+            loader: (_, _) async => <UserModel>[],
           ),
         ),
       ),
@@ -48,7 +48,7 @@ void main() {
           body: MutualPartnersBar(
             currentUserId: 'user1',
             profileUserId: 'user2',
-            loader: (_, __) async => partners,
+            loader: (_, _) async => partners,
           ),
         ),
       ),
@@ -67,7 +67,7 @@ void main() {
           body: MutualPartnersBar(
             currentUserId: 'user1',
             profileUserId: 'user2',
-            loader: (_, __) async {
+            loader: (_, _) async {
               return [TestUserBuilder().withId('p1').build()];
             },
           ),

@@ -18,9 +18,9 @@ class ProfileHeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final counters = [
-      (value: '${user.totalMeetupsRegistered}', label: 'Etkinlik', type: CounterType.events),
-      (value: '${user.partners.length}', label: 'Partner', type: CounterType.partners),
-      (value: '${user.reliabilityScore.round()}%', label: 'Güvenilir', type: CounterType.reliability),
+      (value: '${user.totalMeetupsRegistered}', label: 'Etkinlikler', type: CounterType.events),
+      (value: '${user.partners.length}', label: 'Partnerler', type: CounterType.partners),
+      (value: '${user.reliabilityScore.round()}%', label: 'Güvenilirlik', type: CounterType.reliability),
       (value: '${user.averageRating.toStringAsFixed(1)}⭐', label: 'Puan', type: CounterType.rating),
     ];
 

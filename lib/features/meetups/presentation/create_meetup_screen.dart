@@ -71,7 +71,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   static const Color borderLight = Color(0xFFE2E8F0);
 
   // Sport types with icons
-  static final List<_SportTypeData> _sportTypes = [
+  static const List<_SportTypeData> _sportTypes = [
     _SportTypeData(MeetupType.running, Icons.directions_run, 'Koşu'),
     _SportTypeData(MeetupType.cycling, Icons.pedal_bike, 'Bisiklet'),
     _SportTypeData(MeetupType.fitness, Icons.fitness_center, 'Fitness'),
@@ -89,7 +89,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   @override
   void initState() {
     super.initState();
-    _mapCenter = LatLng(
+    _mapCenter = const LatLng(
       LocationService.defaultLatitude,
       LocationService.defaultLongitude,
     );
@@ -178,7 +178,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   final suggestion = _suggestions[index];
                   return ListTile(
                     dense: true,
-                    leading: Icon(
+                    leading: const Icon(
                       Icons.location_on_outlined,
                       color: textMuted,
                       size: 20,
@@ -197,7 +197,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                             suggestion.secondaryText,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: textMuted),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: textMuted,
+                            ),
                           )
                         : null,
                     onTap: () => _selectPlace(suggestion),
@@ -373,7 +376,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       final meetupService = context.read<MeetupService>();
 
       final user = await authService.getCurrentUser();
-      if (user == null) throw Exception("Oturum açık değil");
+      if (user == null) throw Exception('Oturum açık değil');
 
       final meetupStartDateTime = DateTime(
         _selectedDate.year,
@@ -668,7 +671,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: Icon(Icons.chevron_left, color: textMuted),
+          icon: const Icon(Icons.chevron_left, color: textMuted),
           onPressed: () {
             setState(() {
               _displayedMonth = DateTime(
@@ -688,7 +691,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           ),
         ),
         IconButton(
-          icon: Icon(Icons.chevron_right, color: textMuted),
+          icon: const Icon(Icons.chevron_right, color: textMuted),
           onPressed: () {
             setState(() {
               _displayedMonth = DateTime(
@@ -729,7 +732,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   child: Text(
                     d,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: textMuted,
@@ -819,12 +822,12 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
               onTap: _pickStartTime,
               child: Row(
                 children: [
-                  Icon(Icons.schedule, color: textMuted, size: 20),
+                  const Icon(Icons.schedule, color: textMuted, size: 20),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'BAŞLANGIÇ',
                         style: TextStyle(
                           fontSize: 10,
@@ -858,7 +861,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
+                      const Text(
                         'BİTİŞ',
                         style: TextStyle(
                           fontSize: 10,
@@ -928,10 +931,18 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 decoration: InputDecoration(
                   hintText: 'Konum veya mekan ara...',
                   hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
-                  prefixIcon: Icon(Icons.search, color: textMuted, size: 20),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: textMuted,
+                    size: 20,
+                  ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.clear, color: textMuted, size: 18),
+                          icon: const Icon(
+                            Icons.clear,
+                            color: textMuted,
+                            size: 18,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _suggestions = []);
@@ -967,7 +978,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                     options: MapOptions(
                       initialCenter:
                           _mapCenter ??
-                          LatLng(
+                          const LatLng(
                             LocationService.defaultLatitude,
                             LocationService.defaultLongitude,
                           ),
@@ -1004,7 +1015,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.location_on, color: primary, size: 48),
+                        const Icon(Icons.location_on, color: primary, size: 48),
                         Container(
                           width: 12,
                           height: 6,
@@ -1040,7 +1051,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.near_me, color: textMuted, size: 16),
+                            const Icon(Icons.near_me, color: textMuted, size: 16),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1326,7 +1337,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
             color: backgroundLight,
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: textMuted,
@@ -1412,7 +1423,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: backgroundLight.withValues(alpha: 0.8),
-        border: Border(top: BorderSide(color: const Color(0xFFF1F5F9))),
+        border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
       ),
       child: SafeArea(
         child: GestureDetector(

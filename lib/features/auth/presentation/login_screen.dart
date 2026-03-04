@@ -187,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'E-posta',
                                   style: TextStyle(
                                     fontSize: 14,
@@ -210,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     }
                                     return null;
                                   },
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                     hintText: 'ornek@email.com',
                                     prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textMuted),
                                     filled: true,
@@ -228,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Şifre',
                                   style: TextStyle(
                                     fontSize: 14,
@@ -254,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                             decoration: InputDecoration(
                               hintText: '••••••••',
-                              prefixIcon: Icon(Icons.lock_outline, color: AppTheme.textMuted),
+                              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textMuted),
                               suffixIcon: Semantics(
                                 label: _obscurePassword ? 'Şifreyi göster' : 'Şifreyi gizle',
                                 child: IconButton(
@@ -319,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           'Hesabın yok mu?',
                           style: TextStyle(color: AppTheme.textMuted),
                         ),
@@ -327,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () {
                             context.push('/signup');
                           },
-                          child: Text(
+                          child: const Text(
                             'Kayıt Ol',
                             style: TextStyle(
                               color: AppTheme.primary,

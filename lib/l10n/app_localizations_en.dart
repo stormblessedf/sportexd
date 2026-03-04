@@ -120,4 +120,102 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get selectPositionForFootball =>
       'You must select a position to join this football event';
+
+  @override
+  String get sectionAccount => 'Account';
+
+  @override
+  String get editProfileSubtitle => 'Update your information';
+
+  @override
+  String get sectionPrivacy => 'Privacy';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get changePasswordSubtitle => 'Keep your account secure';
+
+  @override
+  String get privacySettings => 'Privacy Settings';
+
+  @override
+  String get privacySettingsSubtitle => 'Who can see you?';
+
+  @override
+  String get sectionNotifications => 'Notifications';
+
+  @override
+  String get notificationSettingsSubtitle =>
+      'Which notifications would you like to receive?';
+
+  @override
+  String get sectionAppearance => 'Appearance';
+
+  @override
+  String get mapStyle => 'Map Style';
+
+  @override
+  String get appLanguage => 'App Language';
+
+  @override
+  String get appLanguageSubtitle => 'Select the language of the app.';
+
+  @override
+  String get sectionSupport => 'Support';
+
+  @override
+  String get helpSupport => 'Help & Support';
+
+  @override
+  String get aboutApp => 'About';
+
+  @override
+  String get sectionAdmin => 'Admin';
+
+  @override
+  String get adminActions => 'Admin Actions';
+
+  @override
+  String get adminActionsSubtitle => 'Maintenance and management tools';
+
+  @override
+  String get logout => 'Log Out';
+
+  @override
+  String get logoutConfirmTitle => 'Log Out';
+
+  @override
+  String get logoutConfirmContent =>
+      'Are you sure you want to log out of your account?';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get passwordChangeSoon => 'Password change coming soon!';
+
+  @override
+  String get privacySettingsSoon => 'Privacy settings coming soon!';
+
+  @override
+  String get helpSoon => 'Help page coming soon!';
+
+  @override
+  String get navFeed => 'Feed';
+
+  @override
+  String get navChats => 'Chats';
+
+  @override
+  String get navCreate => 'Create';
+
+  @override
+  String get navVenues => 'Venues';
+
+  @override
+  String get navProfile => 'Profile';
+
+  @override
+  String get navPhoto => 'Photo';
 }

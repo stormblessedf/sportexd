@@ -5,7 +5,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
 import 'app_localizations_tr.dart';
 
 // ignore_for_file: type=lint
@@ -96,6 +100,10 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('tr'),
     Locale('en'),
+    Locale('de'),
+    Locale('fr'),
+    Locale('es'),
+    Locale('ar'),
   ];
 
   /// No description provided for @appTitle.
@@ -319,6 +327,198 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu futbol etkinligine katilmak icin pozisyon secmelisiniz'**
   String get selectPositionForFootball;
+
+  /// No description provided for @sectionAccount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap'**
+  String get sectionAccount;
+
+  /// No description provided for @editProfileSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilgilerinizi güncelleyin'**
+  String get editProfileSubtitle;
+
+  /// No description provided for @sectionPrivacy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik'**
+  String get sectionPrivacy;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre Değiştir'**
+  String get changePassword;
+
+  /// No description provided for @changePasswordSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap güvenliğinizi koruyun'**
+  String get changePasswordSubtitle;
+
+  /// No description provided for @privacySettings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik Ayarları'**
+  String get privacySettings;
+
+  /// No description provided for @privacySettingsSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kim sizi görebilir?'**
+  String get privacySettingsSubtitle;
+
+  /// No description provided for @sectionNotifications.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirimler'**
+  String get sectionNotifications;
+
+  /// No description provided for @notificationSettingsSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi bildirimleri almak istersiniz?'**
+  String get notificationSettingsSubtitle;
+
+  /// No description provided for @sectionAppearance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Görünüm'**
+  String get sectionAppearance;
+
+  /// No description provided for @mapStyle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Harita Stili'**
+  String get mapStyle;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulama Dili'**
+  String get appLanguage;
+
+  /// No description provided for @appLanguageSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulamanın görüntülendiği dili seçin.'**
+  String get appLanguageSubtitle;
+
+  /// No description provided for @sectionSupport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Destek'**
+  String get sectionSupport;
+
+  /// No description provided for @helpSupport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yardım & Destek'**
+  String get helpSupport;
+
+  /// No description provided for @aboutApp.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hakkında'**
+  String get aboutApp;
+
+  /// No description provided for @sectionAdmin.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yönetim'**
+  String get sectionAdmin;
+
+  /// No description provided for @adminActions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Admin İşlemleri'**
+  String get adminActions;
+
+  /// No description provided for @adminActionsSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bakım ve yönetim araçları'**
+  String get adminActionsSubtitle;
+
+  /// No description provided for @logout.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkış Yap'**
+  String get logout;
+
+  /// No description provided for @logoutConfirmTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkış Yap'**
+  String get logoutConfirmTitle;
+
+  /// No description provided for @logoutConfirmContent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınızdan çıkmak istediğinize emin misiniz?'**
+  String get logoutConfirmContent;
+
+  /// No description provided for @cancel.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal'**
+  String get cancel;
+
+  /// No description provided for @passwordChangeSoon.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre değiştirme yakında eklenecek!'**
+  String get passwordChangeSoon;
+
+  /// No description provided for @privacySettingsSoon.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik ayarları yakında eklenecek!'**
+  String get privacySettingsSoon;
+
+  /// No description provided for @helpSoon.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yardım sayfası yakında eklenecek!'**
+  String get helpSoon;
+
+  /// No description provided for @navFeed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akış'**
+  String get navFeed;
+
+  /// No description provided for @navChats.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbetler'**
+  String get navChats;
+
+  /// No description provided for @navCreate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Oluştur'**
+  String get navCreate;
+
+  /// No description provided for @navVenues.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mekanlar'**
+  String get navVenues;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Profil'**
+  String get navProfile;
+
+  /// No description provided for @navPhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf'**
+  String get navPhoto;
 }
 
 class _AppLocalizationsDelegate
@@ -331,8 +531,14 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'tr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'ar',
+    'de',
+    'en',
+    'es',
+    'fr',
+    'tr',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -341,8 +547,16 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return AppLocalizationsAr();
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
+    case 'fr':
+      return AppLocalizationsFr();
     case 'tr':
       return AppLocalizationsTr();
   }

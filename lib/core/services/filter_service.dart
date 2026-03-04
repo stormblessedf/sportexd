@@ -149,7 +149,7 @@ class FilterService {
     double? userLongitude,
   ) {
     final scoredMeetups = meetups.map((m) {
-      double score = _calculateIntelligentScore(m, userLatitude, userLongitude);
+      final double score = _calculateIntelligentScore(m, userLatitude, userLongitude);
       return _ScoredMeetup(m, score);
     }).toList();
 

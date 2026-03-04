@@ -7,7 +7,6 @@ import '../../../core/services/auth_service.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/quick_filter_chips.dart';
 import 'widgets/filter_panel.dart';
-import 'widgets/recommendation_section.dart';
 import '../../home/presentation/widgets/meetup_card.dart';
 import '../../meetups/presentation/nearby_meetups_map_screen.dart';
 import '../../notifications/presentation/widgets/notification_bell.dart';
@@ -27,6 +26,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   _FeedMode _feedMode = _FeedMode.discovery;
+  bool _headerVisible = true;
 
   @override
   void initState() {
@@ -46,6 +46,22 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       _controller.loadMore();
+    }
+  }
+
+  void _onScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta > 5 && _headerVisible) {
+        setState(() => _headerVisible = false);
+      } else if (delta < -5 && !_headerVisible) {
+        setState(() => _headerVisible = true);
+      }
+    }
+    if (notification is ScrollEndNotification &&
+        notification.metrics.pixels <= 0 &&
+        !_headerVisible) {
+      setState(() => _headerVisible = true);
     }
   }
 
@@ -92,48 +108,67 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         body: SafeArea(
           child: Column(
             children: [
-              // App Bar
-              _buildAppBar(),
-
-              // Search Bar & Quick Filters (hidden in live mode)
-              if (_feedMode != _FeedMode.live) ...[
-                _buildSearchBar(),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Consumer<DiscoveryController>(
-                    builder: (context, controller, _) => QuickFilterChips(
-                      filterState: controller.filterState,
-                      hasLocationPermission: controller.hasLocationPermission,
-                      onTodayTap: () => controller.setDateRange(DateRangeFilter.today),
-                      onThisWeekTap: () => controller.setDateRange(DateRangeFilter.thisWeek),
-                      onNearMeTap: () => controller.filterNearMe(),
-                      onSportTypeTap: (type) => controller.toggleSportType(type),
-                      onClearFilters: () => controller.clearFilters(),
-                    ),
+              // Animated header — hides on scroll down, shows on scroll up
+              AnimatedAlign(
+                alignment: Alignment.topCenter,
+                heightFactor: _headerVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                child: AnimatedOpacity(
+                  opacity: _headerVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildAppBar(),
+                      if (_feedMode != _FeedMode.live) ...[
+                        _buildSearchBar(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Consumer<DiscoveryController>(
+                            builder: (context, controller, _) => QuickFilterChips(
+                              filterState: controller.filterState,
+                              hasLocationPermission: controller.hasLocationPermission,
+                              onTodayTap: () => controller.setDateRange(DateRangeFilter.today),
+                              onThisWeekTap: () => controller.setDateRange(DateRangeFilter.thisWeek),
+                              onNearMeTap: () => controller.filterNearMe(),
+                              onSportTypeTap: (type) => controller.toggleSportType(type),
+                              onClearFilters: () => controller.clearFilters(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ],
+              ),
 
               // Content
               Expanded(
-                child: _feedMode == _FeedMode.live
-                    ? const LiveFeedPage()
-                    : Consumer<DiscoveryController>(
-                  builder: (context, controller, _) {
-                    if (controller.isLoading) {
-                      return _buildLoadingState();
-                    }
-
-                    if (controller.error != null) {
-                      return _buildErrorState(controller.error!);
-                    }
-
-                    if (controller.viewMode == ViewMode.map) {
-                      return const NearbyMeetupsMapScreen(embedded: true);
-                    }
-
-                    return _buildListView(controller);
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    _onScrollNotification(notification);
+                    return false;
                   },
+                  child: _feedMode == _FeedMode.live
+                      ? const LiveFeedPage()
+                      : Consumer<DiscoveryController>(
+                          builder: (context, controller, _) {
+                            if (controller.isLoading) {
+                              return _buildLoadingState();
+                            }
+
+                            if (controller.error != null) {
+                              return _buildErrorState(controller.error!);
+                            }
+
+                            if (controller.viewMode == ViewMode.map) {
+                              return const NearbyMeetupsMapScreen(embedded: true);
+                            }
+
+                            return _buildListView(controller);
+                          },
+                        ),
                 ),
               ),
             ],
@@ -235,7 +270,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         top: 0,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppTheme.primary,
                             shape: BoxShape.circle,
                           ),
@@ -311,11 +346,11 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           fillColor: AppTheme.surfaceLight,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.borderLight),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.borderLight),
+            borderSide: const BorderSide(color: AppTheme.borderLight),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -418,7 +453,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.videocam,
+              Icons.photo_library_outlined,
               size: 18,
               color: isLive ? Colors.white : AppTheme.textMuted,
             ),
@@ -484,66 +519,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
-          // Recommendations
-          if (controller.filterState.searchQuery.isEmpty &&
-              !controller.filterState.hasActiveFilters) ...[
-            // For You section
-            if (controller.recommendations.forYou.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: RecommendationSection(
-                    title: 'Senin İçin',
-                    icon: Icons.auto_awesome,
-                    accentColor: AppTheme.primary,
-                    meetups: controller.recommendations.forYou,
-                  ),
-                ),
-              ),
-
-            // Trending Nearby
-            if (controller.recommendations.trendingNearby.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: RecommendationSection(
-                    title: 'Yakınında Trend',
-                    icon: Icons.trending_up,
-                    accentColor: Colors.orange,
-                    meetups: controller.recommendations.trendingNearby,
-                  ),
-                ),
-              ),
-
-            // Starting Soon
-            if (controller.recommendations.startingSoon.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: RecommendationSection(
-                    title: 'Yakında Başlıyor',
-                    icon: Icons.schedule,
-                    accentColor: Colors.blue,
-                    meetups: controller.recommendations.startingSoon,
-                  ),
-                ),
-              ),
-
-            // New Events
-            if (controller.recommendations.newEvents.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: RecommendationSection(
-                    title: 'Yeni Etkinlikler',
-                    icon: Icons.new_releases,
-                    accentColor: Colors.purple,
-                    meetups: controller.recommendations.newEvents,
-                  ),
-                ),
-              ),
-          ],
-
           // Section header for main list
           SliverToBoxAdapter(
             child: Padding(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sporsal/core/models/meetup_model.dart';
+import 'package:sporsal/core/services/meetup_service.dart';
+import 'package:sporsal/features/profile/presentation/widgets/active_meetup_card.dart';
 import 'package:sporsal/features/profile/presentation/widgets/calendar_event_card.dart';
 import 'package:sporsal/features/profile/presentation/widgets/calendar_grid.dart';
 import 'package:sporsal/theme/app_theme.dart';
@@ -8,11 +10,13 @@ import 'package:sporsal/theme/app_theme.dart';
 class CalendarTab extends StatefulWidget {
   final List<MeetupModel> meetups;
   final Function(MeetupModel) onMeetupTap;
+  final MeetupService meetupService;
 
   const CalendarTab({
     super.key,
     required this.meetups,
     required this.onMeetupTap,
+    required this.meetupService,
   });
 
   @override
@@ -36,14 +40,42 @@ class _CalendarTabState extends State<CalendarTab> {
     _selectedMonth = DateTime(now.year, now.month);
   }
 
-  List<MeetupModel> get _monthMeetups => widget.meetups
-      .where((m) =>
-          m.date.year == _selectedMonth.year &&
-          m.date.month == _selectedMonth.month)
+  List<MeetupModel> get _activeMeetups => widget.meetups
+      .where((m) => widget.meetupService.isMeetupActive(m))
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
-  Set<int> get _eventDays => _monthMeetups.map((m) => m.date.day).toSet();
+  Set<int> get _activeEventDays => widget.meetups
+      .where((m) =>
+          m.date.year == _selectedMonth.year &&
+          m.date.month == _selectedMonth.month &&
+          widget.meetupService.isMeetupActive(m))
+      .map((m) => m.date.day)
+      .toSet();
+
+  List<MeetupModel> get _monthMeetups => widget.meetups
+      .where((m) =>
+          m.date.year == _selectedMonth.year &&
+          m.date.month == _selectedMonth.month &&
+          m.date.isAfter(DateTime.now()) &&
+          !widget.meetupService.isMeetupActive(m))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+
+  Set<int> get _eventDays => widget.meetups
+      .where((m) =>
+          m.date.year == _selectedMonth.year &&
+          m.date.month == _selectedMonth.month)
+      .map((m) => m.date.day)
+      .toSet();
+
+  Set<int> get _pastEventDays => widget.meetups
+      .where((m) =>
+          m.date.year == _selectedMonth.year &&
+          m.date.month == _selectedMonth.month &&
+          !m.date.isAfter(DateTime.now()))
+      .map((m) => m.date.day)
+      .toSet();
 
   void _previousMonth() {
     setState(() {
@@ -117,14 +149,52 @@ class _CalendarTabState extends State<CalendarTab> {
           year: _selectedMonth.year,
           month: _selectedMonth.month,
           eventDays: _eventDays,
+          pastEventDays: _pastEventDays,
+          activeEventDays: _activeEventDays,
           today: DateTime.now(),
         ),
+        if (_activeMeetups.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Text(
+            'Şu An Aktif',
+            style: GoogleFonts.lexend(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF4CAF50),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ..._activeMeetups.map((meetup) {
+            final effectiveEnd =
+                widget.meetupService.getEffectiveEndDate(meetup);
+            final remaining = effectiveEnd.difference(DateTime.now());
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ActiveMeetupCard(
+                meetup: meetup,
+                remainingTime: remaining,
+                onTap: () => widget.onMeetupTap(meetup),
+              ),
+            );
+          }),
+        ],
         if (_monthMeetups.isNotEmpty) ...[
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
+          Text(
+            'Yaklaşan Etkinlikler',
+            style: GoogleFonts.lexend(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 8),
         ],
-        // Event cards list
+        // Only upcoming event cards
         ..._monthMeetups.map((meetup) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: CalendarEventCard(

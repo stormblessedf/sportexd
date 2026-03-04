@@ -61,14 +61,29 @@ class DiscoveryController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load saved filter state
+      // Load saved filter state but clear sport type filters AND distance filter.
+      // Sport type filters are session-only to prevent stale filters
+      // from hiding newly created meetups.
+      // Distance filter is also cleared because saved coordinates may be stale
+      // and would silently exclude meetups in different locations.
       final savedState = await _filterService.loadFilterState();
       if (savedState != null) {
-        _filterState = savedState;
+        _filterState = savedState.copyWith(
+          sportTypes: <MeetupType>{},
+          clearDistance: true,
+        );
+        debugPrint('[Feed] Loaded saved filter (sport types + distance cleared): dateRange=${_filterState.dateRange.type.name}, sort=${_filterState.sortOrder.name}');
+      } else {
+        debugPrint('[Feed] No saved filter, using defaults');
       }
 
-      // Try to get user location
-      await _updateUserLocation();
+      // Try to get user location (with timeout to prevent web hang)
+      await _updateUserLocation().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          debugPrint('[Feed] Location fetch timed out, proceeding without location');
+        },
+      );
 
       // Fetch initial data
       await _fetchMeetups();
@@ -130,14 +145,25 @@ class DiscoveryController extends ChangeNotifier {
     }
 
     try {
+      debugPrint('[Feed] filterState: sportTypes=${_filterState.sportTypes}, dateRange=${_filterState.dateRange.type.name}, startDate=${_filterState.dateRange.startDate}, endDate=${_filterState.dateRange.endDate}');
       final query = _filterService.buildQuery(_filterState);
       final limitedQuery = query.limit(_pageSize);
 
       QuerySnapshot<Map<String, dynamic>> snapshot;
       if (_lastDocument != null) {
-        snapshot = await limitedQuery.startAfterDocument(_lastDocument!).get();
+        snapshot = await limitedQuery.startAfterDocument(_lastDocument!).get(
+          const GetOptions(source: Source.serverAndCache),
+        );
       } else {
-        snapshot = await limitedQuery.get();
+        snapshot = await limitedQuery.get(
+          const GetOptions(source: Source.serverAndCache),
+        );
+      }
+
+      debugPrint('[Feed] Query returned ${snapshot.docs.length} documents');
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        debugPrint('[Feed] doc=${doc.id}, title=${data['title']}, date=${data['date']}, type=${data['type']}');
       }
 
       if (snapshot.docs.isEmpty) {
@@ -167,6 +193,7 @@ class DiscoveryController extends ChangeNotifier {
       _userLatitude,
       _userLongitude,
     );
+    debugPrint('[Feed] After post-filters: ${_allMeetups.length} -> ${_filteredMeetups.length} meetups');
     notifyListeners();
   }
 
@@ -194,8 +221,10 @@ class DiscoveryController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Save filter state (excludes search query)
-      await _filterService.saveFilterState(newState.copyWith(searchQuery: ''));
+      // Save filter state (excludes search query and sport types — sport types are session-only)
+      await _filterService.saveFilterState(
+        newState.copyWith(searchQuery: '', sportTypes: <MeetupType>{}),
+      );
 
       // Fetch new data
       await _fetchMeetups(reset: true);

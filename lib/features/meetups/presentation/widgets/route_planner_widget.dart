@@ -373,7 +373,7 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
                   options: MapOptions(
                     initialCenter: _startPoint != null
                         ? LatLng(_startPoint!.latitude, _startPoint!.longitude)
-                        : LatLng(LocationService.defaultLatitude, LocationService.defaultLongitude),
+                        : const LatLng(LocationService.defaultLatitude, LocationService.defaultLongitude),
                     initialZoom: 13,
                     onTap: _onMapTap,
                   ),
@@ -503,7 +503,7 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
             if (location != null)
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close, size: 18, color: textMuted),
+                child: const Icon(Icons.close, size: 18, color: textMuted),
               )
             else if (isSelecting)
               const SizedBox(

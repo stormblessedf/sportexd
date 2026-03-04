@@ -42,9 +42,9 @@ class _MyChatsScreenState extends State<MyChatsScreen>
     final userId = authService.currentUserId;
 
     if (userId == null) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: AppTheme.backgroundLight,
-        body: const Center(
+        body: Center(
           child: EmptyStateWidget(
             icon: Icons.login,
             message: 'Sohbetleri görmek için giriş yapın',

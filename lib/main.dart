@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -19,7 +18,9 @@ import 'core/services/partnership_service.dart';
 import 'core/services/messaging_permission_service.dart';
 import 'core/services/event_photo_service.dart';
 import 'core/services/meetup_participation_service.dart';
+import 'core/services/locale_service.dart';
 import 'core/utils/app_router.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
   final MapPreferencesService _mapPreferencesService = MapPreferencesService();
+  final LocaleService _localeService = LocaleService();
   final ProximityAttendanceService _proximityAttendanceService = ProximityAttendanceService();
   final LocationTrackingService _locationTrackingService = LocationTrackingService();
   String? _currentUserId;
@@ -63,6 +65,7 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
     _initializePresence();
     _initializeNotifications();
     _mapPreferencesService.initialize();
+    _localeService.initialize();
   }
 
   @override
@@ -195,29 +198,27 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
         Provider<LocationTrackingService>.value(value: _locationTrackingService),
         Provider<ReliabilityService>(create: (_) => ReliabilityService()),
         ProxyProvider<MeetupService, EventPhotoService>(
-          update: (_, meetupService, __) => EventPhotoService(meetupService: meetupService),
+          update: (_, meetupService, _) => EventPhotoService(meetupService: meetupService),
         ),
         ChangeNotifierProvider<NotificationService>.value(value: _notificationService),
         ChangeNotifierProvider<MapPreferencesService>.value(value: _mapPreferencesService),
+        ChangeNotifierProvider<LocaleService>.value(value: _localeService),
       ],
-      child: MaterialApp.router(
-        title: 'Sporsal',
-        locale: DevicePreview.locale(context),
-        builder: DevicePreview.appBuilder,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('tr'),
-          Locale('en'),
-        ],
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
-        routerConfig: appRouter,
-        debugShowCheckedModeBanner: false,
+      child: Consumer<LocaleService>(
+        builder: (context, localeService, _) => MaterialApp.router(
+          title: 'Sporsal',
+          locale: localeService.locale,
+          builder: DevicePreview.appBuilder,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: LocaleService.supportedLocales
+              .map((o) => o.locale)
+              .toList(),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.light,
+          routerConfig: appRouter,
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }

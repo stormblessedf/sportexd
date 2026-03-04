@@ -328,7 +328,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (_currentUser == null) {
       return const Scaffold(
-        body: Center(child: Text("Sohbete katılmak için giriş yapmalısınız.")),
+        body: Center(child: Text('Sohbete katılmak için giriş yapmalısınız.')),
       );
     }
 
@@ -418,7 +418,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(
-                      child: Text("Henüz mesaj yok. İlk mesajı sen at!"),
+                      child: Text('Henüz mesaj yok. İlk mesajı sen at!'),
                     );
                   }
 
