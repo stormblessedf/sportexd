@@ -20,6 +20,7 @@ import 'core/services/event_photo_service.dart';
 import 'core/services/meetup_participation_service.dart';
 import 'core/services/locale_service.dart';
 import 'core/utils/app_router.dart';
+import 'core/utils/google_maps_loader.dart';
 import 'l10n/app_localizations.dart';
 
 void main() async {
@@ -32,6 +33,9 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }
+
+  // Load Google Maps JS API with key from --dart-define
+  GoogleMapsLoader.load();
 
   runApp(
     DevicePreview(
