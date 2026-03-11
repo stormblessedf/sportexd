@@ -58,6 +58,7 @@ firebase-debug.log
 .firebase/
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+ios/Flutter/Secrets.xcconfig
 
 # Build artifacts (may contain embedded keys)
 .dart_tool/
