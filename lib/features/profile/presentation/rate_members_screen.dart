@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/rating_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RateMembersScreen extends StatefulWidget {
   final String meetupId;
@@ -33,6 +34,8 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _currentUserId;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -106,8 +109,8 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
 
     if (ratingsToSubmit.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Değerlendirmek için en az bir kişiye puan verin'),
+        SnackBar(
+          content: Text(l10n.rateAtLeastOne),
           backgroundColor: Colors.orange,
         ),
       );
@@ -144,7 +147,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
       if (successCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$successCount değerlendirme başarıyla gönderildi'),
+            content: Text(l10n.ratingsSubmitted(successCount)),
             backgroundColor: AppTheme.primary,
           ),
         );
@@ -156,7 +159,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Hata: $e'),
+          content: Text(l10n.errorWithMessage(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -169,10 +172,11 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('Katılımcıları Değerlendir'),
+        title: Text(l10n.rateParticipants),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -196,7 +200,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Değerlendirilecek katılımcı yok',
+            l10n.noParticipantsToRate,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -237,7 +241,7 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${_participants.length} katılımcı',
+                l10n.participantCount(_participants.length),
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -297,8 +301,8 @@ class _RateMembersScreenState extends State<RateMembersScreen> {
                             ),
                           ),
                         )
-                      : const Text(
-                          'Değerlendirmeleri Gönder',
+                      : Text(
+                          l10n.submitRatings,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -330,6 +334,7 @@ class _ParticipantRatingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -403,8 +408,8 @@ class _ParticipantRatingCard extends StatelessWidget {
                     color: AppTheme.primary.withValues(alpha:0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    'Değerlendirildi',
+                  child: Text(
+                    l10n.alreadyReviewed,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textDark,
@@ -449,7 +454,7 @@ class _ParticipantRatingCard extends StatelessWidget {
               maxLines: 2,
               maxLength: 200,
               decoration: InputDecoration(
-                hintText: 'Yorum ekle (opsiyonel)',
+                hintText: l10n.commentOptional,
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 filled: true,
                 fillColor: Colors.grey[50],
@@ -475,3 +480,8 @@ class _ParticipantRatingCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

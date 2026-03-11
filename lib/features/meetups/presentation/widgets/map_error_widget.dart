@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class MapErrorWidget extends StatelessWidget {
   final String? message;
@@ -14,6 +15,8 @@ class MapErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       height: 200,
       width: double.infinity,
@@ -34,7 +37,7 @@ class MapErrorWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            message ?? 'Harita yüklenemedi',
+            message ?? l10n.mapLoadFailed,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.outline,
             ),
@@ -72,7 +75,7 @@ class MapErrorWidget extends StatelessWidget {
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Tekrar Dene'),
+              label: Text(l10n.retryButton),
             ),
           ],
         ],

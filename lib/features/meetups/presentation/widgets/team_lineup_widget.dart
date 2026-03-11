@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../../core/models/meetup_model.dart';
 import '../../../../core/models/position_slot.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Widget for displaying team lineup in football meetups
 class TeamLineupWidget extends StatelessWidget {
@@ -11,6 +12,7 @@ class TeamLineupWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Only show for football meetups with teams
     if (!meetup.isFootballWithTeams) {
       return const SizedBox.shrink();
@@ -29,7 +31,7 @@ class TeamLineupWidget extends StatelessWidget {
                 const Icon(Icons.sports_soccer, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Takım Dizilişi',
+                  l10n.formationLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -71,7 +73,7 @@ class TeamLineupWidget extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Takım A'),
+                      Text(l10n.teamA),
                       const SizedBox(width: 4),
                       _buildFilledCount(context, meetup.teamASlots),
                     ],
@@ -81,7 +83,7 @@ class TeamLineupWidget extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Takım B'),
+                      Text(l10n.teamB),
                       const SizedBox(width: 4),
                       _buildFilledCount(context, meetup.teamBSlots),
                     ],
@@ -146,7 +148,7 @@ class TeamLineupWidget extends StatelessWidget {
 
   Widget _buildTeamSlots(BuildContext context, List<PositionSlot>? slots) {
     if (slots == null || slots.isEmpty) {
-      return const Center(child: Text('Pozisyon bilgisi yok'));
+      return Center(child: Text(AppLocalizations.of(context)!.noPositionInfo));
     }
 
     return ListView.builder(
@@ -189,6 +191,7 @@ class _PositionSlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final positionColor = _getPositionColor();
 
@@ -246,7 +249,7 @@ class _PositionSlotCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Boş',
+                        l10n.open,
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.outline,
@@ -281,7 +284,7 @@ class _PositionSlotCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              slot.assignedUserName ?? 'Bilinmeyen',
+                              slot.assignedUserName ?? l10n.unknownUser,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -310,8 +313,8 @@ class _PositionSlotCard extends StatelessWidget {
                 color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Text(
-                'Uygun',
+              child: Text(
+                l10n.open,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -326,3 +329,5 @@ class _PositionSlotCard extends StatelessWidget {
     );
   }
 }
+
+

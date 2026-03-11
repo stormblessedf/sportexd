@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class UserMeetupsScreen extends StatefulWidget {
   final String userId;
@@ -17,6 +18,8 @@ class UserMeetupsScreen extends StatefulWidget {
 class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
   final MeetupService _meetupService = MeetupService();
   String _filter = 'all';
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   IconData _getSportIcon(MeetupType type) {
     switch (type) {
@@ -68,7 +71,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: AppTheme.textDark,
-        title: const Text('Katıldığı Etkinlikler', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.participatedMeetups, style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: StreamBuilder<List<MeetupModel>>(
@@ -84,7 +87,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
                 children: [
                   Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                   const SizedBox(height: 12),
-                  Text('Bir hata oluştu', style: TextStyle(color: Colors.red[300], fontSize: 16)),
+                  Text(l10n.errorOccurred, style: TextStyle(color: Colors.red[300], fontSize: 16)),
                 ],
               ),
             );
@@ -98,7 +101,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
                 children: [
                   Icon(Icons.event_busy, size: 64, color: Colors.grey[300]),
                   const SizedBox(height: 16),
-                  Text('Henüz katıldığı etkinlik yok',
+                  Text(l10n.noEventsAttended,
                     style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w500)),
                 ],
               ),
@@ -119,7 +122,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('${filtered.length} etkinlik',
+                    child: Text('${filtered.length}${l10n.eventCount}',
                       style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500)),
                   ),
                 ),
@@ -172,7 +175,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
             ],
           ),
           const SizedBox(height: 2),
-          Text('Toplam Etkinlik', style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+          Text(l10n.totalEvents, style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
           if (top3.isNotEmpty) ...[
             const SizedBox(height: 10),
             Row(
@@ -208,7 +211,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _buildChip('Tümü', 'all', null),
+          _buildChip(l10n.all, 'all', null),
           ...sportTypes.map((type) {
             final count = meetups.where((m) => m.type == type).length;
             return Padding(
@@ -240,7 +243,7 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
 
   Widget _buildMeetupCard(MeetupModel meetup) {
     final sportColor = _getSportColor(meetup.type);
-    final dateStr = DateFormat('dd MMM yyyy, HH:mm', 'tr_TR').format(meetup.date);
+    final dateStr = DateFormat('dd MMM yyyy, HH:mm', Localizations.localeOf(context).toString()).format(meetup.date);
     final participantCount = meetup.participantIds.length;
     final maxParticipants = meetup.maxParticipants;
 
@@ -318,3 +321,6 @@ class _UserMeetupsScreenState extends State<UserMeetupsScreen> {
     );
   }
 }
+
+
+

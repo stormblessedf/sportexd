@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/models/rating_model.dart';
 import '../../../core/models/eligible_meetup.dart';
 import '../../../core/services/rating_service.dart';
@@ -6,6 +6,7 @@ import '../../../core/services/partnership_service.dart';
 import '../../../core/widgets/partnership_suggestion_dialog.dart';
 import 'widgets/star_rating_selector.dart';
 import 'widgets/comment_text_field.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RateUserScreen extends StatefulWidget {
   final String currentUserId;
@@ -32,6 +33,8 @@ class _RateUserScreenState extends State<RateUserScreen> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -42,14 +45,14 @@ class _RateUserScreenState extends State<RateUserScreen> {
     // Validate
     if (_selectedRating == null) {
       setState(() {
-        _errorMessage = 'Lütfen bir puan seçin';
+        _errorMessage = l10n.selectRating;
       });
       return;
     }
 
     if (_commentController.text.length > 200) {
       setState(() {
-        _errorMessage = 'Yorum en fazla 200 karakter olabilir';
+        _errorMessage = l10n.commentMaxLength;
       });
       return;
     }
@@ -78,8 +81,8 @@ class _RateUserScreenState extends State<RateUserScreen> {
       if (mounted) {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Değerlendirme başarıyla gönderildi!'),
+          SnackBar(
+            content: Text(l10n.ratingSubmitted),
             backgroundColor: Colors.green,
           ),
         );
@@ -113,8 +116,8 @@ class _RateUserScreenState extends State<RateUserScreen> {
                       );
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Partner isteği gönderildi!'),
+                          SnackBar(
+                            content: Text(l10n.partnerRequestSent),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -138,11 +141,11 @@ class _RateUserScreenState extends State<RateUserScreen> {
       }
     } catch (e) {
       debugPrint('Error submitting rating: $e');
-      String errorMsg = 'Değerlendirme gönderilemedi. Lütfen tekrar deneyin.';
+      String errorMsg = l10n.ratingSubmitFailed;
       if (e is ArgumentError) {
         errorMsg = e.message.toString();
       } else if (e is StateError) {
-        errorMsg = 'Bu kişiyi zaten değerlendirdiniz.';
+        errorMsg = l10n.alreadyRatedUser;
       }
       setState(() {
         _errorMessage = errorMsg;
@@ -154,7 +157,7 @@ class _RateUserScreenState extends State<RateUserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Değerlendirme Yap'), elevation: 0),
+      appBar: AppBar(title: Text(l10n.rateUserTitle), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -168,7 +171,7 @@ class _RateUserScreenState extends State<RateUserScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Etkinlik',
+                      l10n.eventLabel,
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
@@ -187,7 +190,7 @@ class _RateUserScreenState extends State<RateUserScreen> {
             const SizedBox(height: 24),
             // Star rating selector
             Text(
-              'Puanınız',
+              l10n.yourRating,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -205,7 +208,7 @@ class _RateUserScreenState extends State<RateUserScreen> {
             const SizedBox(height: 24),
             // Comment field
             Text(
-              'Yorum (İsteğe Bağlı)',
+              l10n.commentOptional,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -261,7 +264,7 @@ class _RateUserScreenState extends State<RateUserScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Değerlendirmeyi Gönder'),
+                  : Text(l10n.submitRating),
             ),
           ],
         ),

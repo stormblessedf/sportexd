@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/models/notification_model.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -27,6 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Group notifications by date categories
   Map<String, List<NotificationModel>> _groupByDate(
     List<NotificationModel> notifications,
+    AppLocalizations l10n,
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -34,10 +36,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final thisWeekStart = today.subtract(Duration(days: today.weekday - 1));
 
     final groups = <String, List<NotificationModel>>{
-      'Bugün': [],
-      'Dün': [],
-      'Bu Hafta': [],
-      'Daha Önce': [],
+      l10n.today: [],
+      l10n.yesterday: [],
+      l10n.thisWeek: [],
+      l10n.earlier: [],
     };
 
     for (final notification in notifications) {
@@ -49,14 +51,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       if (notificationDate.isAtSameMomentAs(today) ||
           notificationDate.isAfter(today)) {
-        groups['Bugün']!.add(notification);
+        groups[l10n.today]!.add(notification);
       } else if (notificationDate.isAtSameMomentAs(yesterday)) {
-        groups['Dün']!.add(notification);
+        groups[l10n.yesterday]!.add(notification);
       } else if (notificationDate.isAfter(thisWeekStart) ||
           notificationDate.isAtSameMomentAs(thisWeekStart)) {
-        groups['Bu Hafta']!.add(notification);
+        groups[l10n.thisWeek]!.add(notification);
       } else {
-        groups['Daha Önce']!.add(notification);
+        groups[l10n.earlier]!.add(notification);
       }
     }
 
@@ -69,11 +71,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final notificationService = context.read<NotificationService>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('Bildirimler'),
+        title: Text(l10n.notifications),
         backgroundColor: AppTheme.backgroundLight,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -84,20 +87,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (value == 'mark_all_read') {
                 notificationService.markAllAsRead();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tüm bildirimler okundu olarak işaretlendi'),
+                  SnackBar(
+                    content: Text(l10n.allNotificationsRead),
                   ),
                 );
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mark_all_read',
                 child: Row(
                   children: [
-                    Icon(Icons.done_all, size: 20),
-                    SizedBox(width: 8),
-                    Text('Tümünü Okundu İşaretle'),
+                    const Icon(Icons.done_all, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.markAllRead),
                   ],
                 ),
               ),
@@ -123,7 +126,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
-                    'Bir hata oluştu',
+                    l10n.errorOccurred,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
@@ -146,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             return _buildEmptyState();
           }
 
-          final groupedNotifications = _groupByDate(notifications);
+          final groupedNotifications = _groupByDate(notifications, l10n);
 
           return RefreshIndicator(
             color: AppTheme.primary,
@@ -195,6 +198,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -213,9 +217,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Bildirim Yok',
-            style: TextStyle(
+          Text(
+            l10n.noNotifications,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppTheme.textDark,
@@ -223,7 +227,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Yeni bildirimler burada görünecek',
+            l10n.newNotificationsHere,
             style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
         ],
@@ -280,9 +284,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       if (!doc.exists) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Etkinlik bulunamadı')));
+          ).showSnackBar(SnackBar(content: Text(l10n.eventNotFound)));
         }
         return;
       }
@@ -294,8 +299,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       debugPrint('Error fetching meetup: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Etkinlik yüklenirken hata oluştu')),
+          SnackBar(content: Text(l10n.eventLoadError)),
         );
       }
     }
@@ -369,16 +375,16 @@ class _NotificationListItem extends StatelessWidget {
     }
   }
 
-  String _formatTime(DateTime dateTime) {
+  String _formatTime(DateTime dateTime, AppLocalizations l10n) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
     if (difference.inMinutes < 1) {
-      return 'Şimdi';
+      return l10n.justNow;
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}dk önce';
+      return l10n.minutesAgo(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}sa önce';
+      return l10n.hoursAgo(difference.inHours);
     } else {
       return '${dateTime.day}/${dateTime.month}';
     }
@@ -396,6 +402,7 @@ class _NotificationListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final messageCount = _getMessageCount();
     final isChatMessage = notification.type == NotificationType.chatMessage;
 
@@ -474,7 +481,7 @@ class _NotificationListItem extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _formatTime(notification.timestamp),
+                    _formatTime(notification.timestamp, l10n),
                     style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],

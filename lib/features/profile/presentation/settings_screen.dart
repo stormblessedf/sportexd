@@ -78,7 +78,7 @@ class SettingsScreen extends StatelessWidget {
                 builder: (context, mapPrefs, _) => ListTile(
                   leading: const Icon(Icons.map_outlined),
                   title: Text(l10n.mapStyle),
-                  subtitle: Text(mapPrefs.currentStyle.displayName),
+                  subtitle: Text(_getStyleName(mapPrefs.currentStyle, l10n)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () => _showMapStylePicker(context, mapPrefs, l10n),
                 ),
@@ -91,7 +91,8 @@ class SettingsScreen extends StatelessWidget {
                     title: Text(l10n.appLanguage),
                     subtitle: Text('${current.flag}  ${current.name}'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _showLanguagePicker(context, localeService, l10n),
+                    onTap: () =>
+                        _showLanguagePicker(context, localeService, l10n),
                   );
                 },
               ),
@@ -102,9 +103,9 @@ class SettingsScreen extends StatelessWidget {
                 leading: const Icon(Icons.help_outline),
                 title: Text(l10n.helpSupport),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.helpSoon)),
-                ),
+                onTap: () => ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.helpSoon))),
               ),
               ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -115,9 +116,9 @@ class SettingsScreen extends StatelessWidget {
                   applicationName: 'Sporsal',
                   applicationVersion: '1.0.0',
                   applicationLegalese: '© 2026 Sporsal.',
-                  children: const [
-                    SizedBox(height: 16),
-                    Text('Spor tutkunlarını bir araya getiren sosyal platform.'),
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(l10n.aboutAppDescription),
                   ],
                 ),
               ),
@@ -194,7 +195,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showLanguagePicker(
-      BuildContext context, LocaleService localeService, AppLocalizations l10n) {
+    BuildContext context,
+    LocaleService localeService,
+    AppLocalizations l10n,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -209,7 +213,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showMapStylePicker(
-      BuildContext context, MapPreferencesService mapPrefs, AppLocalizations l10n) {
+    BuildContext context,
+    MapPreferencesService mapPrefs,
+    AppLocalizations l10n,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -225,8 +232,10 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 l10n.mapStyle,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -240,12 +249,14 @@ class SettingsScreen extends StatelessWidget {
               },
               child: Column(
                 children: MapStyleOption.values
-                    .map((style) => RadioListTile<MapStyleOption>(
-                          title: Text(style.displayName),
-                          subtitle: Text(_getStyleDescription(style)),
-                          value: style,
-                          activeColor: Theme.of(context).colorScheme.primary,
-                        ))
+                    .map(
+                      (style) => RadioListTile<MapStyleOption>(
+                        title: Text(_getStyleName(style, l10n)),
+                        subtitle: Text(_getStyleDescription(style, l10n)),
+                        value: style,
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -256,16 +267,33 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  String _getStyleDescription(MapStyleOption style) {
+  String _getStyleDescription(MapStyleOption style, AppLocalizations l10n) {
     switch (style) {
+      case MapStyleOption.cityNightGold:
+        return l10n.mapStyleCityNightGoldDesc;
       case MapStyleOption.enhanced:
-        return 'Yeşil tonlarında sportif görünüm';
+        return l10n.mapStyleEnhancedDesc;
       case MapStyleOption.dark:
-        return 'Gece kullanımı için karanlık tema';
+        return l10n.mapStyleDarkDesc;
       case MapStyleOption.light:
-        return 'Klasik açık renkli harita';
+        return l10n.mapStyleLightDesc;
       case MapStyleOption.minimal:
-        return 'Sade ve temiz görünüm';
+        return l10n.mapStyleMinimalDesc;
+    }
+  }
+
+  String _getStyleName(MapStyleOption style, AppLocalizations l10n) {
+    switch (style) {
+      case MapStyleOption.cityNightGold:
+        return l10n.mapStyleCityNightGoldName;
+      case MapStyleOption.enhanced:
+        return l10n.mapStyleEnhancedName;
+      case MapStyleOption.dark:
+        return l10n.mapStyleDarkName;
+      case MapStyleOption.light:
+        return l10n.mapStyleLightName;
+      case MapStyleOption.minimal:
+        return l10n.mapStyleMinimalName;
     }
   }
 }
@@ -386,8 +414,7 @@ class _LanguageTile extends StatelessWidget {
                 option.name,
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected ? AppTheme.primary : AppTheme.textDark,
                 ),
               ),

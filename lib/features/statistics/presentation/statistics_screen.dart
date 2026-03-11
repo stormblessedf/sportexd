@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sporsal/core/models/meetup_model.dart';
@@ -10,6 +10,7 @@ import 'widgets/sport_distribution_chart.dart';
 import 'widgets/activity_trend_chart.dart';
 import 'widgets/reliability_trend_chart.dart';
 import 'widgets/partner_growth_chart.dart';
+import '../../../l10n/app_localizations.dart';
 
 class StatisticsScreen extends StatefulWidget {
   final String userId;
@@ -27,6 +28,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   String? _username;
   bool _isLoading = false;
   String? _error;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -60,7 +63,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'İstatistikler yüklenemedi: $e';
+          _error = l10n.statsLoadFailed(e.toString());
         });
       }
     }
@@ -75,7 +78,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'İstatistikler',
+              l10n.statistics,
               style: GoogleFonts.lexend(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -123,7 +126,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadStatistics,
-              child: const Text('Tekrar Dene'),
+              child: Text(l10n.retryButton),
             ),
           ],
         ),
@@ -187,25 +190,25 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       childAspectRatio: 1.5,
       children: [
         SummaryCard(
-          title: 'Toplam Etkinlik',
+          title: l10n.totalEvents,
           value: '${stats.totalMeetups}',
           icon: Icons.event,
           iconColor: AppTheme.primary,
         ),
         SummaryCard(
-          title: 'En Çok Yapılan',
+          title: l10n.mostDone,
           value: mostSportName,
           icon: Icons.sports,
           iconColor: const Color(0xFFFF9800),
         ),
         SummaryCard(
-          title: 'Aylık Ortalama',
+          title: l10n.monthlyAverage,
           value: stats.averageMonthlyParticipation.toStringAsFixed(1),
           icon: Icons.trending_up,
           iconColor: const Color(0xFF4CAF50),
         ),
         SummaryCard(
-          title: 'Partner',
+          title: l10n.partnersShort,
           value: '${stats.partnerCount}',
           icon: Icons.people,
           iconColor: const Color(0xFF2196F3),
@@ -214,3 +217,5 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 }
+
+

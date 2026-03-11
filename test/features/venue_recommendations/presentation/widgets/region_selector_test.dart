@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sporsal/core/models/location_data.dart';
 import 'package:sporsal/core/models/place_autocomplete_result.dart';
 import 'package:sporsal/features/venue_recommendations/presentation/widgets/region_selector.dart';
+import 'package:sporsal/l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -43,6 +44,9 @@ Widget _buildTestWidget({
   CurrentLocationFetcher? currentLocationFetcher,
 }) {
   return MaterialApp(
+    locale: const Locale('tr'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SingleChildScrollView(
         child: RegionSelector(
@@ -63,8 +67,9 @@ Widget _buildTestWidget({
 
 void main() {
   group('RegionSelector', () {
-    testWidgets('renders search field and current location button',
-        (tester) async {
+    testWidgets('renders search field and current location button', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildTestWidget());
 
       expect(find.text('Mevcut Konumumu Kullan'), findsOneWidget);
@@ -72,22 +77,23 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('current location button is above search field',
-        (tester) async {
+    testWidgets('current location button is above search field', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildTestWidget());
 
-      final buttonOffset =
-          tester.getTopLeft(find.text('Mevcut Konumumu Kullan'));
+      final buttonOffset = tester.getTopLeft(
+        find.text('Mevcut Konumumu Kullan'),
+      );
       final fieldOffset = tester.getTopLeft(find.byType(TextField));
 
       expect(buttonOffset.dy, lessThan(fieldOffset.dy));
     });
 
-    testWidgets('shows autocomplete suggestions after typing',
-        (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
-        autocompleteFetcher: (_) async => [_kadikoy, _kartal],
-      ));
+    testWidgets('shows autocomplete suggestions after typing', (tester) async {
+      await tester.pumpWidget(
+        _buildTestWidget(autocompleteFetcher: (_) async => [_kadikoy, _kartal]),
+      );
 
       await tester.enterText(find.byType(TextField), 'Ka');
       await tester.pump(const Duration(milliseconds: 500));
@@ -97,15 +103,18 @@ void main() {
       expect(find.text('Kartal'), findsOneWidget);
     });
 
-    testWidgets('calls onRegionSelected when suggestion is tapped',
-        (tester) async {
+    testWidgets('calls onRegionSelected when suggestion is tapped', (
+      tester,
+    ) async {
       LocationData? selectedRegion;
 
-      await tester.pumpWidget(_buildTestWidget(
-        autocompleteFetcher: (_) async => [_kadikoy],
-        placeDetailFetcher: (_) async => _kadikoyLocation,
-        onRegionSelected: (loc) => selectedRegion = loc,
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          autocompleteFetcher: (_) async => [_kadikoy],
+          placeDetailFetcher: (_) async => _kadikoyLocation,
+          onRegionSelected: (loc) => selectedRegion = loc,
+        ),
+      );
 
       await tester.enterText(find.byType(TextField), 'Ka');
       await tester.pump(const Duration(milliseconds: 500));
@@ -119,14 +128,17 @@ void main() {
       expect(selectedRegion!.longitude, 29.03);
     });
 
-    testWidgets('uses current location and calls onRegionSelected',
-        (tester) async {
+    testWidgets('uses current location and calls onRegionSelected', (
+      tester,
+    ) async {
       LocationData? selectedRegion;
 
-      await tester.pumpWidget(_buildTestWidget(
-        currentLocationFetcher: () async => _currentLocation,
-        onRegionSelected: (loc) => selectedRegion = loc,
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          currentLocationFetcher: () async => _currentLocation,
+          onRegionSelected: (loc) => selectedRegion = loc,
+        ),
+      );
 
       await tester.tap(find.text('Mevcut Konumumu Kullan'));
       await tester.pumpAndSettle();
@@ -135,34 +147,36 @@ void main() {
       expect(selectedRegion!.latitude, 41.01);
     });
 
-    testWidgets(
-        'shows permission denied message when location returns null',
-        (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
-        currentLocationFetcher: () async => null,
-      ));
+    testWidgets('shows permission denied message when location returns null', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildTestWidget(currentLocationFetcher: () async => null),
+      );
 
       await tester.tap(find.text('Mevcut Konumumu Kullan'));
       await tester.pumpAndSettle();
 
       expect(
-        find.text(
-            'Konum izni reddedildi. Lütfen manuel olarak konum girin.'),
+        find.text('Konum izni reddedildi. Lütfen manuel olarak konum girin.'),
         findsOneWidget,
       );
       expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
 
-    testWidgets('does not fetch suggestions when query is too short',
-        (tester) async {
+    testWidgets('does not fetch suggestions when query is too short', (
+      tester,
+    ) async {
       int callCount = 0;
 
-      await tester.pumpWidget(_buildTestWidget(
-        autocompleteFetcher: (_) async {
-          callCount++;
-          return [_kadikoy];
-        },
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          autocompleteFetcher: (_) async {
+            callCount++;
+            return [_kadikoy];
+          },
+        ),
+      );
 
       await tester.enterText(find.byType(TextField), 'K');
       await tester.pump(const Duration(milliseconds: 500));
@@ -171,11 +185,12 @@ void main() {
       expect(callCount, 0);
     });
 
-    testWidgets('clears suggestions when clear button is tapped',
-        (tester) async {
-      await tester.pumpWidget(_buildTestWidget(
-        autocompleteFetcher: (_) async => [_kadikoy],
-      ));
+    testWidgets('clears suggestions when clear button is tapped', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildTestWidget(autocompleteFetcher: (_) async => [_kadikoy]),
+      );
 
       await tester.enterText(find.byType(TextField), 'Ka');
       await tester.pump(const Duration(milliseconds: 500));
@@ -189,15 +204,18 @@ void main() {
       expect(find.text('Kadıköy'), findsNothing);
     });
 
-    testWidgets('calls onRegionNameChanged when suggestion is selected',
-        (tester) async {
+    testWidgets('calls onRegionNameChanged when suggestion is selected', (
+      tester,
+    ) async {
       String? regionName;
 
-      await tester.pumpWidget(_buildTestWidget(
-        autocompleteFetcher: (_) async => [_kadikoy],
-        placeDetailFetcher: (_) async => _kadikoyLocation,
-        onRegionNameChanged: (name) => regionName = name,
-      ));
+      await tester.pumpWidget(
+        _buildTestWidget(
+          autocompleteFetcher: (_) async => [_kadikoy],
+          placeDetailFetcher: (_) async => _kadikoyLocation,
+          onRegionNameChanged: (name) => regionName = name,
+        ),
+      );
 
       await tester.enterText(find.byType(TextField), 'Ka');
       await tester.pump(const Duration(milliseconds: 500));

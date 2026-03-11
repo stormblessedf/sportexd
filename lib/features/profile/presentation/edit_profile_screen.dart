@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -34,6 +35,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _currentImageUrl;
 
   bool _isLoading = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -153,8 +156,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil başarıyla güncellendi!'),
+          SnackBar(
+            content: Text(l10n.profileUpdated),
             backgroundColor: Colors.green,
           ),
         );
@@ -163,7 +166,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.errorWithMessage(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -177,7 +180,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profili Düzenle'),
+        title: Text(l10n.editProfile),
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveProfile,
@@ -187,8 +190,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text(
-                    'Kaydet',
+                : Text(
+                    l10n.save,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
           ),
@@ -242,7 +245,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Profil fotoğrafını değiştirmek için tıklayın',
+                  l10n.changePhotoHint,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -251,16 +254,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 32),
 
               // Username
-              _buildSectionTitle('Kullanıcı Adı'),
+              _buildSectionTitle(l10n.usernameLabel),
               TextFormField(
                 controller: _usernameController,
-                decoration: _inputDecoration('Kullanıcı adınızı girin'),
+                decoration: _inputDecoration(l10n.usernameInputHint),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Kullanıcı adı gerekli';
+                    return l10n.usernameRequired;
                   }
                   if (value.trim().length < 3) {
-                    return 'En az 3 karakter olmalı';
+                    return l10n.minThreeChars;
                   }
                   return null;
                 },
@@ -268,37 +271,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
 
               // Bio
-              _buildSectionTitle('Hakkında'),
+              _buildSectionTitle(l10n.aboutSection),
               TextFormField(
                 controller: _bioController,
-                decoration: _inputDecoration('Kendinizden bahsedin...'),
+                decoration: _inputDecoration(l10n.aboutInputHint),
                 maxLines: 3,
                 maxLength: 200,
               ),
               const SizedBox(height: 20),
 
               // Location
-              _buildSectionTitle('Konum'),
+              _buildSectionTitle(l10n.locationLabel),
               TextFormField(
                 controller: _locationController,
-                decoration: _inputDecoration('Şehir, İlçe'),
+                decoration: _inputDecoration(l10n.cityDistrict),
               ),
               const SizedBox(height: 20),
 
               // Personal Info Row (Age, Height, Weight)
-              _buildSectionTitle('Kişisel Bilgiler'),
+              _buildSectionTitle(l10n.personalInfo),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _ageController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Yaş'),
+                      decoration: _inputDecoration(l10n.age),
                       validator: (val) {
                         if (val == null || val.isEmpty) return null;
                         final age = int.tryParse(val);
                         if (age == null || age < 13 || age > 100) {
-                          return 'Geçersiz';
+                          return l10n.invalid;
                         }
                         return null;
                       },
@@ -309,7 +312,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: TextFormField(
                       controller: _heightController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Boy (cm)'),
+                      decoration: _inputDecoration(l10n.height),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -317,7 +320,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: TextFormField(
                       controller: _weightController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Kilo (kg)'),
+                      decoration: _inputDecoration(l10n.weight),
                     ),
                   ),
                 ],
@@ -325,16 +328,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
 
               // Gender
-              _buildSectionTitle('Cinsiyet'),
+              _buildSectionTitle(l10n.gender),
               DropdownButtonFormField<String>(
                 initialValue: _selectedGender,
-                decoration: _inputDecoration('Seçiniz'),
-                items: const [
-                  DropdownMenuItem(value: 'erkek', child: Text('Erkek')),
-                  DropdownMenuItem(value: 'kadın', child: Text('Kadın')),
+                decoration: _inputDecoration(l10n.selectGender),
+                items: [
+                  DropdownMenuItem(value: 'erkek', child: Text(l10n.male)),
+                  DropdownMenuItem(value: 'kadın', child: Text(l10n.female)),
                   DropdownMenuItem(
                     value: 'belirtmek_istemiyorum',
-                    child: Text('Belirtmek İstemiyorum'),
+                    child: Text(l10n.preferNotToSay),
                   ),
                 ],
                 onChanged: (value) => setState(() => _selectedGender = value),
@@ -342,38 +345,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
 
               // Level
-              _buildSectionTitle('Seviye'),
+              _buildSectionTitle(l10n.level),
               DropdownButtonFormField<Level>(
                 initialValue: _selectedLevel,
-                decoration: _inputDecoration('Spor seviyeniz'),
-                items: const [
+                decoration: _inputDecoration(l10n.levelSubtitle),
+                items: [
                   DropdownMenuItem(
                     value: Level.beginner,
-                    child: Text('Başlangıç'),
+                    child: Text(l10n.beginner),
                   ),
                   DropdownMenuItem(
                     value: Level.intermediate,
-                    child: Text('Orta'),
+                    child: Text(l10n.intermediate),
                   ),
-                  DropdownMenuItem(value: Level.advanced, child: Text('İleri')),
+                  DropdownMenuItem(value: Level.advanced, child: Text(l10n.advanced)),
                 ],
                 onChanged: (value) => setState(() => _selectedLevel = value),
               ),
               const SizedBox(height: 20),
 
               // Play Style
-              _buildSectionTitle('Oyun Tarzı'),
+              _buildSectionTitle(l10n.playStyle),
               DropdownButtonFormField<PlayStyle>(
                 initialValue: _selectedPlayStyle,
-                decoration: _inputDecoration('Nasıl oynamayı seversiniz?'),
-                items: const [
+                decoration: _inputDecoration(l10n.playStyleSubtitle),
+                items: [
                   DropdownMenuItem(
                     value: PlayStyle.casual,
-                    child: Text('Eğlence Amaçlı'),
+                    child: Text(l10n.funOriented),
                   ),
                   DropdownMenuItem(
                     value: PlayStyle.competitive,
-                    child: Text('Rekabetçi'),
+                    child: Text(l10n.competitive),
                   ),
                 ],
                 onChanged: (value) =>
@@ -382,9 +385,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
 
               // Interested Sports
-              _buildSectionTitle('İlgilendiğin Spor Dalları'),
+              _buildSectionTitle(l10n.interestedSports),
               Text(
-                'Birden fazla seçebilirsiniz',
+                l10n.multipleSelect,
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -424,8 +427,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   onPressed: _isLoading ? null : _saveProfile,
                   child: _isLoading
                       ? const CircularProgressIndicator()
-                      : const Text(
-                          'Değişiklikleri Kaydet',
+                      : Text(
+                          l10n.saveChanges,
                           style: TextStyle(fontSize: 16),
                         ),
                 ),
@@ -472,3 +475,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
+
+
+
+
+

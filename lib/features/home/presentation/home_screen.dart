@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/models/meetup_model.dart';
 import '../../../../core/services/meetup_service.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../features/live_event/presentation/live_feed_page.dart';
 import 'widgets/meetup_card.dart';
 
@@ -70,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final meetupService = MeetupService();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: backgroundLight,
@@ -89,10 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             _feedMode == FeedMode.explore
-                                ? 'Keşfet'
+                                ? l10n.explore
                                 : _feedMode == FeedMode.following
-                                    ? 'Takip Edilenler'
-                                    : 'Canlı',
+                                    ? l10n.following
+                                    : l10n.live,
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -102,10 +104,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 2),
                           Text(
                             _feedMode == FeedMode.explore
-                                ? 'Yakınındaki aktiviteleri keşfet'
+                                ? l10n.exploreSubtitle
                                 : _feedMode == FeedMode.following
-                                    ? 'Takip ettiğin kişilerin aktiviteleri'
-                                    : 'Aktif etkinliklerden canlı paylaşımlar',
+                                    ? l10n.followingSubtitle
+                                    : l10n.liveSubtitle,
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: textMuted,
@@ -150,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _feedMode = FeedMode.explore;
                                 });
                               },
-                              tooltip: 'Keşfet',
+                              tooltip: l10n.explore,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -188,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _feedMode = FeedMode.following;
                                 });
                               },
-                              tooltip: 'Takip Edilenler',
+                              tooltip: l10n.following,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -238,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _feedMode = FeedMode.live;
                                 });
                               },
-                              tooltip: 'Canlı',
+                              tooltip: l10n.live,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -296,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (snapshot.hasError) {
                           return Center(
                             child: Text(
-                              'Bir hata oluştu: ${snapshot.error}',
+                              '${l10n.errorOccurred}: ${snapshot.error}',
                               style: const TextStyle(color: textMuted),
                             ),
                           );
@@ -320,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 16),
                                 Text(
                                   _feedMode == FeedMode.following
-                                      ? 'Takip ettiğin kişiler henüz etkinlik oluşturmamış'
-                                      : 'Henüz etkinlik yok',
+                                      ? l10n.noEventsFollowing
+                                      : l10n.noEventsYet,
                                   style: TextStyle(
                                     color: Colors.grey[600],
                                     fontSize: 16,
@@ -331,8 +333,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _feedMode == FeedMode.following
-                                      ? 'Keşfet sekmesine göz atabilirsin'
-                                      : 'İlk etkinliği sen oluştur!',
+                                      ? l10n.checkExploreTab
+                                      : l10n.createFirstEvent,
                                   style: TextStyle(
                                     color: Colors.grey[500],
                                     fontSize: 14,

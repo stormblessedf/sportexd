@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:provider/provider.dart';
-import '../../../../core/services/map_preferences_service.dart';
+import '../../../../core/widgets/styled_tile_layer.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'map_error_widget.dart';
 
 class MeetupMapWidget extends StatelessWidget {
@@ -41,15 +41,16 @@ class MeetupMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (!hasCoordinates) {
       return MapErrorWidget(
-        message: 'Konum koordinatı bulunamadı',
+        message: l10n.locationCoordinatesMissing,
         locationName: locationName,
       );
     }
 
     final position = LatLng(latitude!, longitude!);
-    final mapPrefs = context.watch<MapPreferencesService>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,11 +69,7 @@ class MeetupMapWidget extends StatelessWidget {
                 ),
               ),
               children: [
-                TileLayer(
-                  urlTemplate: mapPrefs.currentTileUrl,
-                  subdomains: mapPrefs.currentSubdomains,
-                  userAgentPackageName: 'com.sporsal.app',
-                ),
+                const StyledTileLayer(),
                 MarkerLayer(
                   markers: [
                     Marker(
@@ -81,7 +78,7 @@ class MeetupMapWidget extends StatelessWidget {
                       height: 40,
                       child: const Icon(
                         Icons.location_on,
-                        color: Colors.red,
+                        color: Color(0xFFB84A2A),
                         size: 40,
                       ),
                     ),
@@ -98,7 +95,7 @@ class MeetupMapWidget extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: _openInMaps,
               icon: const Icon(Icons.open_in_new, size: 18),
-              label: const Text('Haritada Aç'),
+              label: Text(l10n.openOnMap),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),

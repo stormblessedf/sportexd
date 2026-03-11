@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/partnership_service.dart';
 import '../../../theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import '../../../l10n/app_localizations.dart';
 
 class PartnershipRequestsScreen extends StatefulWidget {
   const PartnershipRequestsScreen({super.key});
@@ -30,6 +31,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
   final Set<String> _processingIds = {};
 
   String? _suggestionsError;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -65,7 +68,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
             setState(() {
               _suggestedUsers = [];
               _isLoadingSuggestions = false;
-              _suggestionsError = 'Zaman aşımı — lütfen tekrar deneyin';
+              _suggestionsError = l10n.timeoutError;
             });
           }
         },
@@ -135,7 +138,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       if (mounted) {
         setState(() => _isLoadingIncoming = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gelen istekler yüklenirken hata: $e')),
+          SnackBar(content: Text(l10n.incomingRequestsLoadError(e.toString()))),
         );
       }
     }
@@ -184,7 +187,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       if (mounted) {
         setState(() => _isLoadingOutgoing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gonderilen istekler yuklenirken hata: $e')),
+          SnackBar(content: Text(l10n.outgoingRequestsLoadError(e.toString()))),
         );
       }
     }
@@ -198,13 +201,13 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       await _partnershipService.acceptPartnershipRequest(partnership.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Partner istegi kabul edildi')),
+        SnackBar(content: Text(l10n.partnerRequestAccepted)),
       );
       await _loadIncomingRequests();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
+        SnackBar(content: Text(l10n.errorRetry)),
       );
     } finally {
       if (mounted) {
@@ -221,13 +224,13 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       await _partnershipService.rejectPartnershipRequest(partnership.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Partner istegi reddedildi')),
+        SnackBar(content: Text(l10n.partnerRequestRejected)),
       );
       await _loadIncomingRequests();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
+        SnackBar(content: Text(l10n.errorRetry)),
       );
     } finally {
       if (mounted) {
@@ -244,13 +247,13 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       await _partnershipService.cancelRequest(partnership.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Partner istegi iptal edildi')),
+        SnackBar(content: Text(l10n.partnerRequestCanceled)),
       );
       await _loadOutgoingRequests();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin')),
+        SnackBar(content: Text(l10n.errorRetry)),
       );
     } finally {
       if (mounted) {
@@ -369,8 +372,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       if (sharedMeetupIds.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ortak etkinliğiniz olmadan istek gönderemezsiniz'),
+          SnackBar(
+            content: Text(l10n.noSharedEventError),
           ),
         );
         return;
@@ -385,7 +388,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${user.username} adlı kullanıcıya istek gönderildi'),
+          content: Text(l10n.requestSentTo(user.username)),
         ),
       );
 
@@ -398,7 +401,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('İstek gönderilemedi: $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.requestFailed(e.toString()))));
     } finally {
       if (mounted) {
         setState(() => _processingIds.remove(user.id));
@@ -411,7 +414,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Partnerlik Yap'),
+        title: Text(l10n.partnershipAction),
         backgroundColor: Colors.white,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -425,10 +428,10 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
             fontWeight: FontWeight.w600,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: const [
-            Tab(text: 'Gelen'),
-            Tab(text: 'Gönderilen'),
-            Tab(text: 'Keşfet'),
+          tabs: [
+            Tab(text: l10n.incomingTab),
+            Tab(text: l10n.sentTab),
+            Tab(text: l10n.discoverTab),
           ],
         ),
       ),
@@ -451,7 +454,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
     }
 
     if (_incomingRequests.isEmpty) {
-      return _buildEmptyState('Gelen partner istegi yok', Icons.inbox_outlined);
+      return _buildEmptyState(l10n.incomingRequestsEmpty, Icons.inbox_outlined);
     }
 
     return RefreshIndicator(
@@ -478,7 +481,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
 
     if (_outgoingRequests.isEmpty) {
       return _buildEmptyState(
-        'Gonderilen partner istegi yok',
+        l10n.outgoingRequestsEmpty,
         Icons.outbox_outlined,
       );
     }
@@ -518,8 +521,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                 color: AppTheme.textMuted.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Öneriler yüklenemedi',
+              Text(
+                l10n.suggestionsLoadFailed,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppTheme.textDark,
@@ -534,7 +537,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                   _loadSuggestedUsers();
                 },
                 icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Tekrar Dene'),
+                label: Text(l10n.retryButton),
               ),
             ],
           ),
@@ -555,8 +558,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                 color: AppTheme.textMuted.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Öneri bulunamadı',
+              Text(
+                l10n.noSuggestions,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppTheme.textDark,
@@ -565,8 +568,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Ortak etkinliklere katılarak\nyeni partnerler keşfedin',
+              Text(
+                l10n.discoverPartnersHint,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
               ),
@@ -676,8 +679,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                         color: AppTheme.textDark,
                       ),
                     )
-                  : const Text(
-                      'İstek Gönder',
+                  : Text(
+                      l10n.sendRequest,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -755,7 +758,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user?.username ?? 'Bilinmeyen Kullanici',
+                  user?.username ?? l10n.unknownUser,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -772,7 +775,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${item.sharedMeetupCount} ortak etkinlik',
+                      l10n.sharedMeetupCount(item.sharedMeetupCount),
                       style: TextStyle(
                         fontSize: 13,
                         color: AppTheme.textMuted.withValues(alpha: 0.7),
@@ -811,8 +814,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                                     color: AppTheme.textDark,
                                   ),
                                 )
-                              : const Text(
-                                  'Kabul Et',
+                              : Text(
+                                  l10n.accept,
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -838,8 +841,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: const Text(
-                            'Reddet',
+                          child: Text(
+                            l10n.reject,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -903,7 +906,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user?.username ?? 'Bilinmeyen Kullanici',
+                  user?.username ?? l10n.unknownUser,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -912,7 +915,7 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Yanit bekleniyor...',
+                  l10n.pendingResponse,
                   style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.textMuted.withValues(alpha: 0.7),
@@ -947,8 +950,8 @@ class _PartnershipRequestsScreenState extends State<PartnershipRequestsScreen>
                         color: Colors.red,
                       ),
                     )
-                  : const Text(
-                      'Iptal Et',
+                  : Text(
+                      l10n.cancelRequest,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -974,3 +977,6 @@ class _RequestWithUser {
     this.sharedMeetupCount = 0,
   });
 }
+
+
+

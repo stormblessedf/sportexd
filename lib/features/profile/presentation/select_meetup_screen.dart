@@ -6,6 +6,7 @@ import '../../../core/services/rating_service.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/meetup_card.dart';
 import 'rate_user_screen.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SelectMeetupScreen extends StatefulWidget {
   final String currentUserId;
@@ -32,6 +33,8 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
 
   bool get _isForSpecificUser => widget.profileOwnerId != null;
 
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +55,7 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Etkinlikler yüklenemedi. Lütfen tekrar deneyin.';
+        _errorMessage = l10n.eventsLoadFailed;
       });
       debugPrint('Error loading meetups: $e');
     } finally {
@@ -134,7 +137,7 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
         eligibleMeetups.add(
           EligibleMeetup(
             meetupId: meetupDoc.id,
-            title: meetupData['title'] ?? 'İsimsiz Etkinlik',
+            title: meetupData['title'] ?? l10n.untitledEvent,
             date: meetupDate,
             sportType: meetupData['type'] ?? 'other',
             hasRated: false,
@@ -159,7 +162,7 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
         title: Text(
-          _isForSpecificUser ? 'Etkinlik Seç' : 'Değerlendirme Bekleyenler',
+          _isForSpecificUser ? l10n.selectEvent : l10n.pendingReviews,
         ),
         backgroundColor: AppTheme.backgroundLight,
         foregroundColor: AppTheme.textDark,
@@ -189,14 +192,14 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              _errorMessage ?? 'Bir hata oluştu',
+              _errorMessage ?? l10n.errorOccurred,
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _loadData,
-              child: const Text('Tekrar Dene'),
+              child: Text(l10n.retryButton),
             ),
           ],
         ),
@@ -219,8 +222,8 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
             const SizedBox(height: 16),
             Text(
               _isForSpecificUser
-                  ? 'Değerlendirilebilecek etkinlik yok'
-                  : 'Tüm değerlendirmeler tamamlandı!',
+                  ? l10n.noRateableEvents
+                  : l10n.allReviewsDone,
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(color: AppTheme.textDark),
@@ -228,8 +231,8 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
             const SizedBox(height: 8),
             Text(
               _isForSpecificUser
-                  ? 'Bu kullanıcıyla birlikte geçmiş bir etkinliğe katılmanız gerekiyor'
-                  : 'Bekleyen değerlendirmeniz bulunmuyor',
+                  ? l10n.needSharedEvent
+                  : l10n.noPendingReviews,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
@@ -332,7 +335,7 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Değerlendirilecek Katılımcılar (${participants.length})',
+                  l10n.participantsToRateCount(participants.length),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -409,7 +412,7 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text('Değerlendir', style: TextStyle(fontSize: 12)),
+          child: Text(l10n.rateButton, style: const TextStyle(fontSize: 12)),
         ),
       ),
     );
@@ -505,3 +508,5 @@ class _SelectMeetupScreenState extends State<SelectMeetupScreen> {
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }
+
+

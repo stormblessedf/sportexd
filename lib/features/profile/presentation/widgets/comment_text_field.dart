@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sporsal/l10n/app_localizations.dart';
 
 class CommentTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -12,6 +13,7 @@ class CommentTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -21,7 +23,7 @@ class CommentTextField extends StatelessWidget {
           maxLines: 4,
           maxLength: 200,
           decoration: InputDecoration(
-            hintText: 'Share your experience...',
+            hintText: l10n.shareYourExperienceHint,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),

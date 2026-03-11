@@ -249,6 +249,110 @@ service cloud.firestore {
         && request.resource.data.email == resource.data.email;
     }
 
+
+    function isSafeOwnUserCreate(userId) {
+      return isOwnUser(userId)
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'username',
+          'email',
+          'profileImageUrl',
+          'bio',
+          'certificates',
+          'badges',
+          'partnersCount',
+          'partners',
+          'location',
+          'gender',
+          'birthDate',
+          'height',
+          'weight',
+          'interestedSports',
+          'level',
+          'preferredTimes',
+          'playStyle',
+          'teamPreference',
+          'isPremium',
+          'premiumUntil',
+          'reliabilityScore',
+          'totalMeetupsJoined',
+          'totalMeetupsRegistered',
+          'averageRating',
+          'totalRatings',
+          'lastSeen',
+          'isOnline',
+          'fcmTokens',
+          'notificationPreferences',
+          'processedAttendanceIds',
+        ])
+        && request.resource.data.id == userId
+        && request.resource.data.email is string
+        && request.resource.data.username is string
+        && (
+          !request.resource.data.keys().hasAny(['isPremium'])
+          || request.resource.data.isPremium == false
+        )
+        && (
+          !request.resource.data.keys().hasAny(['premiumUntil'])
+          || request.resource.data.premiumUntil == null
+        )
+        && (
+          !request.resource.data.keys().hasAny(['partnersCount'])
+          || request.resource.data.partnersCount == 0
+        )
+        && (
+          !request.resource.data.keys().hasAny(['partners'])
+          || (
+            request.resource.data.partners is list
+            && request.resource.data.partners.size() == 0
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(['badges'])
+          || (
+            request.resource.data.badges is list
+            && request.resource.data.badges.size() == 0
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(['certificates'])
+          || (
+            request.resource.data.certificates is list
+            && request.resource.data.certificates.size() == 0
+          )
+        )
+        && (
+          !request.resource.data.keys().hasAny(['reliabilityScore'])
+          || request.resource.data.reliabilityScore == 100
+        )
+        && (
+          !request.resource.data.keys().hasAny(['totalMeetupsJoined'])
+          || request.resource.data.totalMeetupsJoined == 0
+        )
+        && (
+          !request.resource.data.keys().hasAny(['totalMeetupsRegistered'])
+          || request.resource.data.totalMeetupsRegistered == 0
+        )
+        && (
+          !request.resource.data.keys().hasAny(['averageRating'])
+          || request.resource.data.averageRating == 0
+        )
+        && (
+          !request.resource.data.keys().hasAny(['totalRatings'])
+          || request.resource.data.totalRatings == 0
+        );
+    }
+
+    function isPremiumUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && (
+          get(/databases/$(database)/documents/users/$(userId)).data.isPremium == true
+          || (
+            get(/databases/$(database)/documents/users/$(userId)).data.premiumUntil is timestamp
+            && get(/databases/$(database)/documents/users/$(userId)).data.premiumUntil > request.time
+          )
+        );
+    }
     function isDmChat(chatId) {
       return chatId.matches('^dm_.*');
     }
@@ -355,9 +459,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwnUser(userId);
+      allow create: if isSafeOwnUserCreate(userId);
       allow update: if isSafeOwnUserUpdate(userId);
-      allow delete: if isOwnUser(userId);
+      allow delete: if false;
     }
 
     match /meetups/{meetupId} {
@@ -538,6 +642,149 @@ service cloud.firestore {
         );
     }
 
+
+    match /swipe_actions/{actionId} {
+      allow read: if isSignedIn()
+        && resource.data.actorId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'actorId',
+          'targetId',
+          'decision',
+          'createdAt',
+        ])
+        && actionId == request.resource.data.actorId + '_' + request.resource.data.targetId
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId != request.auth.uid
+        && ['left', 'right'].hasAny([request.resource.data.decision])
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    match /swipe_invites/{inviteId} {
+      allow read: if isSignedIn()
+        && resource.data.participantIds is list
+        && resource.data.participantIds.hasAny([request.auth.uid]);
+
+      allow create: if isSignedIn()
+        && isPremiumUser(request.auth.uid)
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'pairId',
+          'senderId',
+          'receiverId',
+          'participantIds',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'acceptedAt',
+          'rejectedAt',
+          'chatId',
+        ])
+        && request.resource.data.id == inviteId
+        && request.resource.data.pairId == inviteId
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.receiverId is string
+        && request.resource.data.receiverId != request.auth.uid
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() == 2
+        && request.resource.data.participantIds.hasAll([
+          request.resource.data.senderId,
+          request.resource.data.receiverId,
+        ])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.acceptedAt == null
+        && request.resource.data.rejectedAt == null
+        && request.resource.data.chatId == null;
+
+      allow update: if isSignedIn()
+        && resource.data.participantIds is list
+        && resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'pairId',
+          'senderId',
+          'receiverId',
+          'participantIds',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'acceptedAt',
+          'rejectedAt',
+          'chatId',
+        ])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.pairId == resource.data.pairId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && sameList(request.resource.data.participantIds, resource.data.participantIds)
+        && request.resource.data.updatedAt is timestamp
+        && (
+          (
+            request.auth.uid == resource.data.receiverId
+            && resource.data.status == 'pending'
+            && ['accepted', 'rejected'].hasAny([request.resource.data.status])
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.receiverId == resource.data.receiverId
+            && request.resource.data.chatId == resource.data.chatId
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+              'status',
+              'updatedAt',
+              'acceptedAt',
+              'rejectedAt',
+            ])
+            && (
+              request.resource.data.status == 'accepted'
+                ? request.resource.data.acceptedAt is timestamp
+                  && request.resource.data.rejectedAt == null
+                : request.resource.data.acceptedAt == resource.data.acceptedAt
+                  && request.resource.data.rejectedAt is timestamp
+            )
+          )
+          ||
+          (
+            resource.data.status == 'accepted'
+            && request.resource.data.status == 'accepted'
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.receiverId == resource.data.receiverId
+            && request.resource.data.acceptedAt == resource.data.acceptedAt
+            && request.resource.data.rejectedAt == resource.data.rejectedAt
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+              'chatId',
+              'updatedAt',
+            ])
+            && request.resource.data.chatId is string
+          )
+          ||
+          (
+            ['rejected', 'canceled'].hasAny([resource.data.status])
+            && request.resource.data.status == 'pending'
+            && request.resource.data.senderId == request.auth.uid
+            && request.resource.data.receiverId is string
+            && request.resource.data.receiverId != request.auth.uid
+            && request.resource.data.participantIds.hasAll([
+              request.resource.data.senderId,
+              request.resource.data.receiverId,
+            ])
+            && request.resource.data.acceptedAt == null
+            && request.resource.data.rejectedAt == null
+            && request.resource.data.chatId == null
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+              'senderId',
+              'receiverId',
+              'status',
+              'updatedAt',
+              'acceptedAt',
+              'rejectedAt',
+              'chatId',
+            ])
+          )
+        );
+
+      allow delete: if false;
+    }
     match /presence/{userId} {
       allow read: if true;
       allow write: if isOwnUser(userId);
@@ -605,3 +852,5 @@ service cloud.firestore {
     }
   }
 }
+
+

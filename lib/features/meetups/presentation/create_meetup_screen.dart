@@ -12,10 +12,11 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/places_service.dart';
-import '../../../core/services/map_preferences_service.dart';
+import '../../../core/widgets/styled_tile_layer.dart';
 import '../../../core/models/route_data.dart';
 import 'widgets/formation_picker_widget.dart';
 import 'widgets/route_planner_widget.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CreateMeetupScreen extends StatefulWidget {
   const CreateMeetupScreen({super.key});
@@ -72,18 +73,18 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   // Sport types with icons
   static const List<_SportTypeData> _sportTypes = [
-    _SportTypeData(MeetupType.running, Icons.directions_run, 'Koşu'),
-    _SportTypeData(MeetupType.cycling, Icons.pedal_bike, 'Bisiklet'),
-    _SportTypeData(MeetupType.fitness, Icons.fitness_center, 'Fitness'),
-    _SportTypeData(MeetupType.yoga, Icons.self_improvement, 'Yoga'),
-    _SportTypeData(MeetupType.tennis, Icons.sports_tennis, 'Tenis'),
-    _SportTypeData(MeetupType.football, Icons.sports_soccer, 'Futbol'),
-    _SportTypeData(MeetupType.basketball, Icons.sports_basketball, 'Basketbol'),
-    _SportTypeData(MeetupType.volleyball, Icons.sports_volleyball, 'Voleybol'),
-    _SportTypeData(MeetupType.swimming, Icons.pool, 'Yüzme'),
-    _SportTypeData(MeetupType.hiking, Icons.terrain, 'Yürüyüş'),
-    _SportTypeData(MeetupType.boxing, Icons.sports_mma, 'Boks'),
-    _SportTypeData(MeetupType.other, Icons.sports, 'Diğer'),
+    _SportTypeData(MeetupType.running, Icons.directions_run),
+    _SportTypeData(MeetupType.cycling, Icons.pedal_bike),
+    _SportTypeData(MeetupType.fitness, Icons.fitness_center),
+    _SportTypeData(MeetupType.yoga, Icons.self_improvement),
+    _SportTypeData(MeetupType.tennis, Icons.sports_tennis),
+    _SportTypeData(MeetupType.football, Icons.sports_soccer),
+    _SportTypeData(MeetupType.basketball, Icons.sports_basketball),
+    _SportTypeData(MeetupType.volleyball, Icons.sports_volleyball),
+    _SportTypeData(MeetupType.swimming, Icons.pool),
+    _SportTypeData(MeetupType.hiking, Icons.terrain),
+    _SportTypeData(MeetupType.boxing, Icons.sports_mma),
+    _SportTypeData(MeetupType.other, Icons.sports),
   ];
 
   @override
@@ -143,6 +144,42 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     setState(() {
       _selectedFormation = formation;
     });
+  }
+
+  String _getSportTypeName(MeetupType type, AppLocalizations l10n) {
+    switch (type) {
+      case MeetupType.running: return l10n.sportRunning;
+      case MeetupType.cycling: return l10n.sportCycling;
+      case MeetupType.fitness: return l10n.sportFitness;
+      case MeetupType.yoga: return l10n.sportYoga;
+      case MeetupType.tennis: return l10n.sportTennis;
+      case MeetupType.football: return l10n.sportFootball;
+      case MeetupType.basketball: return l10n.sportBasketball;
+      case MeetupType.volleyball: return l10n.sportVolleyball;
+      case MeetupType.swimming: return l10n.sportSwimming;
+      case MeetupType.hiking: return l10n.sportHiking;
+      case MeetupType.boxing: return l10n.sportBoxing;
+      case MeetupType.other: return l10n.sportOther;
+      default: return l10n.sportOther;
+    }
+  }
+
+  String _getMonthName(int month, AppLocalizations l10n) {
+    switch (month) {
+      case 1: return l10n.monthJan;
+      case 2: return l10n.monthFeb;
+      case 3: return l10n.monthMar;
+      case 4: return l10n.monthApr;
+      case 5: return l10n.monthMay;
+      case 6: return l10n.monthJun;
+      case 7: return l10n.monthJul;
+      case 8: return l10n.monthAug;
+      case 9: return l10n.monthSep;
+      case 10: return l10n.monthOct;
+      case 11: return l10n.monthNov;
+      case 12: return l10n.monthDec;
+      default: return '';
+    }
   }
 
   // Autocomplete methods
@@ -328,6 +365,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   Future<void> _pickEndTime() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showTimePicker(
       context: context,
       initialTime: _endTime,
@@ -345,8 +383,8 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       final endMinutes = picked.hour * 60 + picked.minute;
       if (endMinutes <= startMinutes) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Bitiş saati başlangıç saatinden sonra olmalı'),
+          SnackBar(
+            content: Text(l10n.endTimeMustBeAfterStart),
             backgroundColor: Colors.orange,
           ),
         );
@@ -359,10 +397,12 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen konum seçin'),
+        SnackBar(
+          content: Text(l10n.pleaseSelectLocation),
           backgroundColor: Colors.red,
         ),
       );
@@ -376,7 +416,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       final meetupService = context.read<MeetupService>();
 
       final user = await authService.getCurrentUser();
-      if (user == null) throw Exception('Oturum açık değil');
+      if (user == null) throw Exception(l10n.notLoggedIn);
 
       final meetupStartDateTime = DateTime(
         _selectedDate.year,
@@ -443,8 +483,8 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Etkinlik oluşturuldu!'),
+          SnackBar(
+            content: Text(l10n.eventCreated),
             backgroundColor: primary,
           ),
         );
@@ -453,7 +493,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.errorWithMessage(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -463,6 +503,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: backgroundLight,
       appBar: AppBar(
@@ -472,9 +513,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           icon: const Icon(Icons.arrow_back, color: textDark),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text(
-          'Etkinlik Oluştur',
-          style: TextStyle(
+        title: Text(
+          l10n.createEvent,
+          style: const TextStyle(
             color: textDark,
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -526,14 +567,15 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildSportSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Text(
-            'Spor Seç',
-            style: TextStyle(
+            l10n.selectSport,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: textDark,
@@ -564,6 +606,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildSportChip(_SportTypeData sport, bool isSelected) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => _onSportTypeChanged(sport.type),
       child: Column(
@@ -596,7 +639,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            sport.label,
+            _getSportTypeName(sport.type, l10n),
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -609,14 +652,15 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildDateTimeSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tarih & Saat',
-            style: TextStyle(
+          Text(
+            l10n.dateAndTime,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: textDark,
@@ -653,20 +697,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildMonthNavigation() {
-    final months = [
-      'Ocak',
-      'Şubat',
-      'Mart',
-      'Nisan',
-      'Mayıs',
-      'Haziran',
-      'Temmuz',
-      'Ağustos',
-      'Eylül',
-      'Ekim',
-      'Kasım',
-      'Aralık',
-    ];
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -683,7 +714,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           },
         ),
         Text(
-          '${months[_displayedMonth.month - 1]} ${_displayedMonth.year}',
+          '${_getMonthName(_displayedMonth.month, l10n)} ${_displayedMonth.year}',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -707,7 +738,8 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildCalendarGrid() {
-    final days = ['P', 'S', 'Ç', 'P', 'C', 'C', 'P'];
+    final l10n = AppLocalizations.of(context)!;
+    final days = [l10n.weekdayMon, l10n.weekdayTue, l10n.weekdayWed, l10n.weekdayThu, l10n.weekdayFri, l10n.weekdaySat, l10n.weekdaySun];
     final firstDayOfMonth = DateTime(
       _displayedMonth.year,
       _displayedMonth.month,
@@ -809,6 +841,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildTimeRange() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -827,9 +860,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'BAŞLANGIÇ',
-                        style: TextStyle(
+                      Text(
+                        l10n.startTime.toUpperCase(),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: textMuted,
@@ -861,9 +894,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text(
-                        'BİTİŞ',
-                        style: TextStyle(
+                      Text(
+                        l10n.endTime.toUpperCase(),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: textMuted,
@@ -898,16 +931,16 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildLocationSection() {
-    final mapPrefs = context.watch<MapPreferencesService>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Konum',
-            style: TextStyle(
+          Text(
+            l10n.location,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: textDark,
@@ -929,7 +962,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 focusNode: _searchFocusNode,
                 style: const TextStyle(fontSize: 14, color: textDark),
                 decoration: InputDecoration(
-                  hintText: 'Konum veya mekan ara...',
+                  hintText: l10n.searchLocationHint,
                   hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.6)),
                   prefixIcon: const Icon(
                     Icons.search,
@@ -986,11 +1019,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       onTap: _onMapTap,
                     ),
                     children: [
-                      TileLayer(
-                        urlTemplate: mapPrefs.currentTileUrl,
-                        subdomains: mapPrefs.currentSubdomains,
-                        userAgentPackageName: 'com.sporsal.app',
-                      ),
+                      const StyledTileLayer(),
                     ],
                   ),
 
@@ -1157,14 +1186,15 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildDetailsSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Detaylar',
-            style: TextStyle(
+          Text(
+            l10n.details,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: textDark,
@@ -1174,7 +1204,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
           // Event Title
           _buildFloatingLabelField(
-            label: 'Etkinlik Başlığı',
+            label: l10n.eventTitle,
             child: TextFormField(
               controller: _titleController,
               style: const TextStyle(
@@ -1183,7 +1213,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 color: textDark,
               ),
               decoration: InputDecoration(
-                hintText: 'Sabah Koşusu 5K',
+                hintText: l10n.eventTitleHint,
                 hintStyle: TextStyle(
                   color: textMuted.withValues(alpha: 0.5),
                   fontWeight: FontWeight.normal,
@@ -1195,20 +1225,20 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 ),
               ),
               validator: (val) =>
-                  val == null || val.isEmpty ? 'Başlık gerekli' : null,
+                  val == null || val.isEmpty ? l10n.titleRequired : null,
             ),
           ),
           const SizedBox(height: 16),
 
           // Description
           _buildFloatingLabelField(
-            label: 'Açıklama',
+            label: l10n.description,
             child: TextFormField(
               controller: _descriptionController,
               maxLines: 3,
               style: const TextStyle(fontSize: 14, color: textDark),
               decoration: InputDecoration(
-                hintText: 'Etkinlik hakkında detay...',
+                hintText: l10n.eventDescriptionHint,
                 hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5)),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
@@ -1221,13 +1251,13 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           const SizedBox(height: 16),
 
           _buildFloatingLabelField(
-            label: 'Kurallar',
+            label: l10n.rules,
             child: TextFormField(
               controller: _rulesController,
               maxLines: 4,
               style: const TextStyle(fontSize: 14, color: textDark),
               decoration: InputDecoration(
-                hintText: 'Orn: Sert mudahale yok, gec gelen yedek olur...',
+                hintText: l10n.rulesHint,
                 hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5)),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
@@ -1236,7 +1266,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 ),
               ),
               validator: (val) =>
-                  val == null || val.trim().isEmpty ? 'Kurallar gerekli' : null,
+                  val == null || val.trim().isEmpty ? l10n.rulesRequired : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -1244,7 +1274,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           // Participant Limit (not shown for football - auto-calculated from format)
           if (_selectedType != MeetupType.football)
             _buildFloatingLabelField(
-              label: 'Katılımcı Sınırı',
+              label: l10n.participantLimit,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1253,9 +1283,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Maks. Katılımcı',
-                      style: TextStyle(
+                    Text(
+                      l10n.maxParticipants,
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: textDark,
@@ -1296,16 +1326,16 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
           // Skill Level
           _buildFloatingLabelField(
-            label: 'Seviye',
+            label: l10n.skillLevel,
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
-                  _buildSkillButton('Başlangıç', 0),
+                  _buildSkillButton(l10n.beginner, 0),
                   const SizedBox(width: 8),
-                  _buildSkillButton('Orta', 1),
+                  _buildSkillButton(l10n.intermediate, 1),
                   const SizedBox(width: 8),
-                  _buildSkillButton('İleri', 2),
+                  _buildSkillButton(l10n.advanced, 2),
                 ],
               ),
             ),
@@ -1419,6 +1449,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
   }
 
   Widget _buildBottomButton() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1453,10 +1484,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       ),
                     ),
                   )
-                : const Text(
-                    'Etkinliği Yayınla',
+                : Text(
+                    l10n.publishEvent,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -1472,6 +1503,5 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 class _SportTypeData {
   final MeetupType type;
   final IconData icon;
-  final String label;
-  const _SportTypeData(this.type, this.icon, this.label);
+  const _SportTypeData(this.type, this.icon);
 }

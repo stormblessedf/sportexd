@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/models/formation_config.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/models/position_slot.dart';
@@ -34,6 +35,8 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   late MeetupModel _currentMeetup;
   List<UserModel> _participants = [];
 
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
+
   bool get _isOrganizer =>
       _currentUserId != null &&
       _currentUserId == _currentMeetup.organizerId;
@@ -50,7 +53,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   Future<void> _autoFillTeams() async {
     // TODO: Implement auto-fill logic - assign waiting participants to random empty slots
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Otomatik doldurma yakında eklenecek.')),
+      SnackBar(content: Text(l10n.autoFillSoon)),
     );
   }
 
@@ -124,7 +127,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   Future<void> _joinMeetup() async {
     if (_currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Katılmak için giriş yapmalısınız.')),
+        SnackBar(content: Text(l10n.loginToJoin)),
       );
       return;
     }
@@ -135,8 +138,8 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         // Switch to Takım tab and show warning
         setState(() => _selectedFootballTab = 1);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Önce Takım sekmesinden bir pozisyon seçin'),
+          SnackBar(
+            content: Text(l10n.selectPositionFirst),
             backgroundColor: Colors.orange,
           ),
         );
@@ -147,7 +150,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
       if (currentUser == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Kullanıcı bilgisi alınamadı')),
+            SnackBar(content: Text(l10n.userInfoFailed)),
           );
         }
         return;
@@ -179,8 +182,8 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
           });
           _loadParticipants();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Buluşmaya başarıyla katıldınız!'),
+            SnackBar(
+              content: Text(l10n.joinedSuccessfully),
             ),
           );
           JoinCelebrationOverlay.show(context);
@@ -219,7 +222,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         // Reload participants to include the new user
         _loadParticipants();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Buluşmaya başarıyla katıldınız!')),
+          SnackBar(content: Text(l10n.joinedSuccessfully)),
         );
         JoinCelebrationOverlay.show(context);
       }
@@ -228,7 +231,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+        ).showSnackBar(SnackBar(content: Text(l10n.errorWithMessage(e.toString()))));
       }
     }
   }
@@ -236,7 +239,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   Future<void> _joinWaitlist() async {
     if (_currentUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hatırlatma için giriş yapmalısınız.')),
+        SnackBar(content: Text(l10n.reminderLoginRequired)),
       );
       return;
     }
@@ -251,8 +254,8 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kontenjan açıldığında bildirim alacaksınız!'),
+          SnackBar(
+            content: Text(l10n.spotNotification),
           ),
         );
       }
@@ -261,7 +264,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+        ).showSnackBar(SnackBar(content: Text(l10n.errorWithMessage(e.toString()))));
       }
     }
   }
@@ -279,7 +282,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bekleme listesinden çıkarıldınız')),
+          SnackBar(content: Text(l10n.removedFromWaitlist)),
         );
       }
     } catch (e) {
@@ -287,7 +290,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+        ).showSnackBar(SnackBar(content: Text(l10n.errorWithMessage(e.toString()))));
       }
     }
   }
@@ -299,19 +302,19 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Etkinlikten Ayrıl'),
-        content: const Text(
-          'Bu etkinlikten ayrılmak istediğinizden emin misiniz?',
+        title: Text(l10n.leaveEvent),
+        content: Text(
+          l10n.leaveEventConfirm,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Ayrıl'),
+            child: Text(l10n.leaveButton),
           ),
         ],
       ),
@@ -339,7 +342,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         _loadParticipants();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Etkinlikten ayrıldınız')));
+        ).showSnackBar(SnackBar(content: Text(l10n.leftEvent)));
       }
     } catch (e) {
       if (mounted) {
@@ -454,14 +457,14 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                     // Info Cards
                     _buildDetailRow(
                       icon: Icons.calendar_today,
-                      title: 'Tarih & Saat',
+                      title: l10n.dateAndTime,
                       subtitle:
                           '${_currentMeetup.date.day} ${_getMonth(_currentMeetup.date.month)} • ${_formatTime(_currentMeetup.date, endDate: _currentMeetup.endDate)}',
                     ),
                     const SizedBox(height: 16),
                     _buildDetailRow(
                       icon: Icons.location_on_outlined,
-                      title: 'Buluşma Yeri',
+                      title: l10n.meetupLocation,
                       subtitle: _currentMeetup.locationName,
                       description: _currentMeetup.locationAddress,
                     ),
@@ -513,7 +516,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Organizatör',
+                                    l10n.organizer,
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodySmall,
@@ -566,7 +569,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                               '/user-profile/${_currentMeetup.organizerId}',
                             );
                           },
-                          child: const Text('Profil'),
+                          child: Text(l10n.profile),
                         ),
                       ],
                     ),
@@ -574,7 +577,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
 
                     // About Section
                     Text(
-                      'Açıklama',
+                      l10n.description,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -594,13 +597,13 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Katılımcılar (${_currentMeetup.currentParticipants}/${_currentMeetup.maxParticipants})',
+                          '${l10n.participants} (${_currentMeetup.currentParticipants}/${_currentMeetup.maxParticipants})',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         TextButton(
                           onPressed: () => _showAllParticipants(),
-                          child: const Text('Tümünü Gör'),
+                          child: Text(l10n.seeAll),
                         ),
                       ],
                     ),
@@ -655,7 +658,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                             );
                           },
                           icon: const Icon(Icons.chat_bubble_rounded),
-                          label: const Text('Grup Sohbetine Git'),
+                          label: Text(l10n.goToGroupChat),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
@@ -673,9 +676,9 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                             Icons.star_rate,
                             color: Color(0xFFFF9800),
                           ),
-                          label: const Text(
-                            'Katılımcıları Değerlendir',
-                            style: TextStyle(color: Color(0xFFFF9800)),
+                          label: Text(
+                            l10n.rateParticipants,
+                            style: const TextStyle(color: Color(0xFFFF9800)),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFFFF9800)),
@@ -689,14 +692,14 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                         color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.event_busy, color: Colors.grey),
                           SizedBox(width: 8),
                           Text(
-                            'Bu etkinlik tamamlandı',
-                            style: TextStyle(color: Colors.grey),
+                            l10n.eventCompleted,
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
@@ -718,7 +721,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                       );
                     },
                     icon: const Icon(Icons.chat_bubble_rounded),
-                    label: const Text('Grup Sohbetine Git'),
+                    label: Text(l10n.goToGroupChat),
                   ),
                   // Show leave button only for non-organizers
                   if (_currentUserId != _currentMeetup.organizerId) ...[
@@ -726,9 +729,9 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                     OutlinedButton.icon(
                       onPressed: _leaveMeetup,
                       icon: const Icon(Icons.exit_to_app, color: Colors.red),
-                      label: const Text(
-                        'Etkinlikten Ayrıl',
-                        style: TextStyle(color: Colors.red),
+                      label: Text(
+                        l10n.leaveEvent,
+                        style: const TextStyle(color: Colors.red),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Colors.red),
@@ -744,28 +747,28 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Bekleme Listesinden Çık'),
-                            content: const Text(
-                              'Kontenjan açıldığında bildirim almak istemediğinizden emin misiniz?',
+                            title: Text(l10n.leaveWaitlist),
+                            content: Text(
+                              l10n.leaveWaitlistConfirm,
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: const Text('İptal'),
+                                child: Text(l10n.cancel),
                               ),
                               TextButton(
                                 onPressed: () {
                                   Navigator.pop(context);
                                   _leaveWaitlist();
                                 },
-                                child: const Text('Çık'),
+                                child: Text(l10n.leave),
                               ),
                             ],
                           ),
                         );
                       },
                       icon: const Icon(Icons.notifications_active),
-                      label: const Text('Bekleme Listesinde'),
+                      label: Text(l10n.onWaitlist),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.green,
                         side: const BorderSide(color: Colors.green),
@@ -774,14 +777,14 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                   : ElevatedButton.icon(
                       onPressed: _joinWaitlist,
                       icon: const Icon(Icons.notifications_outlined),
-                      label: const Text('Beni Hatırlat'),
+                      label: Text(l10n.remindMe),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                       ),
                     ))
             : ElevatedButton(
                 onPressed: _joinMeetup,
-                child: const Text('Hemen Katıl'),
+                child: Text(l10n.joinNow),
               ),
       ),
     );
@@ -796,9 +799,9 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
       ),
       child: Row(
         children: [
-          _buildFootballTabButton(index: 0, label: 'Genel'),
-          _buildFootballTabButton(index: 1, label: 'Takim'),
-          _buildFootballTabButton(index: 2, label: 'Kurallar'),
+          _buildFootballTabButton(index: 0, label: l10n.generalTab),
+          _buildFootballTabButton(index: 1, label: l10n.teamTab),
+          _buildFootballTabButton(index: 2, label: l10n.rulesTab),
         ],
       ),
     );
@@ -994,7 +997,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
         Row(
           children: [
             Text(
-              'Kadro Düzeni',
+              l10n.formation,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -1066,7 +1069,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
     if (teamASlots.isEmpty && teamBSlots.isEmpty) {
       return _buildFootballEmptyState(
         icon: Icons.groups_outlined,
-        text: 'Takım kadrosu henüz oluşturulmamış.',
+        text: l10n.teamNotSetUp,
       );
     }
 
@@ -1114,9 +1117,9 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildTeamColumn('Takım A', teamASlots, 'A')),
+              Expanded(child: _buildTeamColumn(l10n.teamA, teamASlots, 'A')),
               const SizedBox(width: 12),
-              Expanded(child: _buildTeamColumn('Takım B', teamBSlots, 'B')),
+              Expanded(child: _buildTeamColumn(l10n.teamB, teamBSlots, 'B')),
             ],
           ),
         ],
@@ -1340,7 +1343,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
     if (rulesText.isEmpty) {
       return _buildFootballEmptyState(
         icon: Icons.rule_folder_outlined,
-        text: 'Bu etkinlik için kural eklenmemiş.',
+        text: l10n.noRulesAdded,
       );
     }
 
@@ -1678,7 +1681,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
               const SizedBox(height: 8),
               if (participant.totalRatings > 0)
                 Text(
-                  '${participant.totalRatings} değerlendirme',
+                  l10n.reviewCount(participant.totalRatings),
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
@@ -1691,7 +1694,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: const Text('Kapat'),
+                      child: Text(l10n.closeButton),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1701,7 +1704,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                         Navigator.pop(context);
                         context.push('/user-profile/${participant.id}');
                       },
-                      child: const Text('Profili Gör'),
+                      child: Text(l10n.viewProfile),
                     ),
                   ),
                 ],
@@ -1741,7 +1744,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Katılımcılar (${_participants.length})',
+                    '${l10n.participants} (${_participants.length})',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -1803,7 +1806,7 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'Organizatör',
+                                    l10n.organizer,
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -1854,21 +1857,34 @@ class _MeetupDetailScreenState extends State<MeetupDetailScreen> {
   }
 
   String _getMonth(int month) {
-    const months = [
-      'Ocak',
-      'Şubat',
-      'Mart',
-      'Nisan',
-      'Mayıs',
-      'Haziran',
-      'Temmuz',
-      'Ağustos',
-      'Eylül',
-      'Ekim',
-      'Kasım',
-      'Aralık',
-    ];
-    return months[month - 1];
+    switch (month) {
+      case 1:
+        return l10n.monthJan;
+      case 2:
+        return l10n.monthFeb;
+      case 3:
+        return l10n.monthMar;
+      case 4:
+        return l10n.monthApr;
+      case 5:
+        return l10n.monthMay;
+      case 6:
+        return l10n.monthJun;
+      case 7:
+        return l10n.monthJul;
+      case 8:
+        return l10n.monthAug;
+      case 9:
+        return l10n.monthSep;
+      case 10:
+        return l10n.monthOct;
+      case 11:
+        return l10n.monthNov;
+      case 12:
+        return l10n.monthDec;
+      default:
+        return '';
+    }
   }
 
   String _formatTime(DateTime date, {DateTime? endDate}) {
@@ -1957,3 +1973,13 @@ class _DashedBorderPainter extends CustomPainter {
       dashWidth != oldDelegate.dashWidth ||
       dashSpace != oldDelegate.dashSpace;
 }
+
+
+
+
+
+
+
+
+
+

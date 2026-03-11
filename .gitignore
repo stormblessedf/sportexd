@@ -83,5 +83,15 @@ CODEBASE_REVIEW_FINDINGS.md
 EVENT_PHOTO_SHARE_REVIEW.md
 PROJE_OZET.md
 
+# HTML design mockups
+designs/
+profile_redesign.html
+
+# Internal plans
+plans/
+
+# Test logs
+full_test_log.txt
+
 # IDE
 .vscode/

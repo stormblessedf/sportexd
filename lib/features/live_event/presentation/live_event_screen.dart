@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +16,7 @@ import '../../../core/services/event_photo_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../theme/app_theme.dart';
 import '../utils/progress_utils.dart';
+import '../../../l10n/app_localizations.dart';
 
 class LiveEventScreen extends StatefulWidget {
   final String meetupId;
@@ -31,6 +32,8 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
   late final EventPhotoService _photoService;
   final ImagePicker _imagePicker = ImagePicker();
   bool _isUploading = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   List<UserModel> _participants = [];
   bool _participantsLoaded = false;
@@ -74,18 +77,18 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
       final user = await _authService.getCurrentUser();
       await _photoService.uploadPhoto(
         meetupId: widget.meetupId, userId: userId,
-        userName: user?.username ?? 'Anonim', userImageUrl: user?.profileImageUrl,
+        userName: user?.username ?? l10n.anonymousUser, userImageUrl: user?.profileImageUrl,
         imageBytes: imageBytes,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fotoğraf başarıyla paylaşıldı')),
+          SnackBar(content: Text(l10n.photoShared)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fotoğraf yüklenirken bir hata oluştu')),
+          SnackBar(content: Text(l10n.photoUploadError)),
         );
       }
     } finally {
@@ -109,7 +112,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                 const SizedBox(height: 16),
-                Text(snapshot.hasError ? 'Bir hata oluştu' : 'Etkinlik bulunamadı',
+                Text(snapshot.hasError ? l10n.errorOccurred : l10n.eventNotFound,
                   style: TextStyle(color: Colors.red[300], fontSize: 18, fontWeight: FontWeight.w600)),
               ]),
             );
@@ -156,7 +159,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
     );
   }
 
-  // ── Photo Gallery (horizontal scroll) ──
+  // ¦¦ Photo Gallery (horizontal scroll) ¦¦
   Widget _buildPhotoGallery(MeetupModel meetup, bool isCompleted) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,7 +175,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
               if (meetup.imageUrl.isNotEmpty) {
                 cards.add(_GalleryCard(
                   imageUrl: meetup.imageUrl,
-                  overlayLabel: 'Kapak Fotoğrafı',
+                  overlayLabel: l10n.coverPhoto,
                   overlaySubtitle: meetup.organizerName,
                   isPrimary: true,
                 ));
@@ -193,11 +196,11 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                     color: AppTheme.borderLight,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.photo_library_outlined, size: 48, color: AppTheme.textLight),
                       SizedBox(height: 8),
-                      Text('Henüz fotoğraf yok', style: TextStyle(color: AppTheme.textMuted, fontSize: 14)),
+                      Text(l10n.noPhotosYet, style: const TextStyle(color: AppTheme.textMuted, fontSize: 14)),
                     ]),
                   ),
                 ));
@@ -240,7 +243,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
                       : const Icon(Icons.add_a_photo, color: AppTheme.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    _isUploading ? 'Yükleniyor...' : 'Fotoğraf Ekle',
+                    _isUploading ? l10n.loading : l10n.addPhoto,
                     style: const TextStyle(
                       color: AppTheme.primary, fontWeight: FontWeight.w600, fontSize: 14,
                     ),
@@ -254,7 +257,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
     );
   }
 
-  // ── Participants Section ──
+  // ¦¦ Participants Section ¦¦
   Widget _buildParticipantsSection(MeetupModel meetup) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,11 +265,11 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Kadro (${meetup.currentParticipants}/${meetup.maxParticipants})',
+            Text('${l10n.participants} (${meetup.currentParticipants}/${meetup.maxParticipants})',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
             GestureDetector(
               onTap: () {},
-              child: const Text('Tümünü Gör',
+              child: Text(l10n.seeAll,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary)),
             ),
           ],
@@ -276,7 +279,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
           height: 170,
           child: _participantsLoaded
               ? _participants.isEmpty
-                  ? const Center(child: Text('Katılımcı bulunamadı', style: TextStyle(color: AppTheme.textMuted)))
+                  ? Center(child: Text(l10n.noParticipantsFound, style: const TextStyle(color: AppTheme.textMuted)))
                   : ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _participants.length,
@@ -295,7 +298,7 @@ class _LiveEventScreenState extends State<LiveEventScreen> {
 }
 
 
-// ── Self-contained Countdown Widget ──
+// ¦¦ Self-contained Countdown Widget ¦¦
 // Manages its own Timer so setState only rebuilds this widget, not the whole page.
 class _CountdownText extends StatefulWidget {
   final DateTime endTime;
@@ -362,7 +365,7 @@ class _CountdownTextState extends State<_CountdownText> {
 }
 
 
-// ── Sticky Glass Header Delegate ──
+// ¦¦ Sticky Glass Header Delegate ¦¦
 class _LiveHeaderDelegate extends SliverPersistentHeaderDelegate {
   final MeetupModel meetup;
   final bool isCompleted;
@@ -383,6 +386,7 @@ class _LiveHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final l10n = AppLocalizations.of(context)!;
     final startStr = DateFormat('HH:mm').format(meetup.date);
     final endStr = DateFormat('HH:mm').format(effectiveEnd);
 
@@ -421,7 +425,7 @@ class _LiveHeaderDelegate extends SliverPersistentHeaderDelegate {
                       _PulsingDot(isCompleted: isCompleted),
                       const SizedBox(width: 6),
                       Text(
-                        isCompleted ? 'BİTTİ' : 'CANLI',
+                        isCompleted ? l10n.eventDone : l10n.live.toUpperCase(),
                         style: TextStyle(
                           fontSize: 12, fontWeight: FontWeight.bold,
                           color: isCompleted ? AppTheme.textMuted : AppTheme.primary,
@@ -480,7 +484,7 @@ class _LiveHeaderDelegate extends SliverPersistentHeaderDelegate {
 }
 
 
-// ── Pulsing green dot ──
+// ¦¦ Pulsing green dot ¦¦
 class _PulsingDot extends StatefulWidget {
   final bool isCompleted;
   const _PulsingDot({required this.isCompleted});
@@ -535,7 +539,7 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
   }
 }
 
-// ── Gallery Card ──
+// ¦¦ Gallery Card ¦¦
 class _GalleryCard extends StatelessWidget {
   final String imageUrl;
   final String? overlayLabel;
@@ -564,7 +568,7 @@ class _GalleryCard extends StatelessWidget {
             imageUrl: imageUrl,
             fit: BoxFit.cover,
             placeholder: (_, _) => Container(color: AppTheme.borderLight,
-              child: const Center(child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2))),
+              child: Center(child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2))),
             errorWidget: (_, _, _) => Container(color: AppTheme.borderLight,
               child: const Icon(Icons.broken_image, color: AppTheme.textLight, size: 40)),
           ),
@@ -617,7 +621,7 @@ class _GalleryCard extends StatelessWidget {
 }
 
 
-// ── Participant Card ──
+// ¦¦ Participant Card ¦¦
 class _ParticipantCard extends StatelessWidget {
   final UserModel user;
   final bool isOrganizer;
@@ -692,7 +696,7 @@ class _ParticipantCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                isOrganizer ? 'Organizatör' : _getLevelText(user.level),
+                isOrganizer ? AppLocalizations.of(context)!.organizer : _getLevelText(context, user.level),
                 style: TextStyle(
                   fontSize: 10, fontWeight: FontWeight.w600,
                   color: isOrganizer ? AppTheme.primary : AppTheme.textMuted,
@@ -705,14 +709,17 @@ class _ParticipantCard extends StatelessWidget {
     );
   }
 
-  String _getLevelText(Level? level) {
+  String _getLevelText(BuildContext context, Level? level) {
     switch (level) {
-      case Level.beginner: return 'Başlangıç';
-      case Level.intermediate: return 'Orta';
-      case Level.advanced: return 'İleri';
-      default: return 'Oyuncu';
+      case Level.beginner: return AppLocalizations.of(context)!.beginner;
+      case Level.intermediate: return AppLocalizations.of(context)!.intermediate;
+      case Level.advanced: return AppLocalizations.of(context)!.advanced;
+      default: return AppLocalizations.of(context)!.player;
     }
   }
 }
+
+
+
 
 

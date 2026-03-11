@@ -22,6 +22,7 @@ import '../../features/chat/presentation/my_chats_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/notifications/presentation/notification_settings_screen.dart';
+import '../../features/swipe/presentation/swipe_invite_screen.dart';
 import '../../features/profile/presentation/reliability_detail_screen.dart';
 import '../../features/profile/presentation/user_meetups_screen.dart';
 import '../../features/live_event/presentation/live_event_screen.dart';
@@ -31,6 +32,7 @@ import '../../core/models/meetup_model.dart';
 import '../../core/models/venue_model.dart';
 import '../../core/models/eligible_meetup.dart';
 import '../../core/utils/admin_actions.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../features/venue_recommendations/presentation/venue_onboarding_screen.dart';
 import '../../features/venue_recommendations/presentation/venue_detail_screen.dart';
@@ -44,16 +46,35 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
-    GoRoute(path: '/create-profile', builder: (context, state) => const CreateProfileScreen()),
+    GoRoute(
+      path: '/create-profile',
+      builder: (context, state) => const CreateProfileScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return MainShell(navigationShell: child);
       },
       routes: [
-        GoRoute(path: '/home', builder: (context, state) => const DiscoveryPage()),
-        GoRoute(path: '/chats', builder: (context, state) => const MyChatsScreen()),
-        GoRoute(path: '/create', builder: (context, state) => const CreateMeetupScreen()),
-        GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const DiscoveryPage(),
+        ),
+        GoRoute(
+          path: '/chats',
+          builder: (context, state) => const MyChatsScreen(),
+        ),
+        GoRoute(
+          path: '/create',
+          builder: (context, state) => const CreateMeetupScreen(),
+        ),
+        GoRoute(
+          path: '/swipe-invites',
+          builder: (context, state) => const SwipeInviteScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
       ],
     ),
     GoRoute(
@@ -61,7 +82,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final meetup = state.extra as MeetupModel?;
         if (meetup == null) {
-          return const Scaffold(body: Center(child: Text('Buluşma bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.meetupNotFound),
+            ),
+          );
         }
         return MeetupDetailScreen(meetup: meetup);
       },
@@ -71,7 +96,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final meetupId = state.pathParameters['meetupId'];
         if (meetupId == null || meetupId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Etkinlik bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.eventNotFound),
+            ),
+          );
         }
         return _MeetupLoaderScreen(meetupId: meetupId);
       },
@@ -81,11 +110,15 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         if (extra == null) {
-          return const Scaffold(body: Center(child: Text('Sohbet bilgisi bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.chatInfoNotFound),
+            ),
+          );
         }
         return ChatScreen(
           chatId: extra['chatId'] ?? '',
-          title: extra['title'] ?? 'Sohbet',
+          title: extra['title'] ?? AppLocalizations.of(context)!.chat,
         );
       },
     ),
@@ -94,29 +127,47 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final user = state.extra as UserModel?;
         if (user == null) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return EditProfileScreen(user: user);
       },
     ),
-    GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
     GoRoute(
       path: '/user-profile/:userId',
       builder: (context, state) {
         final userId = state.pathParameters['userId'];
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return ProfileScreen(userId: userId);
       },
     ),
-    GoRoute(path: '/nearby-map', builder: (context, state) => const NearbyMeetupsMapScreen()),
+    GoRoute(
+      path: '/nearby-map',
+      builder: (context, state) => const NearbyMeetupsMapScreen(),
+    ),
     GoRoute(
       path: '/past-meetups',
       builder: (context, state) {
         final userId = state.extra as String?;
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bilgisi bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userInfoNotFound),
+            ),
+          );
         }
         return PastMeetupsScreen(userId: userId);
       },
@@ -126,11 +177,16 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         if (extra == null) {
-          return const Scaffold(body: Center(child: Text('Etkinlik bilgisi bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.eventInfoNotFound),
+            ),
+          );
         }
         return RateMembersScreen(
           meetupId: extra['meetupId'] ?? '',
-          meetupTitle: extra['meetupTitle'] ?? 'Etkinlik',
+          meetupTitle:
+              extra['meetupTitle'] ?? AppLocalizations.of(context)!.eventLabel,
           participantIds: List<String>.from(extra['participantIds'] ?? []),
         );
       },
@@ -140,7 +196,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final userId = state.pathParameters['userId'];
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return UserRatingsPage(profileOwnerId: userId);
       },
@@ -151,9 +211,16 @@ final appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final currentUserId = extra?['currentUserId'] as String?;
         final profileOwnerId = extra?['profileOwnerId'] as String?;
-        if (extra == null || currentUserId == null || currentUserId.isEmpty ||
-            profileOwnerId == null || profileOwnerId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bilgisi bulunamadı')));
+        if (extra == null ||
+            currentUserId == null ||
+            currentUserId.isEmpty ||
+            profileOwnerId == null ||
+            profileOwnerId.isEmpty) {
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userInfoNotFound),
+            ),
+          );
         }
         return SelectMeetupScreen(
           currentUserId: currentUserId,
@@ -166,7 +233,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         if (extra == null) {
-          return const Scaffold(body: Center(child: Text('Bilgi bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.infoNotFound),
+            ),
+          );
         }
         return RateUserScreen(
           currentUserId: extra['currentUserId'] ?? '',
@@ -175,18 +246,26 @@ final appRouter = GoRouter(
         );
       },
     ),
-    GoRoute(path: '/admin-actions', builder: (context, state) => const AdminActionsScreen()),
+    GoRoute(
+      path: '/admin-actions',
+      builder: (context, state) => const AdminActionsScreen(),
+    ),
     GoRoute(
       path: '/reliability-detail',
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final userId = extra?['userId'] as String?;
         if (extra == null || userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Bilgi bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.infoNotFound),
+            ),
+          );
         }
         return ReliabilityDetailScreen(
           userId: userId,
-          reliabilityScore: (extra['reliabilityScore'] as num?)?.toDouble() ?? 0.0,
+          reliabilityScore:
+              (extra['reliabilityScore'] as num?)?.toDouble() ?? 0.0,
         );
       },
     ),
@@ -195,7 +274,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final userId = state.pathParameters['userId'];
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return UserMeetupsScreen(userId: userId);
       },
@@ -205,7 +288,11 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final userId = state.pathParameters['userId'];
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return StatisticsScreen(userId: userId);
       },
@@ -215,24 +302,41 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final meetupId = state.pathParameters['meetupId'];
         if (meetupId == null || meetupId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Etkinlik bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.eventNotFound),
+            ),
+          );
         }
         return LiveEventScreen(meetupId: meetupId);
       },
     ),
-    GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
-    GoRoute(path: '/notification-settings', builder: (context, state) => const NotificationSettingsScreen()),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/notification-settings',
+      builder: (context, state) => const NotificationSettingsScreen(),
+    ),
     GoRoute(
       path: '/partners/:userId',
       builder: (context, state) {
         final userId = state.pathParameters['userId'];
         if (userId == null || userId.isEmpty) {
-          return const Scaffold(body: Center(child: Text('Kullanıcı bulunamadı')));
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.userNotFound),
+            ),
+          );
         }
         return PartnerListScreen(userId: userId);
       },
     ),
-    GoRoute(path: '/partnership-requests', builder: (context, state) => const PartnershipRequestsScreen()),
+    GoRoute(
+      path: '/partnership-requests',
+      builder: (context, state) => const PartnershipRequestsScreen(),
+    ),
     GoRoute(
       path: '/venue-onboarding',
       builder: (context, state) => const VenueOnboardingScreen(),
@@ -242,8 +346,10 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final placeId = state.pathParameters['placeId'];
         if (placeId == null || placeId.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Mekan bulunamadı')),
+          return Scaffold(
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.venueNotFound),
+            ),
           );
         }
         final extra = state.extra as Map<String, dynamic>?;
@@ -260,7 +366,6 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
 
 class _MeetupLoaderScreen extends StatelessWidget {
   final String meetupId;
@@ -279,8 +384,12 @@ class _MeetupLoaderScreen extends StatelessWidget {
         final meetup = snapshot.data;
         if (meetup == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Etkinlik')),
-            body: const Center(child: Text('Etkinlik bulunamadı')),
+            appBar: AppBar(
+              title: Text(AppLocalizations.of(context)!.eventLabel),
+            ),
+            body: Center(
+              child: Text(AppLocalizations.of(context)!.eventNotFound),
+            ),
           );
         }
         return MeetupDetailScreen(meetup: meetup);

@@ -6,7 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../../core/models/location_data.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/services/places_service.dart';
-import '../../../../core/services/map_preferences_service.dart';
+import '../../../../core/widgets/styled_tile_layer.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class LocationPickerWidget extends StatefulWidget {
   final LocationData? initialLocation;
@@ -42,6 +43,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   // Autocomplete
   List<PlaceAutocompleteResult> _suggestions = [];
   Timer? _debounceTimer;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -270,7 +273,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Konumunuz alınamadı')),
+            SnackBar(content: Text(l10n.currentLocationUnavailable)),
           );
         }
       }
@@ -292,8 +295,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final mapPrefs = context.watch<MapPreferencesService>();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -304,7 +305,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
             controller: _searchController,
             focusNode: _searchFocusNode,
             decoration: InputDecoration(
-              hintText: 'Konum veya mekan ara...',
+              hintText: l10n.searchLocationHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -382,11 +383,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           },
                         ),
                         children: [
-                          TileLayer(
-                            urlTemplate: mapPrefs.currentTileUrl,
-                            subdomains: mapPrefs.currentSubdomains,
-                            userAgentPackageName: 'com.sporsal.app',
-                          ),
+                          const StyledTileLayer(),
                           MarkerLayer(
                             markers: [
                               if (_selectedPosition != null)
@@ -513,3 +510,4 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     );
   }
 }
+

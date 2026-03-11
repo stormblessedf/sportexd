@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class LockedMessageButton extends StatelessWidget {
   final bool isLocked;
@@ -13,11 +14,13 @@ class LockedMessageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (isLocked) {
       return OutlinedButton.icon(
         onPressed: () => _showLockedAlert(context),
         icon: const Icon(Icons.lock_outline, size: 18),
-        label: const Text('Mesaj'),
+        label: Text(l10n.chat),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppTheme.textLight,
           side: const BorderSide(color: AppTheme.borderLight),
@@ -30,7 +33,7 @@ class LockedMessageButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: const Icon(Icons.message, size: 18),
-      label: const Text('Mesaj'),
+      label: Text(l10n.chat),
       style: ElevatedButton.styleFrom(
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
@@ -41,25 +44,27 @@ class LockedMessageButton extends StatelessWidget {
   }
 
   void _showLockedAlert(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.lock, color: AppTheme.textMuted),
-            SizedBox(width: 8),
-            Text('Mesaj Kilitli', style: TextStyle(fontSize: 18)),
+            const Icon(Icons.lock, color: AppTheme.textMuted),
+            const SizedBox(width: 8),
+            Text(l10n.lockedMessageTitle, style: const TextStyle(fontSize: 18)),
           ],
         ),
-        content: const Text(
-          'Bu kullanıcıya mesaj atmak veya partner eklemek için, önce aynı sahada ter dökmelisiniz. Hemen bir etkinlik oluşturun veya aynı etkinliğe katılın!',
-          style: TextStyle(fontSize: 14, height: 1.5),
+        content: Text(
+          l10n.lockedMessageDescription,
+          style: const TextStyle(fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
+            child: Text(l10n.okButton),
           ),
         ],
       ),

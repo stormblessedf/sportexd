@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../home/presentation/widgets/meetup_card.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum PastMeetupSort { newest, oldest, title, type }
 
@@ -23,6 +24,8 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
   static const Color textMuted = Color(0xFF64748B);
 
   PastMeetupSort _currentSort = PastMeetupSort.newest;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   List<MeetupModel> _sortMeetups(List<MeetupModel> meetups) {
     final sorted = List<MeetupModel>.from(meetups);
@@ -46,13 +49,13 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
   String _sortLabel(PastMeetupSort sort) {
     switch (sort) {
       case PastMeetupSort.newest:
-        return 'En Yeni';
+        return l10n.sortNewest;
       case PastMeetupSort.oldest:
-        return 'En Eski';
+        return l10n.sortOldest;
       case PastMeetupSort.title:
-        return 'İsim (A-Z)';
+        return l10n.sortNameAZ;
       case PastMeetupSort.type:
-        return 'Spor Türü';
+        return l10n.sportType;
     }
   }
 
@@ -76,7 +79,7 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
     return Scaffold(
       backgroundColor: backgroundLight,
       appBar: AppBar(
-        title: const Text('Geçmiş Etkinliklerim'),
+        title: Text(l10n.myPastEvents),
         backgroundColor: backgroundLight,
         foregroundColor: textDark,
         elevation: 0,
@@ -98,7 +101,7 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                   Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'Bir hata oluştu',
+                    l10n.errorOccurred,
                     style: TextStyle(
                       color: Colors.red[300],
                       fontSize: 18,
@@ -126,7 +129,7 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                   Icon(Icons.history, size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 24),
                   Text(
-                    'Henüz geçmiş etkinliğiniz yok',
+                    l10n.noPastEvents,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 18,
@@ -135,14 +138,14 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Etkinliklere katılmaya başlayın!',
+                    l10n.startJoiningEvents,
                     style: TextStyle(color: Colors.grey[500], fontSize: 14),
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () => context.go('/home'),
                     icon: const Icon(Icons.explore),
-                    label: const Text('Etkinlikleri Keşfet'),
+                    label: Text(l10n.discoverEvents),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primary,
                       foregroundColor: textDark,
@@ -186,7 +189,9 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                         ),
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.white : textDark,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           fontSize: 13,
                         ),
                         backgroundColor: surfaceLight,
@@ -214,7 +219,9 @@ class _PastMeetupsScreenState extends State<PastMeetupsScreen> {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '${sortedMeetups.length} etkinlik',
+                    sortedMeetups.length == 1
+                        ? '1 ${l10n.eventLabel}'
+                        : '${sortedMeetups.length}${l10n.eventCount}',
                     style: const TextStyle(
                       color: textMuted,
                       fontSize: 13,

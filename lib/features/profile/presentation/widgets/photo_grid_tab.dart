@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sporsal/core/models/profile_photo_model.dart';
 import 'package:sporsal/core/services/profile_photo_service.dart';
 import 'package:sporsal/features/profile/presentation/controllers/photo_upload_controller.dart';
 import 'package:sporsal/theme/app_theme.dart';
+import '../../../../l10n/app_localizations.dart';
 
 import 'full_screen_photo_viewer.dart';
 
@@ -26,6 +27,8 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
   final ProfilePhotoService _photoService = ProfilePhotoService();
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -80,8 +83,8 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fotoğraf yüklenemedi. Lütfen tekrar deneyin.'),
+          SnackBar(
+            content: Text(l10n.photoLoadFailed),
           ),
         );
       }
@@ -103,7 +106,7 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Fotoğraf Ekle',
+                l10n.addPhoto,
                 style: GoogleFonts.lexend(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -114,14 +117,14 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined,
                     color: AppTheme.primary),
-                title: Text('Galeriden Seç',
+                title: Text(l10n.selectFromGallery,
                     style: GoogleFonts.lexend(fontSize: 14)),
                 onTap: () => Navigator.pop(context, ImageSource.gallery),
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined,
                     color: AppTheme.primary),
-                title: Text('Kamera ile Çek',
+                title: Text(l10n.takePhoto,
                     style: GoogleFonts.lexend(fontSize: 14)),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
@@ -137,22 +140,22 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Fotoğrafı Sil',
+          l10n.deletePhotoTitle,
           style: GoogleFonts.lexend(fontWeight: FontWeight.w600),
         ),
         content: Text(
-          'Bu fotoğrafı silmek istediğinize emin misiniz?',
+          l10n.deletePhotoConfirm,
           style: GoogleFonts.lexend(fontSize: 14, color: AppTheme.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('İptal', style: GoogleFonts.lexend()),
+            child: Text(l10n.cancel, style: GoogleFonts.lexend()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              'Sil',
+              l10n.delete,
               style: GoogleFonts.lexend(color: Colors.red),
             ),
           ),
@@ -174,8 +177,8 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fotoğraf silinemedi. Lütfen tekrar deneyin.'),
+          SnackBar(
+            content: Text(l10n.photoDeleteFailed),
           ),
         );
       }
@@ -210,7 +213,7 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Fotoğraflar yüklenemedi',
+              l10n.photoLoadFailed,
               style: GoogleFonts.lexend(
                 fontSize: 13,
                 color: AppTheme.textMuted,
@@ -273,7 +276,7 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Henüz fotoğraf yok',
+            l10n.noPhotosYet,
             style: GoogleFonts.lexend(
               fontSize: 13,
               color: AppTheme.textMuted,
@@ -362,3 +365,5 @@ class _PhotoGridItem extends StatelessWidget {
     );
   }
 }
+
+

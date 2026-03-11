@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
 import '../../../../core/models/route_data.dart';
-import '../../../../core/services/map_preferences_service.dart';
+import '../../../../core/widgets/styled_tile_layer.dart';
 import '../../../../core/utils/route_distance_calculator.dart';
 
 class RouteMapDisplayWidget extends StatefulWidget {
@@ -56,7 +55,6 @@ class _RouteMapDisplayWidgetState extends State<RouteMapDisplayWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final mapPrefs = context.watch<MapPreferencesService>();
     final polylinePoints = _polylinePoints;
 
     return Column(
@@ -103,11 +101,7 @@ class _RouteMapDisplayWidgetState extends State<RouteMapDisplayWidget> {
                 ),
               ),
               children: [
-                TileLayer(
-                  urlTemplate: mapPrefs.currentTileUrl,
-                  subdomains: mapPrefs.currentSubdomains,
-                  userAgentPackageName: 'com.sporsal.app',
-                ),
+                const StyledTileLayer(),
                 if (polylinePoints.length >= 2)
                   PolylineLayer(
                     polylines: [

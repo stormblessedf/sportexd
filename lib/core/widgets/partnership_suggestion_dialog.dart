@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/partnership_suggestion_model.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class PartnershipSuggestionDialog extends StatelessWidget {
   final PartnershipSuggestionModel suggestion;
@@ -16,13 +17,15 @@ class PartnershipSuggestionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.handshake, color: AppTheme.primary),
-          SizedBox(width: 8),
-          Text('Partner Önerisi', style: TextStyle(fontSize: 18)),
+          const Icon(Icons.handshake, color: AppTheme.primary),
+          const SizedBox(width: 8),
+          Text(l10n.partnerSuggestionTitle, style: const TextStyle(fontSize: 18)),
         ],
       ),
       content: Text(
@@ -32,12 +35,12 @@ class PartnershipSuggestionDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: onDismiss,
-          child: const Text('Şimdi Değil', style: TextStyle(color: AppTheme.textMuted)),
+          child: Text(l10n.notNow, style: const TextStyle(color: AppTheme.textMuted)),
         ),
         ElevatedButton.icon(
           onPressed: onAccept,
           icon: const Icon(Icons.person_add, size: 18),
-          label: const Text('Partner Ekle'),
+          label: Text(l10n.addPartner),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CreateProfileScreen extends StatefulWidget {
   const CreateProfileScreen({super.key});
@@ -29,8 +30,6 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Level _selectedLevel = Level.beginner;
   PlayStyle _selectedPlayStyle = PlayStyle.casual;
   final Set<SportType> _selectedSports = {};
-
-  final List<String> _genderOptions = ['Erkek', 'Kadın', 'Belirtmek İstemiyorum'];
 
   @override
   void dispose() {
@@ -85,10 +84,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     if (_selectedSports.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('En az bir spor dalı seçmelisiniz'),
+        SnackBar(
+          content: Text(l10n.mustSelectOneSport),
           backgroundColor: Colors.orange,
         ),
       );
@@ -102,7 +103,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       final userId = authService.currentUserId;
 
       if (userId == null) {
-        throw Exception('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        throw Exception(l10n.sessionNotFoundLogin);
       }
 
       // Upload image if selected
@@ -128,8 +129,8 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil başarıyla oluşturuldu!'),
+          SnackBar(
+            content: Text(l10n.profileCreated),
             backgroundColor: Colors.green,
           ),
         );
@@ -139,7 +140,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hata: $e'),
+            content: Text(l10n.errorWithMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -151,9 +152,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final genderOptions = [l10n.male, l10n.female, l10n.preferNotToSay];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil Oluştur'),
+        title: Text(l10n.createProfile),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -205,38 +209,38 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Profil Fotoğrafı Ekle',
+                  l10n.addProfilePhoto,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Username
-              _buildSectionTitle('Kullanıcı Adı *'),
+              _buildSectionTitle('${l10n.usernameLabel} *'),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _usernameController,
-                decoration: _inputDecoration('Kullanıcı adınız', Icons.person_outline),
+                decoration: _inputDecoration(l10n.usernameHint, Icons.person_outline),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Kullanıcı adı gerekli';
-                  if (val.length < 3) return 'En az 3 karakter olmalı';
+                  if (val == null || val.isEmpty) return l10n.usernameRequired;
+                  if (val.length < 3) return l10n.minThreeChars;
                   return null;
                 },
               ),
               const SizedBox(height: 24),
 
               // Bio
-              _buildSectionTitle('Hakkında'),
+              _buildSectionTitle(l10n.aboutSection),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _bioController,
                 maxLines: 3,
-                decoration: _inputDecoration('Kendinizden bahsedin...', Icons.info_outline),
+                decoration: _inputDecoration(l10n.aboutHint, Icons.info_outline),
               ),
               const SizedBox(height: 24),
 
               // Personal Info Row
-              _buildSectionTitle('Kişisel Bilgiler'),
+              _buildSectionTitle(l10n.personalInfo),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -245,11 +249,11 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     child: TextFormField(
                       controller: _ageController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Yaş', Icons.cake_outlined),
+                      decoration: _inputDecoration(l10n.age, Icons.cake_outlined),
                       validator: (val) {
-                        if (val == null || val.isEmpty) return 'Gerekli';
+                        if (val == null || val.isEmpty) return l10n.required;
                         final age = int.tryParse(val);
-                        if (age == null || age < 13 || age > 100) return 'Geçersiz';
+                        if (age == null || age < 13 || age > 100) return l10n.invalid;
                         return null;
                       },
                     ),
@@ -260,7 +264,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     child: TextFormField(
                       controller: _heightController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Boy (cm)', Icons.height),
+                      decoration: _inputDecoration(l10n.height, Icons.height),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -269,7 +273,7 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     child: TextFormField(
                       controller: _weightController,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration('Kilo (kg)', Icons.fitness_center),
+                      decoration: _inputDecoration(l10n.weight, Icons.fitness_center),
                     ),
                   ),
                 ],
@@ -277,12 +281,12 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               const SizedBox(height: 24),
 
               // Gender
-              _buildSectionTitle('Cinsiyet'),
+              _buildSectionTitle(l10n.gender),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _selectedGender,
-                decoration: _inputDecoration('Seçiniz', Icons.wc),
-                items: _genderOptions.map((gender) {
+                decoration: _inputDecoration(l10n.selectGender, Icons.wc),
+                items: genderOptions.map((gender) {
                   return DropdownMenuItem(value: gender, child: Text(gender));
                 }).toList(),
                 onChanged: (value) => setState(() => _selectedGender = value),
@@ -290,33 +294,33 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               const SizedBox(height: 24),
 
               // Location
-              _buildSectionTitle('Konum'),
+              _buildSectionTitle(l10n.location),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _locationController,
-                decoration: _inputDecoration('Şehir', Icons.location_city),
+                decoration: _inputDecoration(l10n.city, Icons.location_city),
               ),
               const SizedBox(height: 24),
 
               // Level
-              _buildSectionTitle('Seviye'),
+              _buildSectionTitle(l10n.level),
               const SizedBox(height: 8),
               SegmentedButton<Level>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: Level.beginner,
-                    label: Text('Başlangıç'),
-                    icon: Icon(Icons.sports_outlined),
+                    label: Text(l10n.beginner),
+                    icon: const Icon(Icons.sports_outlined),
                   ),
                   ButtonSegment(
                     value: Level.intermediate,
-                    label: Text('Orta'),
-                    icon: Icon(Icons.sports),
+                    label: Text(l10n.intermediate),
+                    icon: const Icon(Icons.sports),
                   ),
                   ButtonSegment(
                     value: Level.advanced,
-                    label: Text('İleri'),
-                    icon: Icon(Icons.emoji_events),
+                    label: Text(l10n.advanced),
+                    icon: const Icon(Icons.emoji_events),
                   ),
                 ],
                 selected: {_selectedLevel},
@@ -327,19 +331,19 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               const SizedBox(height: 24),
 
               // Play Style
-              _buildSectionTitle('Oyun Stili'),
+              _buildSectionTitle(l10n.playStyle),
               const SizedBox(height: 8),
               SegmentedButton<PlayStyle>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: PlayStyle.casual,
-                    label: Text('Rahat'),
-                    icon: Icon(Icons.self_improvement),
+                    label: Text(l10n.casual),
+                    icon: const Icon(Icons.self_improvement),
                   ),
                   ButtonSegment(
                     value: PlayStyle.competitive,
-                    label: Text('Rekabetçi'),
-                    icon: Icon(Icons.sports_kabaddi),
+                    label: Text(l10n.competitive),
+                    icon: const Icon(Icons.sports_kabaddi),
                   ),
                 ],
                 selected: {_selectedPlayStyle},
@@ -350,10 +354,10 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
               const SizedBox(height: 24),
 
               // Interested Sports
-              _buildSectionTitle('İlgilendiğin Spor Dalları *'),
+              _buildSectionTitle('${l10n.interestedSports} *'),
               const SizedBox(height: 8),
               Text(
-                'En az bir tane seç',
+                l10n.selectAtLeastOne,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
               ),
               const SizedBox(height: 12),
@@ -401,9 +405,9 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Profili Tamamla',
-                          style: TextStyle(
+                      : Text(
+                          l10n.completeProfile,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'recalculate_ratings.dart';
 import 'partnership_migration.dart';
 import '../services/reliability_service.dart';
@@ -192,6 +193,8 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
   bool _isRecalculatingReliability = false;
   String? _resultMessage;
 
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
+
   Future<void> _runRecalculation() async {
     setState(() {
       _isRecalculating = true;
@@ -201,7 +204,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
     try {
       await recalculateAllUserRatings();
       setState(() {
-        _resultMessage = 'Başarılı! Tüm kullanıcı puanları güncellendi.';
+        _resultMessage = l10n.adminRatingsRecalculateSuccess;
         _isRecalculating = false;
       });
     } catch (e) {
@@ -242,7 +245,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
       await PartnershipMigration().migrate();
       setState(() {
         _resultMessage =
-            'Başarılı! Partnership migration tamamlandı. Geçmiş etkinliklerdeki kullanıcı çiftleri partner olarak eklendi.';
+            l10n.adminPartnershipMigrationSuccess;
         _isMigrating = false;
       });
     } catch (e) {
@@ -288,7 +291,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
 
       setState(() {
         _resultMessage =
-            'BaÅŸarÄ±lÄ±! GÃ¼venilirlik skorlarÄ± gÃ¼ncellendi: $updated/$total'
+            'Başarılı! Güvenilirlik skorları güncellendi: $updated/$total'
             '${failed > 0 ? ' (hata: $failed)' : ''}.';
         _isRecalculatingReliability = false;
       });
@@ -304,7 +307,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin İşlemleri'),
+        title: Text(l10n.adminActions),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -341,7 +344,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Yeniden Hesapla'),
+                  : Text(l10n.adminRecalculateButton),
             ),
             const SizedBox(height: 40),
             const Divider(),
@@ -378,7 +381,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Görselsiz Etkinlikleri Sil'),
+                  : Text(l10n.adminDeleteImageLessButton),
             ),
             const SizedBox(height: 40),
             const Divider(),
@@ -415,7 +418,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Partnership Migration Başlat'),
+                  : Text(l10n.adminPartnershipMigrationButton),
             ),
             const SizedBox(height: 40),
             const Divider(),
@@ -452,13 +455,13 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('Etkinlik Sayaçlarını Hesapla'),
+                  : Text(l10n.adminMeetupRecalculateButton),
             ),
             const SizedBox(height: 40),
             const Divider(),
             const SizedBox(height: 24),
             const Text(
-              'GÃ¼venilirlik SkorlarÄ±nÄ± GÃ¼ncelle',
+              'Güvenilirlik Skorlarını Güncelle',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -466,7 +469,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'TÃ¼m kullanÄ±cÄ±lar iÃ§in totalMeetupsRegistered, totalMeetupsJoined ve reliabilityScore alanlarÄ±nÄ± attendance sonuÃ§larÄ±na gÃ¶re yeniden hesaplar.',
+              'Tüm kullanıcılar için totalMeetupsRegistered, totalMeetupsJoined ve reliabilityScore alanlarını attendance sonuçlarına göre yeniden hesaplar.',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
@@ -489,7 +492,7 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text('GÃ¼venilirlikleri GÃ¼ncelle'),
+                  : Text(l10n.adminReliabilityRecalculateButton),
             ),
             if (_resultMessage != null) ...[
               const SizedBox(height: 24),

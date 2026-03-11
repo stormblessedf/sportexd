@@ -6,9 +6,10 @@ import '../../../../core/models/location_data.dart';
 import '../../../../core/models/meetup_model.dart';
 import '../../../../core/models/route_data.dart';
 import '../../../../core/services/location_service.dart';
-import '../../../../core/services/map_preferences_service.dart';
+import '../../../../core/widgets/styled_tile_layer.dart';
 import '../../../../core/services/routing_service.dart';
 import '../../../../core/utils/route_distance_calculator.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class RoutePlannerWidget extends StatefulWidget {
   final RouteData? initialRoute;
@@ -44,6 +45,8 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
   static const Color borderLight = Color(0xFFE2E8F0);
 
   String? _selectingPoint;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -203,8 +206,6 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final mapPrefs = context.watch<MapPreferencesService>();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -378,11 +379,7 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
                     onTap: _onMapTap,
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate: mapPrefs.currentTileUrl,
-                      subdomains: mapPrefs.currentSubdomains,
-                      userAgentPackageName: 'com.sporsal.app',
-                    ),
+                    const StyledTileLayer(),
                     // Rota çizgisi - OSRM geometry veya düz çizgi
                     if (_routeGeometry.length >= 2)
                       PolylineLayer(
@@ -402,13 +399,13 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
                   Positioned.fill(
                     child: Container(
                       color: Colors.black12,
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             CircularProgressIndicator(color: primary),
                             SizedBox(height: 8),
-                            Text('Rota hesaplanıyor...',
+                            Text(l10n.routeCalculating,
                               style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                           ],
                         ),
@@ -537,7 +534,7 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              waypoint.name ?? waypoint.address ?? 'Ara Nokta ${index + 1}',
+              waypoint.name ?? waypoint.address ?? l10n.waypointLabel(index + 1),
               style: const TextStyle(fontSize: 12, color: textDark),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -552,3 +549,5 @@ class _RoutePlannerWidgetState extends State<RoutePlannerWidget> {
     );
   }
 }
+
+

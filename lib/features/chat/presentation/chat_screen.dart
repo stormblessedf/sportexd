@@ -8,6 +8,7 @@ import '../../../../core/services/chat_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/meetup_service.dart';
 import '../../../../core/models/user_model.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -87,12 +88,13 @@ class _ChatScreenState extends State<ChatScreen> {
           }, SetOptions(merge: true));
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               _isOrganizerOnlyMode
-                  ? 'Herkes mesaj gönderebilir'
-                  : 'Sadece yönetici mesaj gönderebilir',
+                  ? l10n.everyoneCanSend
+                  : l10n.onlyOrganizerCanSend,
             ),
             duration: const Duration(seconds: 2),
           ),
@@ -161,8 +163,8 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!success) {
           _controller.text = messageText;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mesaj düzenlenemedi.'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.editFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -188,8 +190,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!success) {
         _controller.text = messageText;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mesaj gönderilemedi.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.sendFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -198,20 +200,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _deleteMessage(MessageModel message) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Mesajı Sil'),
-        content: const Text('Bu mesajı silmek istediğinizden emin misiniz?'),
+        title: Text(l10n.deleteMessage),
+        content: Text(l10n.deleteMessageConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sil'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -269,6 +272,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final isMe = message.senderId == _currentUser?.id;
     if (message.isDeleted) return;
 
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -278,7 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_canSendMessage) ...[
               ListTile(
                 leading: const Icon(Icons.reply),
-                title: const Text('Yanıtla'),
+                title: Text(l10n.reply),
                 onTap: () {
                   Navigator.pop(context);
                   _startReply(message);
@@ -287,19 +291,19 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Kopyala'),
+              title: Text(l10n.copy),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: message.text));
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mesaj kopyalandı')),
+                  SnackBar(content: Text(l10n.messageCopied)),
                 );
               },
             ),
             if (isMe && !_isChatLocked) ...[
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Düzenle'),
+                title: Text(l10n.edit),
                 onTap: () {
                   Navigator.pop(context);
                   _startEdit(message);
@@ -307,7 +311,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Sil', style: TextStyle(color: Colors.red)),
+                title: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   _deleteMessage(message);
@@ -327,10 +331,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (_currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Sohbete katılmak için giriş yapmalısınız.')),
+      return Scaffold(
+        body: Center(child: Text(AppLocalizations.of(context)!.loginToJoinChat)),
       );
     }
+
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -343,13 +349,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 _isOrganizerOnlyMode ? Icons.lock : Icons.lock_open,
                 color: _isOrganizerOnlyMode ? Colors.orange : null,
               ),
-              tooltip: _isOrganizerOnlyMode ? 'Herkese Aç' : 'Sadece Yönetici',
+              tooltip: _isOrganizerOnlyMode ? l10n.openToAll : l10n.organizerOnly,
               onPressed: _toggleOrganizerOnlyMode,
             ),
           if (_isOrganizer)
             IconButton(
               icon: const Icon(Icons.campaign),
-              tooltip: 'Duyuru Gönder',
+              tooltip: l10n.sendAnnouncement,
               onPressed: () => _showAnnouncementDialog(),
             ),
         ],
@@ -377,8 +383,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     const SizedBox(width: 8),
                     Text(
                       _isOrganizer
-                          ? 'Sadece yönetici modu aktif'
-                          : 'Sadece yönetici mesaj gönderebilir',
+                          ? l10n.organizerModeActive
+                          : l10n.onlyOrganizerCanSend,
                       style: const TextStyle(
                         color: Colors.orange,
                         fontSize: 13,
@@ -396,14 +402,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   horizontal: 16,
                 ),
                 color: Colors.grey.withValues(alpha: 0.2),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.lock, size: 16, color: Colors.grey),
-                    SizedBox(width: 8),
+                    const Icon(Icons.lock, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
                     Text(
-                      'Bu etkinlik sona erdi. Sohbet salt okunur.',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      l10n.chatReadOnly,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
                 ),
@@ -417,8 +423,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   }
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text('Henüz mesaj yok. İlk mesajı sen at!'),
+                    return Center(
+                      child: Text(l10n.noMessagesFirst),
                     );
                   }
 
@@ -608,7 +614,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 Text(
-                  message.isDeleted ? '🚫 Bu mesaj silindi' : message.text,
+                  message.isDeleted ? '🚫 ${AppLocalizations.of(context)!.messageDeleted}' : message.text,
                   style: TextStyle(
                     color: message.isDeleted ? Colors.grey[400] : Colors.white,
                     fontSize: 16,
@@ -623,7 +629,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: [
                     if (message.isEdited && !message.isDeleted)
                       Text(
-                        'düzenlendi • ',
+                        '${AppLocalizations.of(context)!.edited} • ',
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.grey[500],
@@ -664,7 +670,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Icon(Icons.lock, size: 16, color: Colors.grey[600]),
             const SizedBox(width: 8),
             Text(
-              'Bu sohbete mesaj gönderilemez',
+              AppLocalizations.of(context)!.cannotSendMessages,
               style: TextStyle(color: Colors.grey[600]),
             ),
           ],
@@ -690,7 +696,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Sadece yönetici mesaj gönderebilir',
+              AppLocalizations.of(context)!.onlyOrganizerCanSend,
               style: TextStyle(color: Colors.orange[300]),
             ),
           ],
@@ -725,7 +731,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       children: [
                         Text(
                           _editingMessage != null
-                              ? 'Düzenleniyor'
+                              ? AppLocalizations.of(context)!.editing
                               : _replyingTo!.senderName,
                           style: TextStyle(
                             fontSize: 12,
@@ -762,8 +768,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: _editingMessage != null
-                          ? 'Mesajı düzenle...'
-                          : 'Mesaj yaz...',
+                          ? AppLocalizations.of(context)!.editMessageHint
+                          : AppLocalizations.of(context)!.writeMessageHint,
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
@@ -803,28 +809,29 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showAnnouncementDialog() {
     final announcementController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.campaign, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Duyuru Gönder'),
+            const Icon(Icons.campaign, color: Colors.amber),
+            const SizedBox(width: 8),
+            Text(l10n.sendAnnouncement),
           ],
         ),
         content: TextField(
           controller: announcementController,
           maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'Duyuru metnini yazın...',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.announcementHint,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -834,7 +841,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Gönder'),
+            child: Text(l10n.send),
           ),
         ],
       ),

@@ -193,6 +193,8 @@ class AuthService {
         'partners': [],
         'badges': [],
         'certificates': [],
+        'isPremium': false,
+        'premiumUntil': null,
         'level': level?.toString().split('.').last ?? 'beginner',
         'playStyle': playStyle?.toString().split('.').last ?? 'casual',
       };

@@ -6,6 +6,7 @@ import '../../../../core/services/meetup_service.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/widgets/user_rating_badge.dart';
 import '../../../meetups/presentation/widgets/join_celebration_overlay.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class MeetupCard extends StatefulWidget {
   final MeetupModel meetup;
@@ -30,6 +31,8 @@ class _MeetupCardState extends State<MeetupCard> {
   late int _currentParticipants;
   bool _isJoining = false;
   bool _isOnWaitlist = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
   double? _organizerRating;
 
   @override
@@ -83,8 +86,8 @@ class _MeetupCardState extends State<MeetupCard> {
       widget.onTap();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pozisyon secimi icin detay ekranindan katilin'),
+          SnackBar(
+            content: Text(l10n.selectPositionFirst),
             backgroundColor: Colors.orange,
           ),
         );
@@ -109,8 +112,8 @@ class _MeetupCardState extends State<MeetupCard> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Etkinliğe katıldınız!'),
+          SnackBar(
+            content: Text(l10n.joinedSuccessfully),
             backgroundColor: primary,
           ),
         );
@@ -124,7 +127,7 @@ class _MeetupCardState extends State<MeetupCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hata: ${e.toString()}'),
+            content: Text(l10n.errorWithMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -153,8 +156,8 @@ class _MeetupCardState extends State<MeetupCard> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kontenjan açıldığında bildirim alacaksınız!'),
+          SnackBar(
+            content: Text(l10n.spotNotification),
             backgroundColor: Colors.orange,
           ),
         );
@@ -167,7 +170,7 @@ class _MeetupCardState extends State<MeetupCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hata: ${e.toString()}'),
+            content: Text(l10n.errorWithMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -698,3 +701,6 @@ class _MeetupCardState extends State<MeetupCard> {
     }
   }
 }
+
+
+

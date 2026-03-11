@@ -20,18 +20,43 @@ class LocaleService extends ChangeNotifier {
   Locale get locale => _locale;
 
   static const List<LocaleOption> supportedLocales = [
-    LocaleOption(locale: Locale('tr'), name: 'Türkçe', flag: '🇹🇷'),
-    LocaleOption(locale: Locale('en'), name: 'English', flag: '🇬🇧'),
-    LocaleOption(locale: Locale('de'), name: 'Deutsch', flag: '🇩🇪'),
-    LocaleOption(locale: Locale('fr'), name: 'Français', flag: '🇫🇷'),
-    LocaleOption(locale: Locale('es'), name: 'Español', flag: '🇪🇸'),
-    LocaleOption(locale: Locale('ar'), name: 'العربية', flag: '🇸🇦'),
+    LocaleOption(
+      locale: Locale('tr'),
+      name: 'Türkçe',
+      flag: '\u{1F1F9}\u{1F1F7}',
+    ),
+    LocaleOption(
+      locale: Locale('en'),
+      name: 'English',
+      flag: '\u{1F1EC}\u{1F1E7}',
+    ),
+    LocaleOption(
+      locale: Locale('de'),
+      name: 'Deutsch',
+      flag: '\u{1F1E9}\u{1F1EA}',
+    ),
+    LocaleOption(
+      locale: Locale('fr'),
+      name: 'Français',
+      flag: '\u{1F1EB}\u{1F1F7}',
+    ),
+    LocaleOption(
+      locale: Locale('es'),
+      name: 'Español',
+      flag: '\u{1F1EA}\u{1F1F8}',
+    ),
+    LocaleOption(
+      locale: Locale('ar'),
+      name: 'العربية',
+      flag: '\u{1F1F8}\u{1F1E6}',
+    ),
   ];
 
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_prefKey);
-    if (code != null) {
+    if (code != null &&
+        supportedLocales.any((option) => option.locale.languageCode == code)) {
       _locale = Locale(code);
       notifyListeners();
     }

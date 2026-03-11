@@ -8,18 +8,16 @@ import 'package:provider/provider.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/meetup_service.dart';
-import '../../../core/services/map_preferences_service.dart';
+import '../../../core/widgets/styled_tile_layer.dart';
 import '../../../core/utils/custom_marker_generator.dart';
 import '../../../core/utils/route_distance_calculator.dart';
+import '../../../l10n/app_localizations.dart';
 
 class NearbyMeetupsMapScreen extends StatefulWidget {
   /// If true, shows without AppBar (for embedding in other screens)
   final bool embedded;
 
-  const NearbyMeetupsMapScreen({
-    super.key,
-    this.embedded = false,
-  });
+  const NearbyMeetupsMapScreen({super.key, this.embedded = false});
 
   @override
   State<NearbyMeetupsMapScreen> createState() => _NearbyMeetupsMapScreenState();
@@ -37,6 +35,13 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
   bool _filterExpanded = false;
   List<MeetupModel> _allMeetups = [];
   double _currentZoom = 12;
+
+  // Warm-vintage palette: dark walnut overlays + terracotta accent
+  static const Color _mapOverlayDark = Color(0xCC160C06);
+  static const Color _mapOverlayDarkSoft = Color(0xB31A0E07);
+  static const Color _mapAccentGold = Color(0xFFB84A2A);
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -150,8 +155,12 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     for (final marker in markers) {
       minLat = marker.point.latitude < minLat ? marker.point.latitude : minLat;
       maxLat = marker.point.latitude > maxLat ? marker.point.latitude : maxLat;
-      minLng = marker.point.longitude < minLng ? marker.point.longitude : minLng;
-      maxLng = marker.point.longitude > maxLng ? marker.point.longitude : maxLng;
+      minLng = marker.point.longitude < minLng
+          ? marker.point.longitude
+          : minLng;
+      maxLng = marker.point.longitude > maxLng
+          ? marker.point.longitude
+          : maxLng;
     }
 
     // Add padding to bounds
@@ -163,10 +172,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
 
     // Fit map to show all markers in cluster
     _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(50),
-      ),
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
     );
   }
 
@@ -212,7 +218,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     if (sportTypes.length == 1) {
       clusterColor = CustomMarkerGenerator.getSportColor(sportTypes.first);
     } else {
-      clusterColor = const Color(0xFF13EC5B); // Sporsal primary green
+      clusterColor = _mapAccentGold;
     }
 
     return GestureDetector(
@@ -249,9 +255,9 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'etkinlik',
-                style: TextStyle(
+              Text(
+                l10n.eventCount.trim(),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 9,
                   fontWeight: FontWeight.w500,
@@ -265,9 +271,11 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
   }
 
   String _formatDate(DateTime date, {DateTime? endDate}) {
-    final startTime = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final startTime =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     if (endDate != null) {
-      final endTime = '${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}';
+      final endTime =
+          '${endDate.hour.toString().padLeft(2, '0')}:${endDate.minute.toString().padLeft(2, '0')}';
       return '${date.day}/${date.month} $startTime - $endTime';
     }
     return '${date.day}/${date.month} $startTime';
@@ -292,10 +300,10 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: _mapOverlayDark,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: _mapAccentGold.withValues(alpha: 0.25),
                 ),
               ),
               child: Row(
@@ -304,21 +312,22 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      color: _mapAccentGold.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.explore_rounded,
                       size: 18,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: _mapAccentGold,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
-                    'Yakındaki Buluşmalar',
-                    style: TextStyle(
+                  Text(
+                    l10n.nearbyMeetups,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -335,7 +344,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Material(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: _mapOverlayDark,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     onTap: _goToUserLocation,
@@ -345,12 +354,12 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: _mapAccentGold.withValues(alpha: 0.25),
                         ),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.my_location_rounded,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: _mapAccentGold,
                         size: 22,
                       ),
                     ),
@@ -361,7 +370,10 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
           ),
         ],
       ),
-      body: _buildMapContent(context, topPadding: MediaQuery.of(context).padding.top + 70),
+      body: _buildMapContent(
+        context,
+        topPadding: MediaQuery.of(context).padding.top + 70,
+      ),
     );
   }
 
@@ -369,8 +381,6 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-
-    final mapPrefs = context.watch<MapPreferencesService>();
 
     return Stack(
       children: [
@@ -387,20 +397,18 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
             return FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: _userLocation ?? const LatLng(
-                  LocationService.defaultLatitude,
-                  LocationService.defaultLongitude,
-                ),
+                initialCenter:
+                    _userLocation ??
+                    const LatLng(
+                      LocationService.defaultLatitude,
+                      LocationService.defaultLongitude,
+                    ),
                 initialZoom: 12,
                 onPositionChanged: _onPositionChanged,
                 onTap: _onMapTap,
               ),
               children: [
-                TileLayer(
-                  urlTemplate: mapPrefs.currentTileUrl,
-                  subdomains: mapPrefs.currentSubdomains,
-                  userAgentPackageName: 'com.sporsal.app',
-                ),
+                const StyledTileLayer(),
                 MarkerClusterLayerWidget(
                   options: MarkerClusterLayerOptions(
                     maxClusterRadius: 80,
@@ -420,24 +428,26 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                     },
                   ),
                 ),
-                // Seçili etkinliğin rota çizgisi
-                if (_selectedMeetup != null && _selectedMeetup!.hasRoute && _selectedMeetup!.routeData!.hasGeometry)
+                // Route polyline for the selected meetup.
+                if (_selectedMeetup != null &&
+                    _selectedMeetup!.hasRoute &&
+                    _selectedMeetup!.routeData!.hasGeometry)
                   PolylineLayer(
                     polylines: [
                       Polyline(
                         points: _selectedMeetup!.routeData!.routeGeometry
                             .map((pair) => LatLng(pair[0], pair[1]))
                             .toList(),
-                        color: CustomMarkerGenerator.getSportColor(_selectedMeetup!.type),
+                        color: CustomMarkerGenerator.getSportColor(
+                          _selectedMeetup!.type,
+                        ),
                         strokeWidth: 4,
                       ),
                     ],
                   ),
                 // Seçili etkinliğin rota başlangıç/bitiş marker'ları
                 if (_selectedMeetup != null && _selectedMeetup!.hasRoute)
-                  MarkerLayer(
-                    markers: _buildRouteMarkers(_selectedMeetup!),
-                  ),
+                  MarkerLayer(markers: _buildRouteMarkers(_selectedMeetup!)),
               ],
             );
           },
@@ -460,7 +470,7 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Material(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: _mapOverlayDark,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     onTap: _goToUserLocation,
@@ -470,12 +480,12 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: _mapAccentGold.withValues(alpha: 0.25),
                         ),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.my_location_rounded,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: _mapAccentGold,
                         size: 22,
                       ),
                     ),
@@ -511,12 +521,12 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
             maxHeight: _filterExpanded ? 320 : 48,
           ),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
+            color: _mapOverlayDarkSoft,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: activeFilterCount > 0
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.3),
+                  ? _mapAccentGold.withValues(alpha: 0.55)
+                  : _mapAccentGold.withValues(alpha: 0.25),
               width: 1.5,
             ),
             boxShadow: [
@@ -534,42 +544,48 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => setState(() => _filterExpanded = !_filterExpanded),
+                  onTap: () =>
+                      setState(() => _filterExpanded = !_filterExpanded),
                   borderRadius: BorderRadius.circular(16),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                            color: _mapAccentGold.withValues(alpha: 0.16),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.filter_list_rounded,
                             size: 16,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: _mapAccentGold,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           activeFilterCount > 0
-                              ? 'Filtre ($activeFilterCount)'
-                              : 'Spor Türü',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                              ? '${l10n.filterLabel} ($activeFilterCount)'
+                              : l10n.selectSportType,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                         ),
                         const SizedBox(width: 4),
                         AnimatedRotation(
                           turns: _filterExpanded ? 0.5 : 0,
                           duration: const Duration(milliseconds: 200),
-                          child: Icon(
+                          child: const Icon(
                             Icons.keyboard_arrow_down_rounded,
                             size: 18,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Colors.white70,
                           ),
                         ),
                       ],
@@ -595,25 +611,40 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                                 _buildMarkers(_allMeetups);
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
-                              label: const Text('Temizle'),
+                              label: Text(l10n.clearButton),
                               style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                           ),
                         // Sport type filters
-                        _buildFilterItem(MeetupType.football, 'Futbol'),
-                        _buildFilterItem(MeetupType.basketball, 'Basketbol'),
-                        _buildFilterItem(MeetupType.volleyball, 'Voleybol'),
-                        _buildFilterItem(MeetupType.tennis, 'Tenis'),
-                        _buildFilterItem(MeetupType.running, 'Koşu'),
-                        _buildFilterItem(MeetupType.cycling, 'Bisiklet'),
-                        _buildFilterItem(MeetupType.swimming, 'Yüzme'),
-                        _buildFilterItem(MeetupType.yoga, 'Yoga'),
-                        _buildFilterItem(MeetupType.fitness, 'Fitness'),
-                        _buildFilterItem(MeetupType.other, 'Diğer'),
+                        _buildFilterItem(
+                          MeetupType.football,
+                          l10n.sportFootball,
+                        ),
+                        _buildFilterItem(
+                          MeetupType.basketball,
+                          l10n.sportBasketball,
+                        ),
+                        _buildFilterItem(
+                          MeetupType.volleyball,
+                          l10n.sportVolleyball,
+                        ),
+                        _buildFilterItem(MeetupType.tennis, l10n.sportTennis),
+                        _buildFilterItem(MeetupType.running, l10n.sportRunning),
+                        _buildFilterItem(MeetupType.cycling, l10n.sportCycling),
+                        _buildFilterItem(
+                          MeetupType.swimming,
+                          l10n.sportSwimming,
+                        ),
+                        _buildFilterItem(MeetupType.yoga, l10n.sportYoga),
+                        _buildFilterItem(MeetupType.fitness, l10n.sportFitness),
+                        _buildFilterItem(MeetupType.other, l10n.sportOther),
                       ],
                     ),
                   ),
@@ -650,10 +681,14 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+              color: isSelected
+                  ? color.withValues(alpha: 0.15)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? color.withValues(alpha: 0.4) : Colors.transparent,
+                color: isSelected
+                    ? color.withValues(alpha: 0.4)
+                    : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -674,8 +709,10 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                   child: Text(
                     label,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? color : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: isSelected ? color : Colors.white70,
                     ),
                   ),
                 ),
@@ -698,10 +735,10 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: _mapOverlayDarkSoft,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: _mapAccentGold.withValues(alpha: 0.28),
               width: 1.5,
             ),
             boxShadow: [
@@ -749,25 +786,28 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                           width: 76,
                           height: 76,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  sportColor.withValues(alpha: 0.2),
-                                  sportColor.withValues(alpha: 0.1),
-                                ],
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 76,
+                                height: 76,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      sportColor.withValues(alpha: 0.2),
+                                      sportColor.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                ),
+                                child: Icon(
+                                  CustomMarkerGenerator.getSportIcon(
+                                    meetup.type,
+                                  ),
+                                  color: sportColor,
+                                  size: 32,
+                                ),
                               ),
-                            ),
-                            child: Icon(
-                              CustomMarkerGenerator.getSportIcon(meetup.type),
-                              color: sportColor,
-                              size: 32,
-                            ),
-                          ),
                         ),
                       ),
                     ),
@@ -802,18 +842,21 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  CustomMarkerGenerator.getSportIcon(meetup.type),
+                                  CustomMarkerGenerator.getSportIcon(
+                                    meetup.type,
+                                  ),
                                   size: 14,
                                   color: sportColor,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
                                   meetup.type.displayName,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: sportColor,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.3,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: sportColor,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.3,
+                                      ),
                                 ),
                               ],
                             ),
@@ -821,10 +864,12 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                           const SizedBox(height: 8),
                           Text(
                             meetup.title,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.3,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.3,
+                                  color: Colors.white,
+                                ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -833,7 +878,10 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                             children: [
                               _buildInfoChip(
                                 Icons.schedule_rounded,
-                                _formatDate(meetup.date, endDate: meetup.endDate),
+                                _formatDate(
+                                  meetup.date,
+                                  endDate: meetup.endDate,
+                                ),
                               ),
                               const SizedBox(width: 10),
                               _buildInfoChip(
@@ -844,7 +892,9 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
                                 const SizedBox(width: 10),
                                 _buildInfoChip(
                                   Icons.route_rounded,
-                                  RouteDistanceCalculator.formatDistance(meetup.routeData!.totalDistanceKm),
+                                  RouteDistanceCalculator.formatDistance(
+                                    meetup.routeData!.totalDistanceKm,
+                                  ),
                                 ),
                               ],
                             ],
@@ -882,39 +932,54 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     final sportColor = CustomMarkerGenerator.getSportColor(meetup.type);
 
     // Başlangıç noktası
-    markers.add(Marker(
-      point: LatLng(route.startPoint.latitude, route.startPoint.longitude),
-      width: 32, height: 32,
-      child: Icon(Icons.trip_origin, color: sportColor, size: 28),
-    ));
+    markers.add(
+      Marker(
+        point: LatLng(route.startPoint.latitude, route.startPoint.longitude),
+        width: 32,
+        height: 32,
+        child: Icon(Icons.trip_origin, color: sportColor, size: 28),
+      ),
+    );
 
     // Ara noktalar
     for (int i = 0; i < route.waypoints.length; i++) {
       final wp = route.waypoints[i];
-      markers.add(Marker(
-        point: LatLng(wp.latitude, wp.longitude),
-        width: 22, height: 22,
-        child: Container(
-          decoration: BoxDecoration(
-            color: sportColor,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-          ),
-          child: Center(
-            child: Text('${i + 1}',
-              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+      markers.add(
+        Marker(
+          point: LatLng(wp.latitude, wp.longitude),
+          width: 22,
+          height: 22,
+          child: Container(
+            decoration: BoxDecoration(
+              color: sportColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: Center(
+              child: Text(
+                '${i + 1}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ),
-      ));
+      );
     }
 
     // Bitiş noktası
     if (route.endPoint != null) {
-      markers.add(Marker(
-        point: LatLng(route.endPoint!.latitude, route.endPoint!.longitude),
-        width: 32, height: 32,
-        child: Icon(Icons.location_on, color: sportColor, size: 28),
-      ));
+      markers.add(
+        Marker(
+          point: LatLng(route.endPoint!.latitude, route.endPoint!.longitude),
+          width: 32,
+          height: 32,
+          child: Icon(Icons.location_on, color: sportColor, size: 28),
+        ),
+      );
     }
 
     return markers;
@@ -924,16 +989,13 @@ class _NearbyMeetupsMapScreenState extends State<NearbyMeetupsMapScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: Theme.of(context).colorScheme.outline,
-        ),
+        Icon(icon, size: 14, color: Colors.white70),
         const SizedBox(width: 4),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w500,
+            color: Colors.white70,
           ),
         ),
       ],

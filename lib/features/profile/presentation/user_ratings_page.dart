@@ -11,6 +11,7 @@ import 'widgets/rating_filter_bar.dart';
 import 'widgets/rating_card.dart';
 import 'widgets/write_review_button.dart';
 import 'select_meetup_screen.dart';
+import '../../../l10n/app_localizations.dart';
 
 class UserRatingsPage extends StatefulWidget {
   final String profileOwnerId;
@@ -42,6 +43,8 @@ class _UserRatingsPageState extends State<UserRatingsPage>
   bool _isLoading = true;
   String? _errorMessage;
   bool _canWriteReview = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   late TabController _tabController;
   bool _isOwnProfile = false;
@@ -85,7 +88,7 @@ class _UserRatingsPageState extends State<UserRatingsPage>
       await Future.wait(futures);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Puanlar yüklenemedi. Lütfen tekrar deneyin.';
+        _errorMessage = l10n.ratingsFailed;
       });
     } finally {
       setState(() {
@@ -220,7 +223,7 @@ class _UserRatingsPageState extends State<UserRatingsPage>
 
       final user = UserModel(
         id: userId,
-        username: 'Kullanıcı',
+        username: l10n.userFallback,
         email: '',
         averageRating: 0,
         totalRatings: 0,
@@ -237,14 +240,14 @@ class _UserRatingsPageState extends State<UserRatingsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isOwnProfile ? 'Puanlarım' : 'Değerlendirmeler'),
+        title: Text(_isOwnProfile ? l10n.myRatings : l10n.ratingsTitle),
         elevation: 0,
         bottom: _isOwnProfile
             ? TabBar(
                 controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Aldığım Puanlar'),
-                  Tab(text: 'Verdiğim Puanlar'),
+                tabs: [
+                  Tab(text: l10n.receivedRatingsTab),
+                  Tab(text: l10n.givenRatingsTab),
                 ],
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.textMuted,
@@ -286,14 +289,14 @@ class _UserRatingsPageState extends State<UserRatingsPage>
           ),
           const SizedBox(height: 16),
           Text(
-            _errorMessage ?? 'Bir hata oluştu',
+            _errorMessage ?? l10n.errorOccurred,
             style: Theme.of(context).textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _loadData,
-            child: const Text('Tekrar Dene'),
+            child: Text(l10n.retryButton),
           ),
         ],
       ),
@@ -304,8 +307,8 @@ class _UserRatingsPageState extends State<UserRatingsPage>
     if (_receivedRatings.isEmpty) {
       return _buildEmptyState(
         icon: Icons.star_border,
-        title: 'Henüz puan almadınız',
-        subtitle: 'Etkinliklere katılarak puan almaya başlayın!',
+        title: l10n.noRatingsReceived,
+        subtitle: l10n.startJoiningEvents,
       );
     }
 
@@ -342,8 +345,8 @@ class _UserRatingsPageState extends State<UserRatingsPage>
     if (_givenRatings.isEmpty) {
       return _buildEmptyState(
         icon: Icons.rate_review_outlined,
-        title: 'Henüz puan vermediniz',
-        subtitle: 'Katıldığınız etkinliklerde diğer katılımcıları puanlayabilirsiniz.',
+        title: l10n.noRatingsGiven,
+        subtitle: l10n.givenRatingsSubtitle,
       );
     }
 
@@ -374,8 +377,8 @@ class _UserRatingsPageState extends State<UserRatingsPage>
                       color: AppTheme.textDark,
                     ),
                   ),
-                  const Text(
-                    'Verilen Değerlendirme',
+                  Text(
+                    l10n.givenRatingLabel,
                     style: TextStyle(
                       color: AppTheme.textMuted,
                       fontSize: 14,
@@ -428,12 +431,12 @@ class _UserRatingsPageState extends State<UserRatingsPage>
       future: _getUser(userIdToShow),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Card(
               child: ListTile(
                 leading: CircleAvatar(child: Icon(Icons.person)),
-                title: Text('Yükleniyor...'),
+                title: Text(l10n.loading),
               ),
             ),
           );
@@ -502,3 +505,5 @@ class _UserRatingsPageState extends State<UserRatingsPage>
   }
 
 }
+
+

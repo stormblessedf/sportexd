@@ -7,6 +7,7 @@ import '../../../core/models/chat_update_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/chat_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/chat_card.dart';
 import 'widgets/chat_list_header.dart';
@@ -40,16 +41,16 @@ class _MyChatsScreenState extends State<MyChatsScreen>
   Widget build(BuildContext context) {
     final authService = AuthService();
     final userId = authService.currentUserId;
+    final l10n = AppLocalizations.of(context)!;
 
     if (userId == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppTheme.backgroundLight,
         body: Center(
           child: EmptyStateWidget(
             icon: Icons.login,
-            message: 'Sohbetleri görmek için giriş yapın',
-            subtitle:
-                'Hesabınıza giriş yaparak etkinlik sohbetlerinize ulaşabilirsiniz',
+            message: l10n.loginToViewChats,
+            subtitle: l10n.loginToViewChatsSubtitle,
           ),
         ),
       );
@@ -76,8 +77,11 @@ class _MyChatsScreenState extends State<MyChatsScreen>
                     child: Container(
                       color: AppTheme.backgroundLight.withValues(alpha: 0.9),
                       child: ChatListHeader(
+                        title: l10n.chatListTitle,
+                        subtitle: l10n.chatListSubtitle,
+                        swipeInviteLabel: l10n.swipeInviteTitle,
+                        onSwipeInviteTap: () => context.go('/swipe-invites'),
                         onFilterTap: () {
-                          // TODO: Implement filter functionality
                           _showFilterBottomSheet(context);
                         },
                       ),
@@ -103,10 +107,10 @@ class _MyChatsScreenState extends State<MyChatsScreen>
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
-                    tabs: const [
-                      Tab(text: 'Aktif'),
-                      Tab(text: 'Geçmiş'),
-                      Tab(text: 'DM'),
+                    tabs: [
+                      Tab(text: l10n.activeTab),
+                      Tab(text: l10n.pastTab),
+                      Tab(text: l10n.dmTab),
                     ],
                   ),
                 ),
@@ -140,9 +144,9 @@ class _MyChatsScreenState extends State<MyChatsScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Sohbetleri Filtrele',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.filterChats,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textDark,
@@ -151,7 +155,7 @@ class _MyChatsScreenState extends State<MyChatsScreen>
               const SizedBox(height: 20),
               ListTile(
                 leading: const Icon(Icons.sports_soccer),
-                title: const Text('Spor Türüne Göre'),
+                title: Text(AppLocalizations.of(context)!.bySportType),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.pop(context);
@@ -159,7 +163,7 @@ class _MyChatsScreenState extends State<MyChatsScreen>
               ),
               ListTile(
                 leading: const Icon(Icons.sort),
-                title: const Text('Tarihe Göre Sırala'),
+                title: Text(AppLocalizations.of(context)!.sortByDate),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.pop(context);
@@ -224,7 +228,7 @@ class _ActiveChatsTab extends StatelessWidget {
         if (snapshot.hasError) {
           return EmptyStateWidget(
             icon: Icons.error_outline,
-            message: 'Bir hata oluştu',
+            message: AppLocalizations.of(context)!.errorOccurred,
             subtitle: snapshot.error.toString(),
             iconColor: Colors.red,
           );
@@ -288,7 +292,7 @@ class _PastChatsTab extends StatelessWidget {
         if (snapshot.hasError) {
           return EmptyStateWidget(
             icon: Icons.error_outline,
-            message: 'Bir hata oluştu',
+            message: AppLocalizations.of(context)!.errorOccurred,
             subtitle: snapshot.error.toString(),
             iconColor: Colors.red,
           );
@@ -343,18 +347,18 @@ class _DirectMessagesTab extends StatelessWidget {
         if (snapshot.hasError) {
           return EmptyStateWidget(
             icon: Icons.error_outline,
-            message: 'Bir hata oluştu',
+            message: AppLocalizations.of(context)!.errorOccurred,
             subtitle: snapshot.error.toString(),
             iconColor: Colors.red,
           );
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
+          return Center(
             child: EmptyStateWidget(
               icon: Icons.chat_bubble_outline,
-              message: 'Henüz direkt mesajınız yok',
-              subtitle: 'Spor partnerlerinize mesaj gönderin',
+              message: AppLocalizations.of(context)!.noDmYet,
+              subtitle: AppLocalizations.of(context)!.sendMessageToPartners,
             ),
           );
         }
@@ -368,17 +372,26 @@ class _DirectMessagesTab extends StatelessWidget {
           itemBuilder: (context, index) {
             final chat = dmChats[index];
             final chatId = chat['chatId'] as String;
-            final participantNames = chat['participantNames'] as Map<String, dynamic>? ?? {};
-            final participants = (chat['participants'] as List<dynamic>?)?.cast<String>() ?? [];
-            final otherUserId = participants.firstWhere((id) => id != userId, orElse: () => '');
-            final otherUserName = participantNames[otherUserId] ?? 'Kullanıcı';
+            final participantNames =
+                chat['participantNames'] as Map<String, dynamic>? ?? {};
+            final participants =
+                (chat['participants'] as List<dynamic>?)?.cast<String>() ?? [];
+            final otherUserId = participants.firstWhere(
+              (id) => id != userId,
+              orElse: () => '',
+            );
+            final otherUserName =
+                participantNames[otherUserId] ??
+                AppLocalizations.of(context)!.userFallback;
             final lastMessage = chat['lastMessage'] as String?;
 
             return ListTile(
               leading: CircleAvatar(
                 backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
                 child: Text(
-                  otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : '?',
+                  otherUserName.isNotEmpty
+                      ? otherUserName[0].toUpperCase()
+                      : '?',
                   style: const TextStyle(
                     color: AppTheme.primary,
                     fontWeight: FontWeight.bold,
@@ -402,15 +415,18 @@ class _DirectMessagesTab extends StatelessWidget {
                         fontSize: 13,
                       ),
                     )
-                  : const Text(
-                      'Henüz mesaj yok',
-                      style: TextStyle(
+                  : Text(
+                      AppLocalizations.of(context)!.noMessagesYet,
+                      style: const TextStyle(
                         color: AppTheme.textMuted,
                         fontSize: 13,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-              trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppTheme.textMuted,
+              ),
               onTap: () {
                 chatService.clearUnreadCount(chatId, userId);
                 context.push(

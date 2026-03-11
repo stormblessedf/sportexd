@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum BadgeType { organizer, participant, achievement, milestone }
 
 class Badge {
@@ -40,7 +42,14 @@ class Badge {
 }
 
 enum Level { beginner, intermediate, advanced }
-enum PreferredTime { weekdayMorning, weekdayEvening, weekendMorning, weekendEvening }
+
+enum PreferredTime {
+  weekdayMorning,
+  weekdayEvening,
+  weekendMorning,
+  weekendEvening,
+}
+
 enum PlayStyle { competitive, casual }
 
 class Certificate {
@@ -81,7 +90,7 @@ class Certificate {
   }
 }
 
-// Spor dalları enum
+// Spor dallarÄ± enum
 enum SportType {
   football,
   basketball,
@@ -110,9 +119,9 @@ extension SportTypeExtension on SportType {
       case SportType.tennis:
         return 'Tenis';
       case SportType.swimming:
-        return 'Yüzme';
+        return 'Y\u00FCzme';
       case SportType.running:
-        return 'Koşu';
+        return 'Ko\u015Fu';
       case SportType.cycling:
         return 'Bisiklet';
       case SportType.yoga:
@@ -126,7 +135,7 @@ extension SportTypeExtension on SportType {
       case SportType.badminton:
         return 'Badminton';
       case SportType.other:
-        return 'Diğer';
+        return 'Di\u011Fer';
     }
   }
 }
@@ -135,31 +144,31 @@ extension SportTypeEmojiExtension on SportType {
   String get emoji {
     switch (this) {
       case SportType.football:
-        return '⚽';
+        return '\u{26BD}';
       case SportType.basketball:
-        return '🏀';
+        return '\u{1F3C0}';
       case SportType.volleyball:
-        return '🏐';
+        return '\u{1F3D0}';
       case SportType.tennis:
-        return '🎾';
+        return '\u{1F3BE}';
       case SportType.swimming:
-        return '🏊';
+        return '\u{1F3CA}';
       case SportType.running:
-        return '🏃';
+        return '\u{1F3C3}';
       case SportType.cycling:
-        return '🚴';
+        return '\u{1F6B4}';
       case SportType.yoga:
-        return '🧘';
+        return '\u{1F9D8}';
       case SportType.fitness:
-        return '💪';
+        return '\u{1F4AA}';
       case SportType.boxing:
-        return '🥊';
+        return '\u{1F94A}';
       case SportType.tableTennis:
-        return '🏓';
+        return '\u{1F3D3}';
       case SportType.badminton:
-        return '🏸';
+        return '\u{1F3F8}';
       case SportType.other:
-        return '🏅';
+        return '\u{1F3C5}';
     }
   }
 
@@ -186,6 +195,8 @@ class UserModel {
   final List<PreferredTime>? preferredTimes;
   final PlayStyle? playStyle;
   final String? teamPreference;
+  final bool isPremium;
+  final DateTime? premiumUntil;
 
   // New fields for reliability, rating and online status
   final double reliabilityScore;
@@ -216,6 +227,8 @@ class UserModel {
     this.preferredTimes,
     this.playStyle,
     this.teamPreference,
+    this.isPremium = false,
+    this.premiumUntil,
     this.reliabilityScore = 100.0,
     this.totalMeetupsJoined = 0,
     this.totalMeetupsRegistered = 0,
@@ -246,6 +259,10 @@ class UserModel {
       'preferredTimes': preferredTimes?.map((e) => e.name).toList(),
       'playStyle': playStyle?.name,
       'teamPreference': teamPreference,
+      'isPremium': isPremium,
+      'premiumUntil': premiumUntil != null
+          ? Timestamp.fromDate(premiumUntil!)
+          : null,
       'reliabilityScore': reliabilityScore,
       'totalMeetupsJoined': totalMeetupsJoined,
       'totalMeetupsRegistered': totalMeetupsRegistered,
@@ -257,17 +274,31 @@ class UserModel {
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value);
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      return null;
+    }
+
     return UserModel(
       id: json['id'] ?? '',
       username: json['username'] ?? '',
       email: json['email'] ?? '',
-      profileImageUrl: json['profileImageUrl'],
+      profileImageUrl:
+          (json['profileImageUrl'] ?? json['imageUrl'] ?? json['photoUrl'])
+              as String?,
       bio: json['bio'],
-      certificates: (json['certificates'] as List<dynamic>?)
+      certificates:
+          (json['certificates'] as List<dynamic>?)
               ?.map((e) => Certificate.fromJson(e))
               .toList() ??
           [],
-      badges: (json['badges'] as List<dynamic>?)
+      badges:
+          (json['badges'] as List<dynamic>?)
               ?.map((e) => Badge.fromJson(e))
               .toList() ??
           [],
@@ -275,54 +306,57 @@ class UserModel {
       partners: (json['partners'] as List<dynamic>?)?.cast<String>() ?? [],
       location: json['location'],
       gender: json['gender'],
-      birthDate: json['birthDate'] != null
-          ? DateTime.parse(json['birthDate'])
-          : null,
+      birthDate: parseDate(json['birthDate']),
       height: json['height'],
       weight: json['weight'],
       interestedSports: (json['interestedSports'] as List<dynamic>?)
-          ?.map((e) => SportType.values.firstWhere(
-                (element) => element.name == e,
-                orElse: () => SportType.other,
-              ))
+          ?.map(
+            (e) => SportType.values.firstWhere(
+              (element) => element.name == e,
+              orElse: () => SportType.other,
+            ),
+          )
           .toList(),
       level: Level.values.firstWhere(
         (e) => e.name == json['level'],
         orElse: () => Level.beginner,
       ),
-      preferredTimes: (json['preferredTimes'] as List<dynamic>?)
-          ?.map((e) => PreferredTime.values.firstWhere(
-                (element) => element.name == e,
-                orElse: () => PreferredTime.weekdayMorning,
-              ))
-          .toList() ??
+      preferredTimes:
+          (json['preferredTimes'] as List<dynamic>?)
+              ?.map(
+                (e) => PreferredTime.values.firstWhere(
+                  (element) => element.name == e,
+                  orElse: () => PreferredTime.weekdayMorning,
+                ),
+              )
+              .toList() ??
           [],
       playStyle: PlayStyle.values.firstWhere(
         (e) => e.name == json['playStyle'],
         orElse: () => PlayStyle.casual,
       ),
       teamPreference: json['teamPreference'],
+      isPremium: json['isPremium'] ?? false,
+      premiumUntil: parseDate(json['premiumUntil']),
       reliabilityScore: (json['reliabilityScore'] ?? 100.0).toDouble(),
       totalMeetupsJoined: json['totalMeetupsJoined'] ?? 0,
       totalMeetupsRegistered: json['totalMeetupsRegistered'] ?? 0,
       averageRating: (json['averageRating'] ?? 0.0).toDouble(),
       totalRatings: json['totalRatings'] ?? 0,
-      lastSeen: json['lastSeen'] != null
-          ? DateTime.parse(json['lastSeen'])
-          : null,
+      lastSeen: parseDate(json['lastSeen']),
       isOnline: json['isOnline'] ?? false,
     );
   }
-
   // Factory to create a mock user for UI testing
   factory UserModel.mock() {
     return UserModel(
       id: 'mock_1',
       username: 'Kaan Sportif',
       email: 'kaan@sporsal.com',
-      bio: 'Futbol ve CrossFit tutkunu. Haftada 3 gün antrenman! 🏃🎾',
+      bio:
+          'Futbol ve CrossFit tutkunu. Haftada 3 gÃ¼n antrenman! \u{1F3C3}\u{1F3BE}',
       partnersCount: 12,
-      location: 'İstanbul, Türkiye',
+      location: 'Ä°stanbul, TÃ¼rkiye',
       birthDate: DateTime(1998, 5, 15),
       reliabilityScore: 98.0,
       totalMeetupsJoined: 13,
@@ -334,15 +368,15 @@ class UserModel {
       badges: [
         const Badge(
           id: 'b1',
-          name: 'Maç Organizatörü',
-          description: '10 maç organize etti',
+          name: 'MaÃ§ OrganizatÃ¶rÃ¼',
+          description: '10 maÃ§ organize etti',
           iconPath: 'assets/badges/organizer_gold.png',
           type: BadgeType.organizer,
         ),
         const Badge(
           id: 'b2',
-          name: 'Sadık Oyuncu',
-          description: 'Son 5 maça eksiksiz katıldı',
+          name: 'SadÄ±k Oyuncu',
+          description: 'Son 5 maÃ§a eksiksiz katÄ±ldÄ±',
           iconPath: 'assets/badges/player_silver.png',
           type: BadgeType.participant,
         ),

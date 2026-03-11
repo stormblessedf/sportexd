@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class WriteReviewButton extends StatelessWidget {
   final bool isEnabled;
@@ -12,17 +13,19 @@ class WriteReviewButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Tooltip(
       message: isEnabled
-          ? 'Değerlendirme yap'
-          : 'Birlikte etkinlik yapmanız gerekiyor',
+          ? l10n.writeReviewTooltip
+          : l10n.needSharedEvent,
       child: FloatingActionButton.extended(
         onPressed: isEnabled ? onPressed : null,
         backgroundColor: isEnabled
             ? Theme.of(context).primaryColor
             : Colors.grey[400],
         icon: const Icon(Icons.rate_review),
-        label: const Text('Değerlendirme Yaz'),
+        label: Text(l10n.writeReviewButton),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sporsal/core/models/location_data.dart';
 import 'package:sporsal/core/models/place_autocomplete_result.dart';
+import 'package:sporsal/l10n/app_localizations.dart';
 import 'package:sporsal/theme/app_colors.dart';
 
 /// Signature for autocomplete fetching — allows test injection without
@@ -138,6 +139,7 @@ class _RegionSelectorState extends State<RegionSelector> {
   }
 
   Future<void> _useCurrentLocation() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoadingLocation = true;
       _permissionDeniedMessage = null;
@@ -150,17 +152,16 @@ class _RegionSelectorState extends State<RegionSelector> {
 
     if (location == null) {
       setState(() {
-        _permissionDeniedMessage =
-            'Konum izni reddedildi. Lütfen manuel olarak konum girin.';
+        _permissionDeniedMessage = l10n.locationPermissionDenied;
       });
       _focusNode.requestFocus();
       return;
     }
 
-    _searchController.text = location.address ?? 'Mevcut Konum';
+    _searchController.text = location.address ?? l10n.currentLocation;
     _regionSelected = true;
     _suggestions = [];
-    widget.onRegionNameChanged?.call(location.address ?? 'Mevcut Konum');
+    widget.onRegionNameChanged?.call(location.address ?? l10n.currentLocation);
     widget.onRegionSelected(location);
   }
 
@@ -201,6 +202,7 @@ class _RegionSelectorState extends State<RegionSelector> {
   }
 
   Widget _buildCurrentLocationButton() {
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
       height: 48,
       child: OutlinedButton.icon(
@@ -216,7 +218,7 @@ class _RegionSelectorState extends State<RegionSelector> {
               )
             : const Icon(Icons.my_location, size: 20),
         label: Text(
-          _isLoadingLocation ? 'Konum alınıyor...' : 'Mevcut Konumumu Kullan',
+          _isLoadingLocation ? l10n.gettingLocation : l10n.useCurrentLocation,
           style: GoogleFonts.lexend(
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -234,13 +236,14 @@ class _RegionSelectorState extends State<RegionSelector> {
   }
 
   Widget _buildSearchField() {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: _searchController,
       focusNode: _focusNode,
       onChanged: _onSearchChanged,
       style: GoogleFonts.lexend(fontSize: 14, color: AppColors.textDark),
       decoration: InputDecoration(
-        hintText: 'Konum ara...',
+        hintText: l10n.searchLocation,
         hintStyle: GoogleFonts.lexend(
           fontSize: 14,
           color: AppColors.textLight,

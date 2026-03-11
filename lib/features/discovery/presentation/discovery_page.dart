@@ -11,6 +11,7 @@ import '../../home/presentation/widgets/meetup_card.dart';
 import '../../meetups/presentation/nearby_meetups_map_screen.dart';
 import '../../notifications/presentation/widgets/notification_bell.dart';
 import '../../live_event/presentation/live_feed_page.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum _FeedMode { discovery, live }
 
@@ -27,6 +28,8 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
   final ScrollController _scrollController = ScrollController();
   _FeedMode _feedMode = _FeedMode.discovery;
   bool _headerVisible = true;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -126,15 +129,23 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Consumer<DiscoveryController>(
-                            builder: (context, controller, _) => QuickFilterChips(
-                              filterState: controller.filterState,
-                              hasLocationPermission: controller.hasLocationPermission,
-                              onTodayTap: () => controller.setDateRange(DateRangeFilter.today),
-                              onThisWeekTap: () => controller.setDateRange(DateRangeFilter.thisWeek),
-                              onNearMeTap: () => controller.filterNearMe(),
-                              onSportTypeTap: (type) => controller.toggleSportType(type),
-                              onClearFilters: () => controller.clearFilters(),
-                            ),
+                            builder: (context, controller, _) =>
+                                QuickFilterChips(
+                                  filterState: controller.filterState,
+                                  hasLocationPermission:
+                                      controller.hasLocationPermission,
+                                  onTodayTap: () => controller.setDateRange(
+                                    DateRangeFilter.today,
+                                  ),
+                                  onThisWeekTap: () => controller.setDateRange(
+                                    DateRangeFilter.thisWeek,
+                                  ),
+                                  onNearMeTap: () => controller.filterNearMe(),
+                                  onSportTypeTap: (type) =>
+                                      controller.toggleSportType(type),
+                                  onClearFilters: () =>
+                                      controller.clearFilters(),
+                                ),
                           ),
                         ),
                       ],
@@ -163,7 +174,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                             }
 
                             if (controller.viewMode == ViewMode.map) {
-                              return const NearbyMeetupsMapScreen(embedded: true);
+                              return const NearbyMeetupsMapScreen(
+                                embedded: true,
+                              );
                             }
 
                             return _buildListView(controller);
@@ -190,9 +203,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
               Text(
                 _feedMode == _FeedMode.live ? 'Canlı' : 'Keşfet',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textDark,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -200,9 +213,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                     ? 'Aktif etkinliklerden canlı paylaşımlar'
                     : 'Yakınındaki aktiviteleri bul',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -238,7 +251,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
 
               // Filter button with badge
               Consumer<DiscoveryController>(
@@ -253,7 +266,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                         border: Border.all(color: AppTheme.borderLight),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha:0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 8,
                           ),
                         ],
@@ -308,7 +321,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppTheme.primary.withValues(alpha:0.15) : Colors.transparent,
+          color: isActive
+              ? AppTheme.primary.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.horizontal(
             left: isLeft ? const Radius.circular(11) : Radius.zero,
             right: isLeft ? Radius.zero : const Radius.circular(11),
@@ -330,7 +345,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         controller: _searchController,
         onChanged: (value) => _controller.search(value),
         decoration: InputDecoration(
-          hintText: 'Etkinlik, konum veya spor ara...',
+          hintText: l10n.searchEventLocationSportHint,
           hintStyle: const TextStyle(color: AppTheme.textLight),
           prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
           suffixIcon: _searchController.text.isNotEmpty
@@ -390,7 +405,9 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             height: 100,
             decoration: BoxDecoration(
               color: Colors.grey[200],
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(15),
+              ),
             ),
           ),
           Padding(
@@ -481,18 +498,14 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'Bir hata oluştu',
+              l10n.errorOccurred,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -504,7 +517,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             ElevatedButton.icon(
               onPressed: () => _controller.refresh(),
               icon: const Icon(Icons.refresh),
-              label: const Text('Tekrar Dene'),
+              label: Text(l10n.retryButton),
             ),
           ],
         ),
@@ -529,19 +542,16 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                   Text(
                     controller.filterState.hasActiveFilters ||
                             controller.filterState.searchQuery.isNotEmpty
-                        ? 'Sonuçlar'
-                        : 'Tüm Etkinlikler',
+                        ? l10n.results
+                        : l10n.allEvents,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textDark,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
                   ),
                   Text(
-                    '${controller.meetups.length} etkinlik',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    '${controller.meetups.length}${l10n.eventCount}',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -550,9 +560,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
 
           // Empty state
           if (controller.meetups.isEmpty)
-            SliverFillRemaining(
-              child: _buildEmptyState(controller),
-            )
+            SliverFillRemaining(child: _buildEmptyState(controller))
           else
             // Meetup list
             SliverPadding(
@@ -570,7 +578,8 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                       child: _buildMeetupCard(meetupWithDistance),
                     );
                   },
-                  childCount: controller.meetups.length +
+                  childCount:
+                      controller.meetups.length +
                       (controller.isLoadingMore ? 1 : 0),
                 ),
               ),
@@ -594,7 +603,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
                 padding: const EdgeInsets.all(16),
                 child: Center(
                   child: Text(
-                    'Tüm etkinlikleri gördün',
+                    l10n.seenAllEvents,
                     style: TextStyle(color: Colors.grey[500]),
                   ),
                 ),
@@ -663,18 +672,18 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
             const SizedBox(height: 16),
             Text(
               controller.filterState.hasActiveFilters
-                  ? 'Sonuç bulunamadı'
-                  : 'Henüz etkinlik yok',
+                  ? l10n.noResults
+                  : l10n.noEventsYet,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               controller.filterState.hasActiveFilters
-                  ? 'Filtreleri değiştirmeyi deneyin'
-                  : 'İlk etkinliği sen oluştur!',
+                  ? l10n.tryDifferentFilters
+                  : l10n.createFirstEvent,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -683,7 +692,7 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
               OutlinedButton.icon(
                 onPressed: () => controller.clearFilters(),
                 icon: const Icon(Icons.clear),
-                label: const Text('Filtreleri Temizle'),
+                label: Text(l10n.clearFilters),
               ),
             ],
           ],
@@ -692,7 +701,6 @@ class _DiscoveryPageState extends State<DiscoveryPage> {
     );
   }
 }
-
 
 /// Yanıp sönen yeşil nokta - canlı içerik olduğunu belirtir.
 class _LivePulsingDot extends StatefulWidget {
@@ -715,9 +723,10 @@ class _LivePulsingDotState extends State<_LivePulsingDot>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -740,7 +749,9 @@ class _LivePulsingDotState extends State<_LivePulsingDot>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF22C55E).withValues(alpha: _animation.value * 0.5),
+                color: const Color(
+                  0xFF22C55E,
+                ).withValues(alpha: _animation.value * 0.5),
                 blurRadius: 4,
                 spreadRadius: 1,
               ),

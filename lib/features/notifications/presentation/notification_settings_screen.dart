@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/notification_preferences.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -14,6 +15,8 @@ class NotificationSettingsScreen extends StatefulWidget {
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
   NotificationPreferences _preferences = NotificationPreferences();
   bool _isLoading = true;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -57,7 +60,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   String _formatTime(TimeOfDay? time) {
-    if (time == null) return 'Ayarla';
+    if (time == null) return l10n.setLabel;
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
@@ -72,7 +75,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('Bildirim Ayarları'),
+        title: Text(l10n.notificationSettings),
         backgroundColor: AppTheme.backgroundLight,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -80,12 +83,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       body: ListView(
         children: [
           // Mute All
-          _buildSectionHeader('Genel'),
+          _buildSectionHeader(l10n.generalSection),
           _buildSwitchTile(
             icon: Icons.notifications_off,
             iconColor: Colors.red,
-            title: 'Tüm Bildirimleri Kapat',
-            subtitle: 'Tüm bildirimler geçici olarak devre dışı bırakılır',
+            title: l10n.muteAllNotifications,
+            subtitle: l10n.muteAllNotificationsSubtitle,
             value: _preferences.muteAll,
             onChanged: (value) {
               _updatePreferences(_preferences.copyWith(muteAll: value));
@@ -94,12 +97,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           const Divider(height: 1),
 
           // Notification Types
-          _buildSectionHeader('Bildirim Türleri'),
+          _buildSectionHeader(l10n.notificationTypes),
           _buildSwitchTile(
             icon: Icons.access_time,
             iconColor: Colors.blue,
-            title: 'Etkinlik Hatırlatmaları',
-            subtitle: 'Etkinlik başlamadan 1 saat önce hatırlat',
+            title: l10n.meetupReminders,
+            subtitle: l10n.meetupRemindersSubtitle,
             value: _preferences.meetupReminders,
             onChanged: _preferences.muteAll
                 ? null
@@ -110,8 +113,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           _buildSwitchTile(
             icon: Icons.update,
             iconColor: Colors.orange,
-            title: 'Etkinlik Güncellemeleri',
-            subtitle: 'Etkinlik detayları değiştiğinde bildir',
+            title: l10n.meetupUpdates,
+            subtitle: l10n.meetupUpdatesSubtitle,
             value: _preferences.meetupUpdates,
             onChanged: _preferences.muteAll
                 ? null
@@ -122,8 +125,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           _buildSwitchTile(
             icon: Icons.chat_bubble,
             iconColor: Colors.purple,
-            title: 'Sohbet Mesajları',
-            subtitle: 'Yeni mesajlar geldiğinde bildir',
+            title: l10n.chatMessages,
+            subtitle: l10n.chatMessagesSubtitle,
             value: _preferences.chatMessages,
             onChanged: _preferences.muteAll
                 ? null
@@ -134,8 +137,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           _buildSwitchTile(
             icon: Icons.person_add,
             iconColor: AppTheme.primary,
-            title: 'Yeni Katılımcılar',
-            subtitle: 'Etkinliğinize biri katıldığında bildir',
+            title: l10n.newParticipants,
+            subtitle: l10n.newParticipantsSubtitle,
             value: _preferences.newParticipants,
             onChanged: _preferences.muteAll
                 ? null
@@ -146,8 +149,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           _buildSwitchTile(
             icon: Icons.info,
             iconColor: Colors.grey,
-            title: 'Sistem Bildirimleri',
-            subtitle: 'Uygulama güncellemeleri ve duyurular',
+            title: l10n.systemNotifications,
+            subtitle: l10n.systemNotificationsSubtitle,
             value: _preferences.systemNotifications,
             onChanged: _preferences.muteAll
                 ? null
@@ -158,11 +161,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           const Divider(height: 1),
 
           // Quiet Hours
-          _buildSectionHeader('Sessiz Saatler'),
+          _buildSectionHeader(l10n.quietHours),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
-              'Bu saatler arasında bildirim almayacaksınız',
+              l10n.quietHoursSubtitle,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey[600],
@@ -171,13 +174,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           ),
           _buildTimeTile(
             icon: Icons.bedtime,
-            title: 'Başlangıç',
+            title: l10n.startLabel,
             time: _preferences.quietHoursStart,
             onTap: _pickQuietHoursStart,
           ),
           _buildTimeTile(
             icon: Icons.wb_sunny,
-            title: 'Bitiş',
+            title: l10n.endLabel,
             time: _preferences.quietHoursEnd,
             onTap: _pickQuietHoursEnd,
           ),
@@ -191,7 +194,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     quietHoursEnd: null,
                   ));
                 },
-                child: const Text('Sessiz Saatleri Kaldır'),
+                child: Text(l10n.clearQuietHours),
               ),
             ),
           const SizedBox(height: 32),
@@ -289,3 +292,4 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 }
+

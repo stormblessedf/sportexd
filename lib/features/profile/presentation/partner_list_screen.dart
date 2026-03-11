@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/partnership_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum _SortOption { recent, mostMeetups, alphabetical }
 
@@ -27,6 +28,8 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
   _SortOption _currentSort = _SortOption.recent;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -67,7 +70,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Partnerler yüklenirken hata oluştu: $e')),
+          SnackBar(content: Text(l10n.partnersLoadError(e.toString()))),
         );
       }
     }
@@ -105,7 +108,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('Spor Partnerleri'),
+        title: Text(l10n.sportPartnersTitle),
         backgroundColor: AppTheme.backgroundLight,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -137,8 +140,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
             color: AppTheme.textMuted.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Henüz spor partnerin yok',
+          Text(l10n.noSportPartners,
             style: TextStyle(
               color: AppTheme.textMuted,
               fontSize: 16,
@@ -146,9 +148,9 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Etkinliklere katılarak yeni partnerler edinebilirsin',
-            style: TextStyle(
+          Text(
+            l10n.findPartnersByJoiningEvents,
+            style: const TextStyle(
               color: AppTheme.textLight,
               fontSize: 14,
             ),
@@ -171,7 +173,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v),
         decoration: InputDecoration(
-          hintText: 'İsim ara...',
+          hintText: l10n.searchByName,
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
@@ -203,7 +205,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
       child: Row(
         children: [
           Text(
-            '${_partners.length} partner',
+            l10n.partnerCount(_partners.length),
             style: const TextStyle(
               color: AppTheme.textMuted,
               fontSize: 14,
@@ -211,11 +213,11 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
             ),
           ),
           const Spacer(),
-          _buildSortChip('Son', _SortOption.recent),
+          _buildSortChip(l10n.sortNewest, _SortOption.recent),
           const SizedBox(width: 8),
-          _buildSortChip('En çok meetup', _SortOption.mostMeetups),
+          _buildSortChip(l10n.mostMeetups, _SortOption.mostMeetups),
           const SizedBox(width: 8),
-          _buildSortChip('Alfabetik', _SortOption.alphabetical),
+          _buildSortChip(l10n.sortNameAZ, _SortOption.alphabetical),
         ],
       ),
     );
@@ -384,7 +386,7 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$sharedMeetupCount ortak etkinlik',
+                        l10n.sharedMeetupCount(sharedMeetupCount),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -408,3 +410,4 @@ class _PartnerListScreenState extends State<PartnerListScreen> {
     );
   }
 }
+

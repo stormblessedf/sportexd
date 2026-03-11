@@ -3,6 +3,7 @@ import '../../../../core/models/meetup_model.dart';
 import '../../../../core/models/position_slot.dart';
 import '../../../../core/services/meetup_service.dart';
 import 'package:provider/provider.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Bottom sheet for selecting a position when joining a football meetup.
 /// Uses a side-by-side two-column layout matching the detail screen's
@@ -54,6 +55,8 @@ class _PositionSelectionModalState extends State<PositionSelectionModal> {
   String? _selectedTeam;
   int? _selectedSlotIndex;
   bool _isLoading = false;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   void _selectSlot(String team, int index) {
     setState(() {
@@ -133,7 +136,7 @@ class _PositionSelectionModalState extends State<PositionSelectionModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pozisyon Seç',
+                        l10n.selectPositionTitle,
                         style:
                             Theme.of(context).textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -170,7 +173,7 @@ class _PositionSelectionModalState extends State<PositionSelectionModal> {
     final teamBSlots = widget.meetup.teamBSlots ?? const <PositionSlot>[];
 
     if (teamASlots.isEmpty && teamBSlots.isEmpty) {
-      return const Center(child: Text('Pozisyon bilgisi yok'));
+      return Center(child: Text(l10n.noPositionInfo));
     }
 
     return Container(
@@ -222,11 +225,11 @@ class _PositionSelectionModalState extends State<PositionSelectionModal> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildTeamColumn('Takım A', teamASlots, 'A'),
+                child: _buildTeamColumn(l10n.teamA, teamASlots, 'A'),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTeamColumn('Takım B', teamBSlots, 'B'),
+                child: _buildTeamColumn(l10n.teamB, teamBSlots, 'B'),
               ),
             ],
           ),
@@ -575,3 +578,5 @@ class _DashedBorderPainter extends CustomPainter {
       dashWidth != oldDelegate.dashWidth ||
       dashSpace != oldDelegate.dashSpace;
 }
+
+

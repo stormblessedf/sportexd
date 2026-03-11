@@ -11,6 +11,7 @@ import '../../../core/services/meetup_service.dart';
 import '../../../core/services/badge_award_service.dart';
 import '../../../core/services/proximity_attendance_service.dart';
 import '../../../features/profile/presentation/models/trophy_definition.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/profile_header_row.dart';
 import 'widgets/name_section.dart';
@@ -84,8 +85,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (currentUserId != null) {
         // Process cutoffs for expired meetups
         try {
-          await ProximityAttendanceService()
-              .processCutoffForActiveMeetups(currentUserId);
+          await ProximityAttendanceService().processCutoffForActiveMeetups(
+            currentUserId,
+          );
         } catch (e) {
           debugPrint('Error processing cutoffs: $e');
         }
@@ -101,7 +103,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         }
 
         // Fire-and-forget badge evaluation
-        _badgeAwardService.evaluateAndAwardBadges(currentUserId).catchError((e) {
+        _badgeAwardService.evaluateAndAwardBadges(currentUserId).catchError((
+          e,
+        ) {
           debugPrint('Badge evaluation failed: $e');
           return <Badge>[];
         });
@@ -110,9 +114,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           _isLoading = false;
-          _error = 'Profil yüklenemedi: $e';
+          _error = l10n.profileLoadFailed(e.toString());
         });
       }
     }
@@ -124,8 +129,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       _error = null;
     });
     try {
-      final doc =
-          await _authService.firestore.collection('users').doc(userId).get();
+      final doc = await _authService.firestore
+          .collection('users')
+          .doc(userId)
+          .get();
       if (doc.exists && mounted) {
         setState(() {
           _user = UserModel.fromJson(doc.data() as Map<String, dynamic>);
@@ -133,16 +140,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
         _loadMeetupData(userId);
       } else if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           _isLoading = false;
-          _error = 'Kullanıcı bulunamadı';
+          _error = l10n.userNotFound;
         });
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           _isLoading = false;
-          _error = 'Profil yüklenemedi: $e';
+          _error = l10n.profileLoadFailed(e.toString());
         });
       }
     }
@@ -164,8 +173,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           .get();
       if (mounted) {
         setState(() {
-          _allMeetups =
-              snapshot.docs.map((d) => MeetupModel.fromJson(d.data())).toList();
+          _allMeetups = snapshot.docs
+              .map((d) => MeetupModel.fromJson(d.data()))
+              .toList();
         });
       }
     } catch (e) {
@@ -199,14 +209,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final bytes = await pickedFile.readAsBytes();
+      if (!mounted) return;
       final userId = _authService.currentUserId;
 
+      final l10n = AppLocalizations.of(context)!;
+
       if (userId == null) {
-        throw Exception('Kullanıcı oturumu bulunamadı');
+        throw Exception(l10n.sessionNotFound);
       }
 
-      final ref =
-          FirebaseStorage.instance.ref('profile_images/$userId/$userId.jpg');
+      final ref = FirebaseStorage.instance.ref(
+        'profile_images/$userId/$userId.jpg',
+      );
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {'uploadedBy': userId},
@@ -224,17 +238,18 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil resmi güncellendi!'),
+          SnackBar(
+            content: Text(l10n.profilePicUpdated),
             backgroundColor: AppTheme.primary,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hata: $e'),
+            content: Text(l10n.errorWithMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -252,17 +267,17 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundLight,
-        body: Center(
-          child: CircularProgressIndicator(color: AppTheme.primary),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
       );
     }
+
+    final l10n = AppLocalizations.of(context)!;
 
     // Error state
     if (_error != null) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundLight,
-        appBar: AppBar(title: const Text('Profil')),
+        appBar: AppBar(title: Text(l10n.profile)),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -275,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadUserData,
-                child: const Text('Tekrar Dene'),
+                child: Text(l10n.retryButton),
               ),
             ],
           ),
@@ -287,19 +302,19 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_user == null) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundLight,
-        appBar: AppBar(title: const Text('Profil')),
+        appBar: AppBar(title: Text(l10n.profile)),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'Kullanıcı bilgisi bulunamadı.',
-                style: TextStyle(color: AppTheme.textMuted),
+              Text(
+                l10n.userInfoNotFound,
+                style: const TextStyle(color: AppTheme.textMuted),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => context.go('/login'),
-                child: const Text('Giriş Yap'),
+                child: Text(l10n.login),
               ),
             ],
           ),
@@ -406,13 +421,21 @@ class _ProfileScreenState extends State<ProfileScreen>
       actions: [
         if (isOwnProfile) ...[
           IconButton(
+            icon: const Icon(
+              Icons.sports_handball_rounded,
+              color: AppTheme.primary,
+            ),
+            tooltip: AppLocalizations.of(context)!.swipeInviteTitle,
+            onPressed: () => context.go('/swipe-invites'),
+          ),
+          IconButton(
             icon: const Icon(Icons.history, color: AppTheme.textMuted),
-            tooltip: 'Geçmiş Etkinliklerim',
+            tooltip: AppLocalizations.of(context)!.pastEventsTitle,
             onPressed: () => context.push('/past-meetups', extra: user.id),
           ),
           IconButton(
             icon: const Icon(Icons.handshake, color: AppTheme.primary),
-            tooltip: 'Partnerlik Yap',
+            tooltip: AppLocalizations.of(context)!.partnershipAction,
             onPressed: () => context.push('/partnership-requests'),
           ),
           PopupMenuButton<String>(
@@ -423,13 +446,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'settings',
                 child: Row(
                   children: [
-                    Icon(Icons.settings_outlined, size: 20),
-                    SizedBox(width: 8),
-                    Text('Ayarlar'),
+                    const Icon(Icons.settings_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context)!.settingsMenu),
                   ],
                 ),
               ),
@@ -446,10 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPhotoGridTab(UserModel user) {
     final isOwnProfile = _authService.currentUserId == user.id;
-    return PhotoGridTab(
-      userId: user.id,
-      isOwnProfile: isOwnProfile,
-    );
+    return PhotoGridTab(userId: user.id, isOwnProfile: isOwnProfile);
   }
 
   Widget _buildCalendarTab(UserModel user) {
@@ -486,10 +506,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       case CounterType.partners:
         context.push('/partners/${user.id}');
       case CounterType.reliability:
-        context.push('/reliability-detail', extra: {
-          'userId': user.id,
-          'reliabilityScore': user.reliabilityScore,
-        });
+        context.push(
+          '/reliability-detail',
+          extra: {'userId': user.id, 'reliabilityScore': user.reliabilityScore},
+        );
       case CounterType.rating:
         context.push('/user-ratings/${user.id}');
     }
@@ -552,7 +572,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (earnedBadge != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Kazanıldı ✅',
+                '${AppLocalizations.of(context)!.earnedBadge} âœ…',
                 style: GoogleFonts.lexend(
                   fontSize: 12,
                   color: AppTheme.primary,
@@ -566,7 +586,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
-
 }
 
 /// Delegate for pinning the TabBar in NestedScrollView.
@@ -587,10 +606,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(
-      color: AppTheme.backgroundLight,
-      child: tabBar,
-    );
+    return Container(color: AppTheme.backgroundLight, child: tabBar);
   }
 
   @override

@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 
 class FollowersFollowingScreen extends StatefulWidget {
   final String userId;
-  final int initialTab; // 0 for followers, 1 for following
+  final int initialTab;
 
   const FollowersFollowingScreen({
     super.key,
@@ -22,10 +23,12 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
   late TabController _tabController;
-  
+
   List<UserModel> _followers = [];
   List<UserModel> _following = [];
   bool _isLoading = true;
+
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -46,26 +49,24 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
-      // Get user data
       final userDoc = await _authService.firestore
           .collection('users')
           .doc(widget.userId)
           .get();
-      
+
       if (!userDoc.exists) {
         setState(() => _isLoading = false);
         return;
       }
-      
+
       final userData = UserModel.fromJson(userDoc.data()!);
-      
-      // Load partners (replaces old followers/following)
+
       if (userData.partners.isNotEmpty) {
         final partnerDocs = await Future.wait(
-          userData.partners.map((id) =>
-              _authService.firestore.collection('users').doc(id).get()),
+          userData.partners
+              .map((id) => _authService.firestore.collection('users').doc(id).get()),
         );
 
         _followers = partnerDocs
@@ -74,7 +75,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
             .toList();
         _following = _followers;
       }
-      
+
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -82,7 +83,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e')),
+          SnackBar(content: Text(l10n.errorWithMessage(e.toString()))),
         );
       }
     }
@@ -93,7 +94,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('Takip'),
+        title: Text(l10n.following),
         backgroundColor: AppTheme.backgroundLight,
         foregroundColor: AppTheme.textDark,
         elevation: 0,
@@ -103,8 +104,8 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
           unselectedLabelColor: AppTheme.textMuted,
           indicatorColor: AppTheme.primary,
           tabs: [
-            Tab(text: 'Takipçiler (${_followers.length})'),
-            Tab(text: 'Takip Edilenler (${_following.length})'),
+            Tab(text: '${l10n.followersTab} (${_followers.length})'),
+            Tab(text: '${l10n.followingTab} (${_following.length})'),
           ],
         ),
       ),
@@ -113,8 +114,8 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildUserList(_followers, 'Henüz takipçin yok'),
-                _buildUserList(_following, 'Henüz kimseyi takip etmiyorsun'),
+                _buildUserList(_followers, l10n.noFollowersYet),
+                _buildUserList(_following, l10n.noFollowingYet),
               ],
             ),
     );
@@ -160,9 +161,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
 
   Widget _buildUserCard(UserModel user) {
     return InkWell(
-      onTap: () {
-        context.push('/user-profile/${user.id}');
-      },
+      onTap: () => context.push('/user-profile/${user.id}'),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -173,13 +172,11 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         ),
         child: Row(
           children: [
-            // Profile Picture
             CircleAvatar(
               radius: 28,
               backgroundColor: AppTheme.primary,
-              backgroundImage: user.profileImageUrl != null
-                  ? NetworkImage(user.profileImageUrl!)
-                  : null,
+              backgroundImage:
+                  user.profileImageUrl != null ? NetworkImage(user.profileImageUrl!) : null,
               child: user.profileImageUrl == null
                   ? Text(
                       user.username[0].toUpperCase(),
@@ -192,8 +189,6 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                   : null,
             ),
             const SizedBox(width: 12),
-            
-            // User Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,9 +217,9 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (user.location != null) ...[
+                  if (user.location != null)
+                    Row(
+                      children: [
                         Icon(
                           Icons.location_on_outlined,
                           size: 14,
@@ -242,17 +237,11 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
                           ),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
-            
-            // Arrow Icon
-            const Icon(
-              Icons.chevron_right,
-              color: AppTheme.textMuted,
-            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textMuted),
           ],
         ),
       ),

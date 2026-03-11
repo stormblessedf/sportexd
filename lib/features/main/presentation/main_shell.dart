@@ -107,11 +107,9 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _navigateToOnboarding() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const VenueOnboardingScreen(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const VenueOnboardingScreen()));
   }
 
   @override
@@ -136,7 +134,9 @@ class _MainShellState extends State<MainShell> {
   }
 
   List<NavigationDestination> _buildDestinations(
-      bool isOwnProfile, AppLocalizations l10n) {
+    bool isOwnProfile,
+    AppLocalizations l10n,
+  ) {
     final destinations = <NavigationDestination>[
       NavigationDestination(
         icon: const Icon(Icons.home_outlined),
@@ -152,6 +152,11 @@ class _MainShellState extends State<MainShell> {
         icon: const Icon(Icons.add_circle_outline),
         selectedIcon: const Icon(Icons.add_circle),
         label: l10n.navCreate,
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.sports_handball_outlined),
+        selectedIcon: const Icon(Icons.sports_handball),
+        label: l10n.swipeInvite,
       ),
       NavigationDestination(
         icon: Badge(
@@ -199,22 +204,25 @@ class _MainShellState extends State<MainShell> {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/chats')) return 1;
     if (location.startsWith('/create')) return 2;
-    // Index 3 is now 'Mekanlar' — it's never "selected" via route
-    if (location.startsWith('/profile')) return 4;
+    if (location.startsWith('/swipe-invites')) return 3;
+    // Index 4 is 'Mekanlar' and is opened as an action, not a route.
+    if (location.startsWith('/profile')) return 5;
     return 0;
   }
 
   void _onItemTapped(int index, BuildContext context, bool isOwnProfile) {
+    final photoUploadIndex = isOwnProfile ? 6 : -1;
+
     // Intercept the photo upload button (last item when on own profile)
-    if (isOwnProfile && index == 5) {
+    if (isOwnProfile && index == photoUploadIndex) {
       if (!PhotoUploadController.instance.isUploading) {
         PhotoUploadController.instance.triggerUpload();
       }
       return;
     }
 
-    // Intercept venue icon tap — not a route-based navigation
-    if (index == 3) {
+    // Intercept venue icon tap - not a route-based navigation
+    if (index == 4) {
       _onVenueIconTapped();
       return;
     }
@@ -229,7 +237,10 @@ class _MainShellState extends State<MainShell> {
       case 2:
         context.go('/create');
         break;
-      case 4:
+      case 3:
+        context.go('/swipe-invites');
+        break;
+      case 5:
         context.go('/profile');
         break;
     }

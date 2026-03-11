@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isLoading = true);
     try {
       final authService = context.read<AuthService>();
@@ -48,11 +50,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         String errorMessage = e.toString();
         if (errorMessage.contains('email-already-in-use')) {
-          errorMessage = 'Bu e-posta adresi zaten kullanımda.';
+          errorMessage = l10n.emailAlreadyInUse;
         } else if (errorMessage.contains('weak-password')) {
-          errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalı.';
+          errorMessage = l10n.weakPassword;
         } else if (errorMessage.contains('invalid-email')) {
-          errorMessage = 'Geçersiz e-posta adresi.';
+          errorMessage = l10n.invalidEmail;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -68,6 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       body: Stack(
@@ -130,7 +133,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     // Title
                     Text(
-                      'Hesap Oluştur',
+                      l10n.createAccount,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: AppTheme.textDark,
                         fontWeight: FontWeight.bold,
@@ -138,7 +141,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Spor arkadaşlarınla tanışmaya hazır mısın?',
+                      l10n.signUpSubtitle,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppTheme.textMuted,
                       ),
@@ -170,9 +173,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Email
-                            const Text(
-                              'E-posta',
-                              style: TextStyle(
+                            Text(
+                              l10n.email,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.textDark,
@@ -184,7 +187,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               keyboardType: TextInputType.emailAddress,
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
-                                hintText: 'ornek@email.com',
+                                hintText: l10n.emailHint,
                                 hintStyle: const TextStyle(color: AppTheme.textLight),
                                 prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted),
                                 enabledBorder: OutlineInputBorder(
@@ -208,10 +211,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'E-posta gerekli';
+                                  return l10n.emailRequired;
                                 }
                                 if (!value.contains('@')) {
-                                  return 'Geçerli bir e-posta girin';
+                                  return l10n.emailInvalid;
                                 }
                                 return null;
                               },
@@ -219,9 +222,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             const SizedBox(height: 20),
 
                             // Password
-                            const Text(
-                              'Şifre',
-                              style: TextStyle(
+                            Text(
+                              l10n.password,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.textDark,
@@ -233,7 +236,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               obscureText: _obscurePassword,
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
-                                hintText: 'En az 6 karakter',
+                                hintText: l10n.passwordMinChars,
                                 hintStyle: const TextStyle(color: AppTheme.textLight),
                                 prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.textMuted),
                                 suffixIcon: IconButton(
@@ -268,7 +271,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.length < 6) {
-                                  return 'Şifre en az 6 karakter olmalı';
+                                  return l10n.passwordTooShort;
                                 }
                                 return null;
                               },
@@ -276,9 +279,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             const SizedBox(height: 20),
 
                             // Confirm Password
-                            const Text(
-                              'Şifre Tekrar',
-                              style: TextStyle(
+                            Text(
+                              l10n.confirmPassword,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.textDark,
@@ -290,7 +293,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               obscureText: _obscureConfirmPassword,
                               style: const TextStyle(color: AppTheme.textDark),
                               decoration: InputDecoration(
-                                hintText: 'Şifrenizi tekrar girin',
+                                hintText: l10n.confirmPasswordHint,
                                 hintStyle: const TextStyle(color: AppTheme.textLight),
                                 prefixIcon: const Icon(Icons.lock_outlined, color: AppTheme.textMuted),
                                 suffixIcon: IconButton(
@@ -325,7 +328,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               validator: (value) {
                                 if (value != _passwordController.text) {
-                                  return 'Şifreler eşleşmiyor';
+                                  return l10n.passwordsDoNotMatch;
                                 }
                                 return null;
                               },
@@ -354,9 +357,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           color: AppTheme.textDark,
                                         ),
                                       )
-                                    : const Text(
-                                        'Devam Et',
-                                        style: TextStyle(
+                                    : Text(
+                                        l10n.continueButton,
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -374,15 +377,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Zaten hesabın var mı?',
-                          style: TextStyle(color: AppTheme.textMuted),
+                        Text(
+                          l10n.alreadyHaveAccount,
+                          style: const TextStyle(color: AppTheme.textMuted),
                         ),
                         TextButton(
                           onPressed: () => context.go('/login'),
-                          child: const Text(
-                            'Giriş Yap',
-                            style: TextStyle(
+                          child: Text(
+                            l10n.login,
+                            style: const TextStyle(
                               color: AppTheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
