@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:device_preview/device_preview.dart';
@@ -19,6 +20,7 @@ import 'core/services/messaging_permission_service.dart';
 import 'core/services/event_photo_service.dart';
 import 'core/services/meetup_participation_service.dart';
 import 'core/services/locale_service.dart';
+import 'core/services/premium_service.dart';
 import 'core/utils/app_router.dart';
 import 'core/utils/google_maps_loader.dart';
 import 'l10n/app_localizations.dart';
@@ -35,7 +37,7 @@ void main() async {
   }
 
   // Load Google Maps JS API with key from --dart-define
-  GoogleMapsLoader.load();
+  unawaited(GoogleMapsLoader.load());
 
   runApp(
     DevicePreview(
@@ -58,6 +60,7 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
   final NotificationService _notificationService = NotificationService();
   final MapPreferencesService _mapPreferencesService = MapPreferencesService();
   final LocaleService _localeService = LocaleService();
+  final PremiumService _premiumService = PremiumService();
   final ProximityAttendanceService _proximityAttendanceService = ProximityAttendanceService();
   final LocationTrackingService _locationTrackingService = LocationTrackingService();
   String? _currentUserId;
@@ -70,6 +73,7 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
     _initializeNotifications();
     _mapPreferencesService.initialize();
     _localeService.initialize();
+    _premiumService.initialize();
   }
 
   @override
@@ -207,6 +211,7 @@ class _SporsalAppState extends State<SporsalApp> with WidgetsBindingObserver {
         ChangeNotifierProvider<NotificationService>.value(value: _notificationService),
         ChangeNotifierProvider<MapPreferencesService>.value(value: _mapPreferencesService),
         ChangeNotifierProvider<LocaleService>.value(value: _localeService),
+        ChangeNotifierProvider<PremiumService>.value(value: _premiumService),
       ],
       child: Consumer<LocaleService>(
         builder: (context, localeService, _) => MaterialApp.router(

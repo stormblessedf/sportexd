@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sporsal/core/models/profile_photo_model.dart';
 import 'package:sporsal/core/services/profile_photo_service.dart';
-import 'package:sporsal/features/profile/presentation/controllers/photo_upload_controller.dart';
 import 'package:sporsal/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 
@@ -30,34 +29,8 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
 
   AppLocalizations get l10n => AppLocalizations.of(context)!;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isOwnProfile) {
-      PhotoUploadController.instance.addListener(_onControllerChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    if (widget.isOwnProfile) {
-      PhotoUploadController.instance.removeListener(_onControllerChanged);
-    }
-    super.dispose();
-  }
-
-  void _onControllerChanged() {
-    if (PhotoUploadController.instance.shouldTriggerUpload) {
-      PhotoUploadController.instance.consumeTrigger();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _pickAndUploadPhoto();
-      });
-    }
-  }
-
   void _setUploading(bool value) {
     setState(() => _isUploading = value);
-    PhotoUploadController.instance.setUploading(value);
   }
 
   Future<void> _pickAndUploadPhoto() async {
@@ -226,6 +199,26 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
 
         return CustomScrollView(
           slivers: [
+            if (widget.isOwnProfile)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: ElevatedButton.icon(
+                    onPressed: _isUploading ? null : _pickAndUploadPhoto,
+                    icon: _isUploading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.add_a_photo_outlined),
+                    label: Text(_isUploading ? l10n.loading : l10n.addPhoto),
+                  ),
+                ),
+              ),
             if (_isUploading)
               const SliverToBoxAdapter(
                 child: Padding(
@@ -282,6 +275,14 @@ class _PhotoGridTabState extends State<PhotoGridTab> {
               color: AppTheme.textMuted,
             ),
           ),
+          if (widget.isOwnProfile) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _isUploading ? null : _pickAndUploadPhoto,
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: Text(l10n.addPhoto),
+            ),
+          ],
         ],
       ),
     );

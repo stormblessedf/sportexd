@@ -1716,4 +1716,115 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startChatButton => 'Iniciar chat';
+
+  @override
+  String get premiumTitle => 'Sporsal Premium';
+
+  @override
+  String get premiumHeroTitle => 'Unlock the Full Power of Sporsal';
+
+  @override
+  String get premiumHeroSubtitle =>
+      'Take your sports experience to the next level with Premium.';
+
+  @override
+  String get premiumFeaturesHeader => 'What\'s Included in Premium';
+
+  @override
+  String get premiumFeatureSwipe => 'Swipe Match System';
+
+  @override
+  String get premiumFeatureSwipeDesc => 'Find sports partners by swiping right';
+
+  @override
+  String get premiumFeatureBadge => 'Premium Profile Badge';
+
+  @override
+  String get premiumFeatureBadgeDesc =>
+      'Show a gold premium badge on your profile';
+
+  @override
+  String get premiumFeatureFeatured => 'Featured Profile';
+
+  @override
+  String get premiumFeatureFeaturedDesc =>
+      'Appear at the top of the Discover page';
+
+  @override
+  String get premiumFeatureUnlimited => 'Unlimited Event Creation';
+
+  @override
+  String get premiumFeatureUnlimitedDesc =>
+      'Free accounts are limited to 3 events per month';
+
+  @override
+  String get premiumFeatureSupport => 'Priority Support';
+
+  @override
+  String get premiumFeatureSupportDesc => '24/7 priority customer support';
+
+  @override
+  String get premiumPlanMonthly => 'Monthly';
+
+  @override
+  String get premiumPlanAnnual => 'Annual';
+
+  @override
+  String get premiumPlanSavings => '37% Off';
+
+  @override
+  String premiumPurchaseButton(String plan, String price) {
+    return '$plan Premium — $price';
+  }
+
+  @override
+  String get premiumConfirmTitle => 'Confirm Premium';
+
+  @override
+  String get premiumConfirmContent => 'Premium will be activated in demo mode.';
+
+  @override
+  String get premiumConfirmButton => 'Confirm';
+
+  @override
+  String get premiumActivatedSuccess => 'Premium activated!';
+
+  @override
+  String get premiumErrorRetry => 'An error occurred. Please try again.';
+
+  @override
+  String get premiumLoginRequired => 'You must be logged in to purchase.';
+
+  @override
+  String get premiumActiveTitle => 'Premium Active!';
+
+  @override
+  String premiumDaysLeft(int days) {
+    return '$days days left';
+  }
+
+  @override
+  String premiumExpiryDate(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String get premiumActiveFeatures => 'You\'re Enjoying All Premium Benefits';
+
+  @override
+  String get premiumRestoreNote =>
+      'Subscriptions become active after purchase confirmation.';
+
+  @override
+  String get sectionPremium => 'Premium';
+
+  @override
+  String get premiumSettingsTitle => 'Sporsal Premium';
+
+  @override
+  String get premiumSettingsSubtitleActive =>
+      'Your premium membership is active';
+
+  @override
+  String get premiumSettingsSubtitleInactive => 'Expand your features';
 }

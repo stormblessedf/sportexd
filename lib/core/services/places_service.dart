@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:js_interop';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/location_data.dart';
 import '../models/place_autocomplete_result.dart';
+import '../utils/google_maps_loader.dart';
+import 'nominatim_service.dart';
 
 export '../models/place_autocomplete_result.dart';
 
@@ -116,14 +118,24 @@ JSAny? _toJsValue(dynamic value) {
 }
 
 class PlacesService {
+  final NominatimService _nominatimService = NominatimService();
+
   Future<List<PlaceAutocompleteResult>> getAutocomplete(String query) async {
-    if (query.isEmpty || query.length < 2) return [];
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) return [];
+
+    if (!await _ensureGooglePlacesReady()) {
+      debugPrint(
+        'PlacesService: Google Places unavailable, falling back to Nominatim autocomplete.',
+      );
+      return _nominatimService.getAutocompleteSuggestions(trimmedQuery);
+    }
 
     try {
-      debugPrint('PlacesService: Fetching autocomplete for "$query"');
+      debugPrint('PlacesService: Fetching autocomplete for "$trimmedQuery"');
 
       final request = _createJsObject({
-        'input': query,
+        'input': trimmedQuery,
         // No region restriction - works worldwide
       });
 
@@ -152,14 +164,33 @@ class PlacesService {
         }
       }
 
-      return results;
+      if (results.isNotEmpty) {
+        return results;
+      }
+
+      debugPrint(
+        'PlacesService: Google autocomplete returned no results, falling back to Nominatim.',
+      );
+      return _nominatimService.getAutocompleteSuggestions(trimmedQuery);
     } catch (e) {
       debugPrint('PlacesService: Autocomplete error: $e');
-      return [];
+      return _nominatimService.getAutocompleteSuggestions(trimmedQuery);
     }
   }
 
   Future<LocationData?> getPlaceDetails(String placeId) async {
+    final nominatimLocation = NominatimService.locationFromPlaceId(placeId);
+    if (nominatimLocation != null) {
+      return nominatimLocation;
+    }
+
+    if (!await _ensureGooglePlacesReady()) {
+      debugPrint(
+        'PlacesService: Google Places unavailable for place details: "$placeId"',
+      );
+      return null;
+    }
+
     try {
       debugPrint('PlacesService: Fetching place details for "$placeId"');
 
@@ -202,6 +233,13 @@ class PlacesService {
     int radius = 10000,
     int maxResults = 20,
   }) async {
+    if (!await _ensureGooglePlacesReady()) {
+      debugPrint(
+        'PlacesService: Google Places unavailable for nearby search "$keyword".',
+      );
+      return [];
+    }
+
     try {
       debugPrint(
           'PlacesService: searchNearbyPlaces "$keyword" at ($lat, $lng)');
@@ -260,6 +298,13 @@ class PlacesService {
   /// Fetches full details for a single place by ID.
   Future<Map<String, dynamic>?> getPlaceFullDetails(String placeId) async {
     if (placeId.isEmpty) return null;
+
+    if (!await _ensureGooglePlacesReady()) {
+      debugPrint(
+        'PlacesService: Google Places unavailable for full place details: "$placeId"',
+      );
+      return null;
+    }
 
     try {
       debugPrint('PlacesService: getPlaceFullDetails for "$placeId"');
@@ -385,5 +430,17 @@ class PlacesService {
     } catch (e) {
       return '';
     }
+  }
+
+  Future<bool> _ensureGooglePlacesReady() async {
+    if (!kIsWeb) {
+      return false;
+    }
+
+    if (GoogleMapsLoader.isPlacesReady) {
+      return true;
+    }
+
+    return GoogleMapsLoader.load();
   }
 }

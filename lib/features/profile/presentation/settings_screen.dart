@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/locale_service.dart';
 import '../../../core/services/map_preferences_service.dart';
+import '../../../core/services/premium_service.dart';
 import '../../../core/models/user_model.dart';
 import '../../../theme/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
@@ -28,6 +29,61 @@ class SettingsScreen extends StatelessWidget {
 
           return ListView(
             children: [
+              _buildSectionHeader(l10n.sectionPremium),
+              Consumer<PremiumService>(
+                builder: (context, premiumService, _) {
+                  final isActive = premiumService.hasActivePremium;
+                  return ListTile(
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      l10n.premiumSettingsTitle,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      isActive
+                          ? l10n.premiumSettingsSubtitleActive
+                          : l10n.premiumSettingsSubtitleInactive,
+                    ),
+                    trailing: isActive
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBBF24).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              'Aktif',
+                              style: TextStyle(
+                                color: Color(0xFFF59E0B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => context.push('/premium'),
+                  );
+                },
+              ),
+              const Divider(),
+
               _buildSectionHeader(l10n.sectionAccount),
               ListTile(
                 leading: const Icon(Icons.person_outline),

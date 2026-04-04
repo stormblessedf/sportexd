@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum SwipeInviteStatus { pending, accepted, rejected, canceled }
 
+enum SwipeInviteContext { sport, meetup }
+
 extension SwipeInviteStatusX on SwipeInviteStatus {
   String get value {
     switch (this) {
@@ -43,6 +45,13 @@ class SwipeInviteModel {
   final DateTime? acceptedAt;
   final DateTime? rejectedAt;
   final String? chatId;
+  // Invite context
+  final SwipeInviteContext inviteContext;
+  final String? sportType;   // e.g. 'tennis'
+  final String? meetupId;
+  final String? meetupTitle;
+  final String senderName;
+  final String? senderImageUrl;
 
   const SwipeInviteModel({
     required this.id,
@@ -56,6 +65,12 @@ class SwipeInviteModel {
     this.acceptedAt,
     this.rejectedAt,
     this.chatId,
+    this.inviteContext = SwipeInviteContext.sport,
+    this.sportType,
+    this.meetupId,
+    this.meetupTitle,
+    this.senderName = '',
+    this.senderImageUrl,
   });
 
   static String generatePairId(String uid1, String uid2) {
@@ -109,6 +124,14 @@ class SwipeInviteModel {
       acceptedAt: parseNullableDate(json['acceptedAt']),
       rejectedAt: parseNullableDate(json['rejectedAt']),
       chatId: json['chatId'] as String?,
+      inviteContext: (json['inviteContext'] as String?) == 'meetup'
+          ? SwipeInviteContext.meetup
+          : SwipeInviteContext.sport,
+      sportType: json['sportType'] as String?,
+      meetupId: json['meetupId'] as String?,
+      meetupTitle: json['meetupTitle'] as String?,
+      senderName: (json['senderName'] ?? '') as String,
+      senderImageUrl: json['senderImageUrl'] as String?,
     );
   }
 
@@ -125,6 +148,12 @@ class SwipeInviteModel {
       'acceptedAt': acceptedAt != null ? Timestamp.fromDate(acceptedAt!) : null,
       'rejectedAt': rejectedAt != null ? Timestamp.fromDate(rejectedAt!) : null,
       'chatId': chatId,
+      'inviteContext': inviteContext == SwipeInviteContext.meetup ? 'meetup' : 'sport',
+      'sportType': sportType,
+      'meetupId': meetupId,
+      'meetupTitle': meetupTitle,
+      'senderName': senderName,
+      'senderImageUrl': senderImageUrl,
     };
   }
 
@@ -140,6 +169,12 @@ class SwipeInviteModel {
     DateTime? acceptedAt,
     DateTime? rejectedAt,
     String? chatId,
+    SwipeInviteContext? inviteContext,
+    String? sportType,
+    String? meetupId,
+    String? meetupTitle,
+    String? senderName,
+    String? senderImageUrl,
   }) {
     return SwipeInviteModel(
       id: id ?? this.id,
@@ -153,6 +188,12 @@ class SwipeInviteModel {
       acceptedAt: acceptedAt ?? this.acceptedAt,
       rejectedAt: rejectedAt ?? this.rejectedAt,
       chatId: chatId ?? this.chatId,
+      inviteContext: inviteContext ?? this.inviteContext,
+      sportType: sportType ?? this.sportType,
+      meetupId: meetupId ?? this.meetupId,
+      meetupTitle: meetupTitle ?? this.meetupTitle,
+      senderName: senderName ?? this.senderName,
+      senderImageUrl: senderImageUrl ?? this.senderImageUrl,
     );
   }
 }

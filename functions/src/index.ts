@@ -1,11 +1,27 @@
-import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+﻿import * as admin from "firebase-admin";
+import { FieldPath, FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
+import * as functions from "firebase-functions/v1";
 
 // Initialize Firebase Admin
 admin.initializeApp();
 
-const db = admin.firestore();
+const db = getFirestore();
 const messaging = admin.messaging();
+const interactiveRuntime = functions.runWith({
+  memory: "256MB",
+  timeoutSeconds: 120,
+  maxInstances: 40,
+});
+const eventSyncRuntime = functions.runWith({
+  memory: "256MB",
+  timeoutSeconds: 180,
+  maxInstances: 20,
+});
+const maintenanceRuntime = functions.runWith({
+  memory: "512MB",
+  timeoutSeconds: 540,
+  maxInstances: 1,
+});
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -46,6 +62,227 @@ async function getUserData(userId: string): Promise<UserData | null> {
   const doc = await db.collection("users").doc(userId).get();
   if (!doc.exists) return null;
   return doc.data() as UserData;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function getUsersDataMap(userIds: string[]): Promise<Map<string, UserData>> {
+  const result = new Map<string, UserData>();
+  const uniqueIds = [...new Set(userIds)].filter((userId) => userId.length > 0);
+  if (uniqueIds.length == 0) return result;
+
+  for (const idChunk of chunkArray(uniqueIds, 30)) {
+    const snapshot = await db.collection("users")
+      .where(FieldPath.documentId(), "in", idChunk)
+      .get();
+
+    for (const doc of snapshot.docs) {
+      result.set(doc.id, doc.data() as UserData);
+    }
+  }
+
+  return result;
+}
+
+function stringifyPayload(
+  data: Record<string, unknown>
+): Record<string, string> {
+  const payload: Record<string, string> = {};
+  Object.entries(data).forEach(([key, value]) => {
+    if (value == null) return;
+    payload[key] = typeof value == "string" ? value : JSON.stringify(value);
+  });
+  return payload;
+}
+
+interface NotificationWriteInput {
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  relatedId: string;
+  metadata?: Record<string, unknown>;
+  deterministicId?: string;
+  merge?: boolean;
+}
+
+async function createNotificationDocumentsBatch(
+  notifications: NotificationWriteInput[]
+): Promise<void> {
+  if (notifications.length == 0) return;
+
+  for (const notificationChunk of chunkArray(notifications, 350)) {
+    const batch = db.batch();
+    for (const notification of notificationChunk) {
+      const ref = notification.deterministicId ?
+        db.collection("notifications").doc(notification.deterministicId) :
+        db.collection("notifications").doc();
+      const payload = {
+        userId: notification.userId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        timestamp: FieldValue.serverTimestamp(),
+        isRead: false,
+        relatedId: notification.relatedId,
+        metadata: notification.metadata ?? {},
+      };
+      if (notification.merge) {
+        batch.set(ref, payload, { merge: true });
+      } else {
+        batch.set(ref, payload);
+      }
+    }
+    await batch.commit();
+  }
+}
+
+async function sendBulkPushNotification(
+  usersById: Map<string, UserData>,
+  userIds: string[],
+  title: string,
+  body: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  const tokens = [...new Set(
+    userIds
+      .flatMap((userId) => usersById.get(userId)?.fcmTokens ?? [])
+      .filter((token) => token.length > 0)
+  )];
+
+  if (tokens.length == 0) return;
+
+  for (const tokenChunk of chunkArray(tokens, 500)) {
+    await messaging.sendEachForMulticast({
+      tokens: tokenChunk,
+      notification: {
+        title,
+        body,
+      },
+      data: stringifyPayload(data),
+    });
+  }
+}
+
+function computeParticipantState(
+  currentParticipants: number,
+  maxParticipants: number
+): string {
+  if (maxParticipants <= 0) return "has_space";
+  if (currentParticipants >= maxParticipants) return "full";
+  if ((currentParticipants / maxParticipants) >= 0.8) return "almost_full";
+  return "has_space";
+}
+
+/*
+function buildMeetupSearchKeywords(
+  meetupData: FirebaseFirestore.DocumentData
+): string[] {
+  const joined = [
+    meetupData.title,
+    meetupData.description,
+    meetupData.locationName,
+    meetupData.locationAddress,
+    meetupData.organizerName,
+    meetupData.type,
+  ].filter(Boolean).join(" ");
+
+  return [...new Set(
+    joined
+      .toLowerCase()
+      .replace(/[^a-z0-9Ã§ÄŸÄ±Ã¶ÅŸÃ¼\s]/g, " ")
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 2)
+  )].sort();
+}
+
+*/
+
+function normalizeSearchText(input: string): string {
+  let normalized = input.toLowerCase();
+  const replacements: Record<string, string> = {
+    "ç": "c",
+    "ğ": "g",
+    "ı": "i",
+    "i̇": "i",
+    "ö": "o",
+    "ş": "s",
+    "ü": "u",
+  };
+
+  Object.entries(replacements).forEach(([from, to]) => {
+    normalized = normalized.split(from).join(to);
+  });
+
+  return normalized.replace(/[^a-z0-9\s]/g, " ");
+}
+
+function buildMeetupSearchKeywords(
+  meetupData: FirebaseFirestore.DocumentData
+): string[] {
+  const joined = [
+    meetupData.title,
+    meetupData.description,
+    meetupData.locationName,
+    meetupData.locationAddress,
+    meetupData.organizerName,
+    meetupData.type,
+  ].filter(Boolean).join(" ");
+
+  return [...new Set(
+    normalizeSearchText(joined)
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 2)
+  )].sort();
+}
+
+function buildMeetupDerivedFields(
+  meetupData: FirebaseFirestore.DocumentData
+): Record<string, unknown> {
+  const participantIds = (meetupData.participantIds as string[] | undefined) ?? [];
+  const currentParticipants = Number(
+    meetupData.currentParticipants ?? participantIds.length
+  );
+  const maxParticipants = Number(meetupData.maxParticipants ?? 0);
+
+  return {
+    participantState: computeParticipantState(
+      currentParticipants,
+      maxParticipants
+    ),
+    availableSpots: Math.max(0, maxParticipants - currentParticipants),
+    searchKeywords: buildMeetupSearchKeywords(meetupData),
+  };
+}
+
+function sameStringArray(
+  left: string[] | undefined,
+  right: string[] | undefined
+): boolean {
+  const leftValue = [...(left ?? [])].sort();
+  const rightValue = [...(right ?? [])].sort();
+  if (leftValue.length != rightValue.length) return false;
+  return leftValue.every((item, index) => item === rightValue[index]);
+}
+
+function needsMeetupDerivedFieldSync(
+  meetupData: FirebaseFirestore.DocumentData,
+  derivedFields: Record<string, unknown>
+): boolean {
+  return meetupData.participantState !== derivedFields.participantState ||
+    meetupData.availableSpots !== derivedFields.availableSpots ||
+    !sameStringArray(
+      meetupData.searchKeywords as string[] | undefined,
+      derivedFields.searchKeywords as string[] | undefined
+    );
 }
 
 function isInQuietHours(prefs: NotificationPreferences): boolean {
@@ -109,7 +346,7 @@ async function createNotificationDocument(
     type,
     title,
     message,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
     isRead: false,
     relatedId,
     metadata,
@@ -206,6 +443,151 @@ async function adjustRegisteredCounter(userId: string, delta: number): Promise<v
   });
 }
 
+function buildMeetupChatShell(
+  meetupId: string,
+  meetupData: FirebaseFirestore.DocumentData
+): Record<string, unknown> {
+  const participantIds = ((meetupData.participantIds as string[]) || [])
+    .filter((id) => typeof id === "string");
+  const derivedFields = buildMeetupDerivedFields(meetupData);
+
+  const chatShell: Record<string, unknown> = {
+    type: "meetup",
+    participants: participantIds,
+    title: meetupData.title || "Etkinlik",
+    description: meetupData.description || "",
+    rules: meetupData.rules || "",
+    imageUrl: meetupData.imageUrl || "",
+    meetupType: meetupData.type || "other",
+    organizerId: meetupData.organizerId || "",
+    organizerName: meetupData.organizerName || "Unknown",
+    organizerImageUrl: meetupData.organizerImageUrl || null,
+    locationName: meetupData.locationName || "",
+    locationAddress: meetupData.locationAddress || "",
+    currentParticipants: meetupData.currentParticipants || participantIds.length,
+    maxParticipants: meetupData.maxParticipants || 0,
+    waitlistUserIds: (meetupData.waitlistUserIds as string[]) || [],
+    latitude: meetupData.latitude ?? null,
+    longitude: meetupData.longitude ?? null,
+    hideFromFeedUntilAccepted: meetupData.hideFromFeedUntilAccepted === true,
+    isFull: meetupData.isFull === true,
+    participantState: derivedFields.participantState,
+    availableSpots: derivedFields.availableSpots,
+    searchKeywords: derivedFields.searchKeywords,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  if (meetupData.date) {
+    chatShell.meetupDate = meetupData.date;
+  }
+  if (meetupData.endDate) {
+    chatShell.endDate = meetupData.endDate;
+  }
+  if (meetupData.createdAt) {
+    chatShell.createdAt = meetupData.createdAt;
+  }
+
+  return chatShell;
+}
+
+async function syncMeetupChatShell(
+  meetupId: string,
+  meetupData: FirebaseFirestore.DocumentData | undefined
+): Promise<void> {
+  if (!meetupId || !meetupData) return;
+  await db.collection("chats").doc(meetupId).set(
+    buildMeetupChatShell(meetupId, meetupData),
+    { merge: true }
+  );
+}
+
+async function upsertMeetupChatSummaries(
+  meetupId: string,
+  meetupData: FirebaseFirestore.DocumentData,
+  participantIds: string[],
+  chatData?: FirebaseFirestore.DocumentData | null
+): Promise<void> {
+  if (participantIds.length === 0) return;
+
+  const effectiveChatData = chatData ?? (
+    await db.collection("chats").doc(meetupId).get()
+  ).data();
+  const unreadCounts = (effectiveChatData?.unreadCounts as Record<string, unknown> | undefined) ?? {};
+  const batch = db.batch();
+
+  for (const userId of participantIds) {
+    const summaryRef = db
+      .collection("users")
+      .doc(userId)
+      .collection("chat_summaries")
+      .doc(meetupId);
+
+    const unreadCountRaw = unreadCounts[userId];
+    let unreadCount = Number(unreadCountRaw || 0);
+    if (typeof unreadCountRaw === "number") {
+      unreadCount = unreadCountRaw;
+    }
+
+    batch.set(summaryRef, {
+      userId,
+      chatId: meetupId,
+      meetupId,
+      title: meetupData.title || "",
+      description: meetupData.description || "",
+      rules: meetupData.rules || "",
+      imageUrl: meetupData.imageUrl || "",
+      meetupType: meetupData.type || "other",
+      meetupDate: meetupData.date || null,
+      endDate: meetupData.endDate || null,
+      meetupEndDate: meetupData.endDate || null,
+      effectiveEndDate: meetupData.endDate || meetupData.date || null,
+      meetupCreatedAt: meetupData.createdAt || FieldValue.serverTimestamp(),
+      createdAt: meetupData.createdAt || FieldValue.serverTimestamp(),
+      locationName: meetupData.locationName || "",
+      locationAddress: meetupData.locationAddress || "",
+      organizerId: meetupData.organizerId || "",
+      organizerName: meetupData.organizerName || "",
+      organizerImageUrl: meetupData.organizerImageUrl || null,
+      currentParticipants: meetupData.currentParticipants || 0,
+      maxParticipants: meetupData.maxParticipants || 0,
+      participants: meetupData.participantIds || [],
+      participantIds: meetupData.participantIds || [],
+      waitlistUserIds: meetupData.waitlistUserIds || [],
+      latitude: meetupData.latitude || null,
+      longitude: meetupData.longitude || null,
+      hideFromFeedUntilAccepted: meetupData.hideFromFeedUntilAccepted === true,
+      isFull: meetupData.isFull === true,
+      lastMessage: effectiveChatData?.lastMessage || null,
+      lastMessageTime: effectiveChatData?.lastMessageTime || null,
+      lastMessageSenderId: effectiveChatData?.lastMessageSenderId || null,
+      lastMessageSenderName: effectiveChatData?.lastMessageSenderName || null,
+      unreadCount,
+      isOrganizerOnlyMode: effectiveChatData?.isOrganizerOnlyMode === true,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  await batch.commit();
+}
+
+async function deleteMeetupChatSummaries(
+  meetupId: string,
+  participantIds: string[]
+): Promise<void> {
+  if (participantIds.length === 0) return;
+
+  const batch = db.batch();
+  for (const userId of participantIds) {
+    const summaryRef = db
+      .collection("users")
+      .doc(userId)
+      .collection("chat_summaries")
+      .doc(meetupId);
+    batch.delete(summaryRef);
+  }
+  await batch.commit();
+}
+
 // ==========================================
 // CLOUD FUNCTIONS
 // ==========================================
@@ -213,7 +595,7 @@ async function adjustRegisteredCounter(userId: string, delta: number): Promise<v
 // 1. Chat Message Notification
 // Uses deterministic document ID to prevent race conditions
 // Supports both meetup chats and DM chats
-export const onChatMessage = functions.firestore
+export const onChatMessage = interactiveRuntime.firestore
   .document("chats/{chatId}/messages/{messageId}")
   .onCreate(async (snap, context) => {
     const { chatId } = context.params;
@@ -255,89 +637,103 @@ export const onChatMessage = functions.firestore
       chatTitle = meetupData?.title as string || "Etkinlik";
     }
 
-    // Send notification to all participants except sender
-    const notifications = participantIds
-      .filter((id) => id !== senderId)
-      .map(async (userId) => {
-        const userData = await getUserData(userId);
-        if (!userData) return;
+    const chatRef = db.collection("chats").doc(chatId);
+    const summaryUpdate: Record<string, unknown> = {
+      lastMessage: messageData.text || "",
+      lastMessageTime:
+        messageData.timestamp || FieldValue.serverTimestamp(),
+      lastMessageSenderId: senderId,
+      lastMessageSenderName: messageData.senderName || "Birisi",
+      updatedAt: FieldValue.serverTimestamp(),
+      [`unreadCounts.${senderId}`]: 0,
+    };
 
-        // Check notification preferences
-        if (!shouldSendNotification(userData.notificationPreferences, "chat_message", chatId)) {
-          console.log(`User ${userId} has chat notifications disabled`);
-          return;
-        }
+    for (const userId of participantIds) {
+      if (userId !== senderId) {
+        summaryUpdate[`unreadCounts.${userId}`] =
+          FieldValue.increment(1);
+      }
+    }
 
-        // Use deterministic document ID: chat_userId_chatId
-        // This prevents race conditions by always targeting the same document
-        const notificationId = `chat_${userId}_${chatId}`;
-        const notifRef = db.collection("notifications").doc(notificationId);
+    await chatRef.set(summaryUpdate, { merge: true });
 
-        // Use transaction to safely update or create
-        await db.runTransaction(async (transaction) => {
-          const notifDoc = await transaction.get(notifRef);
+    const recipientIds = participantIds.filter((id) => id !== senderId);
+    const usersById = await getUsersDataMap(recipientIds);
+    const eligibleRecipientIds = recipientIds.filter((userId) => {
+      const userData = usersById.get(userId);
+      return !!userData &&
+        shouldSendNotification(userData.notificationPreferences, "chat_message", chatId);
+    });
 
-          if (notifDoc.exists && notifDoc.data()?.isRead === false) {
-            // Update existing unread notification - increment count
-            const currentCount = (notifDoc.data()?.metadata?.unreadCount as number) || 1;
-            const newCount = currentCount + 1;
-
-            transaction.update(notifRef, {
-              "message": `${newCount} yeni mesaj`,
-              "timestamp": admin.firestore.FieldValue.serverTimestamp(),
-              "metadata.unreadCount": newCount,
-            });
-
-            console.log(`Updated chat notification ${notificationId}, count: ${newCount}`);
-          } else {
-            // Create or replace notification (if it was read before)
-            transaction.set(notifRef, {
-              userId,
-              type: "chat_message",
-              title: chatTitle,
-              message: "1 yeni mesaj",
-              timestamp: admin.firestore.FieldValue.serverTimestamp(),
-              isRead: false,
-              relatedId: chatId,
-              metadata: {
-                chatTitle,
-                unreadCount: 1,
-              },
-            });
-
-            console.log(`Created chat notification ${notificationId}`);
-          }
-        });
-
-        // Send push notification
-        if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-          await sendPushNotification(
-            userData.fcmTokens,
-            chatTitle,
-            "Yeni mesaj geldi",
-            {
-              type: "chat_message",
-              relatedId: chatId,
-            }
-          );
-        }
-      });
-
-    await Promise.all(notifications);
+    await createNotificationDocumentsBatch(
+      eligibleRecipientIds.map((userId) => ({
+        userId,
+        type: "chat_message",
+        title: chatTitle,
+        message: "Yeni mesajlar var",
+        relatedId: chatId,
+        metadata: {
+          chatTitle,
+          unreadCount: FieldValue.increment(1),
+        },
+        deterministicId: `chat_${userId}_${chatId}`,
+        merge: true,
+      }))
+    );
+    await sendBulkPushNotification(
+      usersById,
+      eligibleRecipientIds,
+      chatTitle,
+      "Yeni mesaj geldi",
+      {
+        type: "chat_message",
+        relatedId: chatId,
+      }
+    );
+    if (!isDmChat) {
+      const meetupDoc = await db.collection("meetups").doc(chatId).get();
+      if (meetupDoc.exists) {
+        await syncMeetupChatShell(chatId, meetupDoc.data());
+      }
+    }
     console.log(`Chat notification processed for message in ${chatId}`);
     return null;
   });
 
+export const onChatMetadataWrite = eventSyncRuntime.firestore
+  .document("chats/{chatId}")
+  .onWrite(async (change, context) => {
+    const { chatId } = context.params;
+    if (chatId.startsWith("dm_") || !change.after.exists) return null;
+
+    const meetupDoc = await db.collection("meetups").doc(chatId).get();
+    if (!meetupDoc.exists) return null;
+
+    const meetupData = meetupDoc.data() || {};
+    const participantIds = (meetupData.participantIds as string[]) || [];
+    await upsertMeetupChatSummaries(chatId, meetupData, participantIds, change.after.data());
+    return null;
+  });
+
 // 2. Meetup registration sync for organizer (create-time participant)
-export const onMeetupCreated = functions.firestore
+export const onMeetupCreated = eventSyncRuntime.firestore
   .document("meetups/{meetupId}")
-  .onCreate(async (snap) => {
+  .onCreate(async (snap, context) => {
+    const { meetupId } = context.params;
     const meetupData = snap.data() || {};
+    const derivedFields = buildMeetupDerivedFields(meetupData);
     const organizerId = meetupData.organizerId as string | undefined;
     if (!organizerId) return null;
 
     try {
+      await snap.ref.set(derivedFields, { merge: true });
       await adjustRegisteredCounter(organizerId, 1);
+      await syncMeetupChatShell(meetupId, { ...meetupData, ...derivedFields });
+      await upsertMeetupChatSummaries(
+        meetupId,
+        { ...meetupData, ...derivedFields },
+        (meetupData.participantIds as string[]) || []
+      );
     } catch (error) {
       console.error(`Organizer registration sync failed for ${organizerId}:`, error);
     }
@@ -345,85 +741,100 @@ export const onMeetupCreated = functions.firestore
   });
 
 // 3. Meetup Update Notification
-export const onMeetupUpdate = functions.firestore
+export const onMeetupUpdate = eventSyncRuntime.firestore
   .document("meetups/{meetupId}")
   .onUpdate(async (change, context) => {
     const { meetupId } = context.params;
     const before = change.before.data();
-    const after = change.after.data();
+    let effectiveAfter = change.after.data();
+    const derivedFields = buildMeetupDerivedFields(effectiveAfter);
+    if (needsMeetupDerivedFieldSync(effectiveAfter, derivedFields)) {
+      await change.after.ref.set(derivedFields, { merge: true });
+      effectiveAfter = { ...effectiveAfter, ...derivedFields };
+    }
+
+    const beforeParticipantIds = (before.participantIds as string[]) || [];
+    const participantIds = (effectiveAfter.participantIds as string[]) || [];
+    const removedParticipantIds = beforeParticipantIds.filter(
+      (userId) => !participantIds.includes(userId)
+    );
+
+    await upsertMeetupChatSummaries(meetupId, effectiveAfter, participantIds);
+    if (removedParticipantIds.length > 0) {
+      await deleteMeetupChatSummaries(meetupId, removedParticipantIds);
+    }
 
     // Check what changed
     const changes: string[] = [];
 
-    if (before.date?.toDate?.()?.getTime() !== after.date?.toDate?.()?.getTime()) {
+    if (before.date?.toDate?.()?.getTime() !== effectiveAfter.date?.toDate?.()?.getTime()) {
       changes.push("tarih");
     }
-    if (before.locationName !== after.locationName || before.locationAddress !== after.locationAddress) {
+    if (
+      before.locationName !== effectiveAfter.locationName ||
+      before.locationAddress !== effectiveAfter.locationAddress
+    ) {
       changes.push("konum");
     }
-    if (before.title !== after.title || before.description !== after.description) {
+    if (before.title !== effectiveAfter.title || before.description !== effectiveAfter.description) {
       changes.push("detaylar");
     }
 
     // Check if meetup was cancelled (you might have a 'cancelled' field)
-    const wasCancelled = !before.cancelled && after.cancelled;
+    const wasCancelled = !before.cancelled && effectiveAfter.cancelled;
 
     if (changes.length === 0 && !wasCancelled) {
       // No significant changes
       return null;
     }
 
-    const participantIds = (after.participantIds as string[]) || [];
-    const organizerId = after.organizerId as string;
-    const chatTitle = after.title as string;
+    const organizerId = effectiveAfter.organizerId as string;
+    const chatTitle = effectiveAfter.title as string;
 
     let notificationType = "meetup_update";
-    let title = `${chatTitle} güncellendi`;
-    let message = `Değişiklikler: ${changes.join(", ")}`;
+    let title = `${chatTitle} gÃ¼ncellendi`;
+    let message = `DeÄŸiÅŸiklikler: ${changes.join(", ")}`;
 
     if (wasCancelled) {
       notificationType = "meetup_cancelled";
       title = `${chatTitle} iptal edildi`;
-      message = "Etkinlik organizatör tarafından iptal edildi.";
+      message = "Etkinlik organizatÃ¶r tarafÄ±ndan iptal edildi.";
     }
 
     // Notify all participants except organizer (they made the change)
-    const notifications = participantIds
-      .filter((id) => id !== organizerId)
-      .map(async (userId) => {
-        const userData = await getUserData(userId);
-        if (!userData) return;
+    const recipientIds = participantIds.filter((id) => id !== organizerId);
+    const usersById = await getUsersDataMap(recipientIds);
+    const eligibleRecipientIds = recipientIds.filter((userId) => {
+      const userData = usersById.get(userId);
+      return !!userData &&
+        shouldSendNotification(userData.notificationPreferences, notificationType);
+    });
 
-        if (!shouldSendNotification(userData.notificationPreferences, notificationType)) {
-          return;
-        }
-
-        await createNotificationDocument(
-          userId,
-          notificationType,
-          title,
-          message,
-          meetupId,
-          { chatTitle, changes }
-        );
-
-        if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-          await sendPushNotification(
-            userData.fcmTokens,
-            title,
-            message,
-            { type: notificationType, relatedId: meetupId }
-          );
-        }
-      });
-
-    await Promise.all(notifications);
+    await createNotificationDocumentsBatch(
+      eligibleRecipientIds.map((userId) => ({
+        userId,
+        type: notificationType,
+        title,
+        message,
+        relatedId: meetupId,
+        metadata: { chatTitle, changes },
+      }))
+    );
+    await sendBulkPushNotification(
+      usersById,
+      eligibleRecipientIds,
+      title,
+      message,
+      { type: notificationType, relatedId: meetupId }
+    );
+    await syncMeetupChatShell(meetupId, effectiveAfter);
+    await upsertMeetupChatSummaries(meetupId, effectiveAfter, participantIds);
     console.log(`Meetup update notification sent for ${meetupId}`);
     return null;
   });
 
 // 4. New Participant Notification (to organizer)
-export const onNewParticipant = functions.firestore
+export const onNewParticipant = eventSyncRuntime.firestore
   .document("meetups/{meetupId}/participants/{participantId}")
   .onCreate(async (snap, context) => {
     const { meetupId, participantId } = context.params;
@@ -461,8 +872,8 @@ export const onNewParticipant = functions.firestore
       await createNotificationDocument(
         organizerId,
         "new_participant",
-        `${chatTitle} - Yeni Katılımcı`,
-        `${participantName} etkinliğinize katıldı!`,
+        `${chatTitle} - Yeni KatÄ±lÄ±mcÄ±`,
+        `${participantName} etkinliÄŸinize katÄ±ldÄ±!`,
         meetupId,
         { participantId, participantName }
       );
@@ -470,8 +881,8 @@ export const onNewParticipant = functions.firestore
       if (organizerData.fcmTokens && organizerData.fcmTokens.length > 0) {
         await sendPushNotification(
           organizerData.fcmTokens,
-          `${chatTitle} - Yeni Katılımcı`,
-          `${participantName} etkinliğinize katıldı!`,
+          `${chatTitle} - Yeni KatÄ±lÄ±mcÄ±`,
+          `${participantName} etkinliÄŸinize katÄ±ldÄ±!`,
           { type: "new_participant", relatedId: meetupId }
         );
       }
@@ -484,7 +895,7 @@ export const onNewParticipant = functions.firestore
           organizerId,
           "capacity_reached",
           `${chatTitle} - Kontenjan Doldu!`,
-          "Etkinliğiniz maksimum kapasiteye ulaştı.",
+          "EtkinliÄŸiniz maksimum kapasiteye ulaÅŸtÄ±.",
           meetupId,
           {}
         );
@@ -493,24 +904,25 @@ export const onNewParticipant = functions.firestore
           await sendPushNotification(
             organizerData.fcmTokens,
             `${chatTitle} - Kontenjan Doldu!`,
-            "Etkinliğiniz maksimum kapasiteye ulaştı.",
+            "EtkinliÄŸiniz maksimum kapasiteye ulaÅŸtÄ±.",
             { type: "capacity_reached", relatedId: meetupId }
           );
         }
       }
     }
 
+    await syncMeetupChatShell(meetupId, meetupData || {});
+    await upsertMeetupChatSummaries(meetupId, meetupData || {}, [participantId]);
     console.log(`New participant notification sent for ${meetupId}`);
     return null;
   });
 
 // 5. Participant Removed - Update counters + Notify waitlisted users
-export const onParticipantRemoved = functions.firestore
+export const onParticipantRemoved = eventSyncRuntime.firestore
   .document("meetups/{meetupId}/participants/{participantId}")
   .onDelete(async (snap, context) => {
     const { meetupId, participantId } = context.params;
 
-    // Get meetup details
     const meetupDoc = await db.collection("meetups").doc(meetupId).get();
     if (!meetupDoc.exists) return null;
 
@@ -522,9 +934,8 @@ export const onParticipantRemoved = functions.firestore
     const maxParticipants = meetupData.maxParticipants as number || 0;
     const waitlistUserIds = (meetupData.waitlistUserIds as string[]) || [];
 
-    // Decrement registration only if meetup has not ended yet
-    const dateTs = meetupData.date as admin.firestore.Timestamp | undefined;
-    const endTs = meetupData.endDate as admin.firestore.Timestamp | undefined;
+    const dateTs = meetupData.date as Timestamp | undefined;
+    const endTs = meetupData.endDate as Timestamp | undefined;
     const effectiveEnd = (endTs ?? dateTs)?.toDate();
     if (effectiveEnd && effectiveEnd.getTime() > Date.now()) {
       try {
@@ -534,8 +945,9 @@ export const onParticipantRemoved = functions.firestore
       }
     }
 
-    // Check if spot is now available (current < max)
     if (currentParticipants >= maxParticipants || waitlistUserIds.length === 0) {
+      await syncMeetupChatShell(meetupId, meetupData);
+      await deleteMeetupChatSummaries(meetupId, [participantId]);
       console.log(`No waitlist notifications needed for ${meetupId}`);
       return null;
     }
@@ -547,41 +959,43 @@ export const onParticipantRemoved = functions.firestore
     const mins = meetupDate.getMinutes().toString().padStart(2, "0");
     const timeStr = `${hours}:${mins}`;
 
-    // Notify all waitlisted users
-    const notifications = waitlistUserIds.map(async (userId) => {
-      const userData = await getUserData(userId);
-      if (!userData) return;
-
-      if (!shouldSendNotification(userData.notificationPreferences, "spot_available")) {
-        return;
-      }
-
-      await createNotificationDocument(
-        userId,
-        "spot_available",
-        `${chatTitle} - Kontenjan Açıldı!`,
-        `Etkinlikte yer açıldı! ${timeStr}'de başlayacak.`,
-        meetupId,
-        { chatTitle, time: timeStr }
-      );
-
-      if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-        await sendPushNotification(
-          userData.fcmTokens,
-          `${chatTitle} - Kontenjan Açıldı!`,
-          "Etkinlikte yer açıldı! Hemen katılabilirsiniz.",
-          { type: "spot_available", relatedId: meetupId }
-        );
-      }
+    const usersById = await getUsersDataMap(waitlistUserIds);
+    const eligibleRecipientIds = waitlistUserIds.filter((userId) => {
+      const userData = usersById.get(userId);
+      return !!userData &&
+        shouldSendNotification(userData.notificationPreferences, "spot_available");
     });
 
-    await Promise.all(notifications);
+    if (eligibleRecipientIds.length > 0) {
+      await createNotificationDocumentsBatch(
+        eligibleRecipientIds.map((userId) => ({
+          userId,
+          deterministicId: `spot_available_${userId}_${meetupId}`,
+          type: "spot_available",
+          title: `${chatTitle} - Kontenjan Acildi!`,
+          message: `Etkinlikte yer acildi! ${timeStr}'de baslayacak.`,
+          relatedId: meetupId,
+          metadata: { chatTitle, time: timeStr },
+        }))
+      );
+
+      await sendBulkPushNotification(
+        usersById,
+        eligibleRecipientIds,
+        `${chatTitle} - Kontenjan Acildi!`,
+        "Etkinlikte yer acildi! Hemen katilabilirsiniz.",
+        { type: "spot_available", relatedId: meetupId }
+      );
+    }
+
+    await syncMeetupChatShell(meetupId, meetupData);
+    await deleteMeetupChatSummaries(meetupId, [participantId]);
     console.log(`Waitlist notifications sent for ${meetupId}`);
     return null;
   });
 
 // 6. Meetup deleted - unregister all participants if meetup not finished yet
-export const onMeetupDeleted = functions.firestore
+export const onMeetupDeleted = eventSyncRuntime.firestore
   .document("meetups/{meetupId}")
   .onDelete(async (snap, context) => {
     const { meetupId } = context.params;
@@ -590,10 +1004,18 @@ export const onMeetupDeleted = functions.firestore
     const participantIds = (meetupData.participantIds as string[]) || [];
     if (participantIds.length === 0) return null;
 
-    const dateTs = meetupData.date as admin.firestore.Timestamp | undefined;
-    const endTs = meetupData.endDate as admin.firestore.Timestamp | undefined;
+    const dateTs = meetupData.date as Timestamp | undefined;
+    const endTs = meetupData.endDate as Timestamp | undefined;
     const effectiveEnd = (endTs ?? dateTs)?.toDate();
-    if (!effectiveEnd || effectiveEnd.getTime() <= Date.now()) return null;
+    if (!effectiveEnd || effectiveEnd.getTime() <= Date.now()) {
+      try {
+        await db.collection("chats").doc(meetupId).delete();
+      } catch (error) {
+        console.error(`Meetup chat shell delete failed for ${meetupId}:`, error);
+      }
+      await deleteMeetupChatSummaries(meetupId, participantIds);
+      return null;
+    }
 
     const updates = participantIds.map(async (userId) => {
       try {
@@ -603,108 +1025,200 @@ export const onMeetupDeleted = functions.firestore
       }
     });
     await Promise.all(updates);
+    try {
+      await db.collection("chats").doc(meetupId).delete();
+    } catch (error) {
+      console.error(`Meetup chat shell delete failed for ${meetupId}:`, error);
+    }
+    await deleteMeetupChatSummaries(meetupId, participantIds);
+    return null;
+  });
+
+export const backfillMeetupChatSummaries = maintenanceRuntime.pubsub
+  .schedule("every 6 hours")
+  .timeZone("Europe/Istanbul")
+  .onRun(async () => {
+    const now = new Date();
+    const lookback = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const horizon = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const pageSize = 150;
+    let scannedMeetups = 0;
+    let writtenSummaries = 0;
+    let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+    let hasMoreMeetups = true;
+
+    while (hasMoreMeetups) {
+      let query = db.collection("meetups")
+        .where("date", ">=", Timestamp.fromDate(lookback))
+        .where("date", "<=", Timestamp.fromDate(horizon))
+        .orderBy("date")
+        .limit(pageSize);
+
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
+      }
+
+      const meetupsSnapshot = await query.get();
+      if (meetupsSnapshot.empty) break;
+
+      scannedMeetups += meetupsSnapshot.size;
+
+      for (const meetupDoc of meetupsSnapshot.docs) {
+        let meetupData = meetupDoc.data() || {};
+        const derivedFields = buildMeetupDerivedFields(meetupData);
+        if (needsMeetupDerivedFieldSync(meetupData, derivedFields)) {
+          await meetupDoc.ref.set(derivedFields, { merge: true });
+          meetupData = { ...meetupData, ...derivedFields };
+        }
+
+        const participantIds = (meetupData.participantIds as string[]) || [];
+        if (participantIds.length === 0) {
+          continue;
+        }
+
+        await syncMeetupChatShell(meetupDoc.id, meetupData);
+        await upsertMeetupChatSummaries(meetupDoc.id, meetupData, participantIds);
+        writtenSummaries += participantIds.length;
+      }
+
+      lastDoc = meetupsSnapshot.docs[meetupsSnapshot.docs.length - 1];
+      hasMoreMeetups = meetupsSnapshot.size === pageSize;
+    }
+
+    console.log(
+      `Meetup chat summary backfill done. Scanned ${scannedMeetups} meetups, upserted ${writtenSummaries} summaries.`
+    );
     return null;
   });
 
 // 7. Meetup Reminder (Scheduled - runs every 15 minutes)
-export const meetupReminder = functions.pubsub
+export const meetupReminder = maintenanceRuntime.pubsub
   .schedule("every 15 minutes")
   .timeZone("Europe/Istanbul")
   .onRun(async () => {
     const now = new Date();
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000);
+    const pageSize = 100;
+    let scannedMeetups = 0;
+    let sentReminders = 0;
+    let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
 
-    // Query meetups starting in approximately 1 hour
-    const meetupsSnapshot = await db.collection("meetups")
-      .where("date", ">=", admin.firestore.Timestamp.fromDate(fifteenMinutesLater))
-      .where("date", "<=", admin.firestore.Timestamp.fromDate(oneHourLater))
-      .get();
+    let hasMoreMeetups = true;
+    while (hasMoreMeetups) {
+      let query = db.collection("meetups")
+        .where("date", ">=", Timestamp.fromDate(fifteenMinutesLater))
+        .where("date", "<=", Timestamp.fromDate(oneHourLater))
+        .orderBy("date")
+        .limit(pageSize);
 
-    console.log(`Found ${meetupsSnapshot.size} meetups starting soon`);
-
-    for (const meetupDoc of meetupsSnapshot.docs) {
-      const meetupId = meetupDoc.id;
-      const meetupData = meetupDoc.data();
-
-      // Check if reminder was already sent
-      if (meetupData.reminderSent) {
-        console.log(`Reminder already sent for ${meetupId}`);
-        continue;
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
       }
 
-      const chatTitle = meetupData.title as string;
-      const meetupDate = meetupData.date.toDate() as Date;
-      const participantIds = (meetupData.participantIds as string[]) || [];
-      const locationName = meetupData.locationName as string;
+      const meetupsSnapshot = await query.get();
+      if (meetupsSnapshot.empty) break;
 
-      const hours = meetupDate.getHours().toString().padStart(2, "0");
-      const mins = meetupDate.getMinutes().toString().padStart(2, "0");
-      const timeStr = `${hours}:${mins}`;
+      scannedMeetups += meetupsSnapshot.size;
 
-      // Send reminder to all participants
-      const notifications = participantIds.map(async (userId) => {
-        const userData = await getUserData(userId);
-        if (!userData) return;
+      for (const meetupDoc of meetupsSnapshot.docs) {
+        const meetupId = meetupDoc.id;
+        const meetupData = meetupDoc.data();
 
-        if (!shouldSendNotification(userData.notificationPreferences, "meetup_reminder")) {
-          return;
+        if (meetupData.reminderSent) {
+          continue;
         }
 
-        await createNotificationDocument(
-          userId,
-          "meetup_reminder",
-          `${chatTitle} - 1 Saat Kaldı!`,
-          `Etkinlik ${timeStr}'de ${locationName} konumunda başlayacak.`,
-          meetupId,
-          { chatTitle, time: timeStr, location: locationName }
-        );
+        const chatTitle = meetupData.title as string;
+        const meetupDate = meetupData.date.toDate() as Date;
+        const participantIds = (meetupData.participantIds as string[]) || [];
+        const locationName = meetupData.locationName as string;
 
-        if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-          await sendPushNotification(
-            userData.fcmTokens,
-            `${chatTitle} - 1 Saat Kaldı!`,
-            `Etkinlik ${timeStr}'de ${locationName} konumunda başlayacak.`,
+        const hours = meetupDate.getHours().toString().padStart(2, "0");
+        const mins = meetupDate.getMinutes().toString().padStart(2, "0");
+        const timeStr = `${hours}:${mins}`;
+
+        const usersById = await getUsersDataMap(participantIds);
+        const eligibleRecipientIds = participantIds.filter((userId) => {
+          const userData = usersById.get(userId);
+          if (!userData) return false;
+          return shouldSendNotification(userData.notificationPreferences, "meetup_reminder");
+        });
+
+        if (eligibleRecipientIds.length > 0) {
+          const reminderTitle = `${chatTitle} - 1 Saat Kaldi!`;
+          const reminderBody = `Etkinlik ${timeStr}de ${locationName} konumunda baslayacak.`;
+
+          await createNotificationDocumentsBatch(
+            eligibleRecipientIds.map((userId) => ({
+              userId,
+              type: "meetup_reminder",
+              title: reminderTitle,
+              message: reminderBody,
+              relatedId: meetupId,
+              metadata: { chatTitle, time: timeStr, location: locationName },
+              deterministicId: `reminder_${userId}_${meetupId}`,
+            }))
+          );
+
+          await sendBulkPushNotification(
+            usersById,
+            eligibleRecipientIds,
+            reminderTitle,
+            reminderBody,
             { type: "meetup_reminder", relatedId: meetupId }
           );
         }
-      });
 
-      await Promise.all(notifications);
+        await meetupDoc.ref.update({ reminderSent: true });
+        sentReminders++;
+      }
 
-      // Mark reminder as sent
-      await meetupDoc.ref.update({ reminderSent: true });
-      console.log(`Reminder sent for meetup ${meetupId}`);
+      lastDoc = meetupsSnapshot.docs[meetupsSnapshot.docs.length - 1];
+      hasMoreMeetups = meetupsSnapshot.size === pageSize;
     }
 
+    console.log(`Meetup reminder scan done. Scanned ${scannedMeetups} meetups, sent ${sentReminders} reminders.`);
     return null;
   });
 
 // 8. Cleanup Old Notifications (Scheduled - runs daily)
-export const cleanupOldNotifications = functions.pubsub
+export const cleanupOldNotifications = maintenanceRuntime.pubsub
   .schedule("every 24 hours")
   .timeZone("Europe/Istanbul")
   .onRun(async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const pageSize = 500;
+    let deletedCount = 0;
+    let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
 
-    const oldNotifications = await db.collection("notifications")
-      .where("timestamp", "<", admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
-      .limit(500)
-      .get();
+    let hasMoreNotifications = true;
+    while (hasMoreNotifications) {
+      let query = db.collection("notifications")
+        .where("timestamp", "<", Timestamp.fromDate(thirtyDaysAgo))
+        .orderBy("timestamp")
+        .limit(pageSize);
 
-    if (oldNotifications.empty) {
-      console.log("No old notifications to delete");
-      return null;
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
+      }
+
+      const oldNotifications = await query.get();
+      if (oldNotifications.empty) break;
+
+      const batch = db.batch();
+      oldNotifications.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      deletedCount += oldNotifications.size;
+      lastDoc = oldNotifications.docs[oldNotifications.docs.length - 1];
+      hasMoreNotifications = oldNotifications.size === pageSize;
     }
 
-    const batch = db.batch();
-    oldNotifications.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-    console.log(`Deleted ${oldNotifications.size} old notifications`);
+    console.log(`Deleted ${deletedCount} old notifications`);
 
     return null;
   });
@@ -720,8 +1234,8 @@ export const onUserCreated = functions.firestore
     await createNotificationDocument(
       userId,
       "system",
-      "Sporsal'a Hoş Geldin! 🎉",
-      `Merhaba ${username}! Spor arkadaşlarınla tanışmaya hazır mısın?`,
+      "Sporsal'a HoÅŸ Geldin! ğŸ‰",
+      `Merhaba ${username}! Spor arkadaÅŸlarÄ±nla tanÄ±ÅŸmaya hazÄ±r mÄ±sÄ±n?`,
       "",
       {}
     );
@@ -732,7 +1246,7 @@ export const onUserCreated = functions.firestore
 
 // 10. GPS Proximity Attendance Record Reliability Sync
 // Reliability formula uses ALL registered meetups in denominator.
-export const onAttendanceRecordCreated = functions.firestore
+export const onAttendanceRecordCreated = interactiveRuntime.firestore
   .document("meetups/{meetupId}/attendance_records/{userId}")
   .onCreate(async (snap, context) => {
     const { meetupId, userId } = context.params;
@@ -897,54 +1411,75 @@ export const onPartnershipWrite = functions.firestore
 
 // 13. Attendance cutoff processor (scheduled)
 // Auto-creates "not_attended" records for missing participants after cutoff.
-export const processAttendanceCutoffs = functions.pubsub
+export const processAttendanceCutoffs = maintenanceRuntime.pubsub
   .schedule("every 30 minutes")
   .timeZone("Europe/Istanbul")
   .onRun(async () => {
     const now = new Date();
     const lookback = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const meetupsSnapshot = await db.collection("meetups")
-      .where("date", ">=", admin.firestore.Timestamp.fromDate(lookback))
-      .where("date", "<=", admin.firestore.Timestamp.fromDate(now))
-      .limit(250)
-      .get();
-
+    const pageSize = 250;
     let createdCount = 0;
+    let scannedMeetups = 0;
+    let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
 
-    for (const meetupDoc of meetupsSnapshot.docs) {
-      const meetupData = meetupDoc.data();
-      const participantIds = (meetupData.participantIds as string[]) || [];
-      if (participantIds.length < 2) continue;
+    let hasMoreCutoffMeetups = true;
+    while (hasMoreCutoffMeetups) {
+      let query = db.collection("meetups")
+        .where("date", ">=", Timestamp.fromDate(lookback))
+        .where("date", "<=", Timestamp.fromDate(now))
+        .orderBy("date")
+        .limit(pageSize);
 
-      const startTs = meetupData.date as admin.firestore.Timestamp | undefined;
-      if (!startTs) continue;
-      const startDate = startTs.toDate();
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
+      }
 
-      const endTs = meetupData.endDate as admin.firestore.Timestamp | undefined;
-      const endDate = endTs ? endTs.toDate() : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-      const cutoff = new Date(startDate.getTime() + Math.floor((endDate.getTime() - startDate.getTime()) / 2));
-      if (now < cutoff) continue;
+      const meetupsSnapshot = await query.get();
+      if (meetupsSnapshot.empty) break;
 
-      for (const participantId of participantIds) {
-        const recordRef = meetupDoc.ref.collection("attendance_records").doc(participantId);
-        try {
-          await recordRef.create({
-            userId: participantId,
-            status: "not_attended",
-            detectedAt: now.toISOString(),
-            method: "cutoff_auto",
-          });
-          createdCount++;
-        } catch (error) {
-          // Ignore already-exists (record already created by GPS/client/previous run)
-          const err = error as { code?: string | number };
-          if (err?.code === 6 || err?.code === "already-exists") continue;
-          console.error(`Cutoff record create failed for meetup ${meetupDoc.id}, user ${participantId}:`, error);
+      scannedMeetups += meetupsSnapshot.size;
+
+      for (const meetupDoc of meetupsSnapshot.docs) {
+        const meetupData = meetupDoc.data();
+        const participantIds = (meetupData.participantIds as string[]) || [];
+        if (participantIds.length < 2) continue;
+
+        const startTs = meetupData.date as Timestamp | undefined;
+        if (!startTs) continue;
+        const startDate = startTs.toDate();
+
+        const endTs = meetupData.endDate as Timestamp | undefined;
+        const endDate = endTs ? endTs.toDate() : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        const cutoff = new Date(startDate.getTime() + Math.floor((endDate.getTime() - startDate.getTime()) / 2));
+        if (now < cutoff) continue;
+
+        for (const participantId of participantIds) {
+          const recordRef = meetupDoc.ref.collection("attendance_records").doc(participantId);
+          try {
+            await recordRef.create({
+              userId: participantId,
+              status: "not_attended",
+              detectedAt: now.toISOString(),
+              method: "cutoff_auto",
+            });
+            createdCount++;
+          } catch (error) {
+            // Ignore already-exists (record already created by GPS/client/previous run)
+            const err = error as { code?: string | number };
+            if (err?.code === 6 || err?.code === "already-exists") continue;
+            console.error(`Cutoff record create failed for meetup ${meetupDoc.id}, user ${participantId}:`, error);
+          }
         }
       }
+
+      lastDoc = meetupsSnapshot.docs[meetupsSnapshot.docs.length - 1];
+      hasMoreCutoffMeetups = meetupsSnapshot.size === pageSize;
     }
 
-    console.log(`Attendance cutoff processor done. Created records: ${createdCount}`);
+    console.log(
+      `Attendance cutoff processor done. Scanned ${scannedMeetups} meetups, created records: ${createdCount}`
+    );
     return null;
   });
+
+

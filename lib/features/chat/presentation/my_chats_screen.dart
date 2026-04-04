@@ -1,12 +1,12 @@
 import 'dart:ui';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/models/meetup_chat_summary_model.dart';
 import '../../../core/models/meetup_model.dart';
 import '../../../core/models/chat_update_model.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/meetup_service.dart';
 import '../../../core/services/chat_service.dart';
+import '../../../core/services/meetup_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import 'widgets/chat_card.dart';
@@ -214,10 +214,8 @@ class _ActiveChatsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meetupService = MeetupService();
-
-    return StreamBuilder<List<MeetupModel>>(
-      stream: meetupService.getUserMeetups(userId),
+    return StreamBuilder<List<MeetupChatSummaryModel>>(
+      stream: chatService.streamMeetupChatSummariesForUser(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -234,35 +232,34 @@ class _ActiveChatsTab extends StatelessWidget {
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const ActiveChatsEmptyState();
+        final summaries = snapshot.data ?? const <MeetupChatSummaryModel>[];
+        final activeSummaries = summaries
+            .where((summary) => !summary.isPast)
+            .toList()
+          ..sort((a, b) => a.meetupDate.compareTo(b.meetupDate));
+
+        if (activeSummaries.isNotEmpty) {
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: activeSummaries.length,
+            separatorBuilder: (context, index) => const ChatDivider(),
+            itemBuilder: (context, index) {
+              final summary = activeSummaries[index];
+              return _ChatSummaryCard(
+                summary: summary,
+                userId: userId,
+                chatService: chatService,
+                isPast: false,
+              );
+            },
+          );
         }
 
-        // Filter only upcoming/active meetups
-        final activeMeetups = snapshot.data!
-            .where((meetup) => !meetupService.isMeetupPast(meetup))
-            .toList();
-
-        if (activeMeetups.isEmpty) {
-          return const ActiveChatsEmptyState();
-        }
-
-        // Sort by date (nearest first)
-        activeMeetups.sort((a, b) => a.date.compareTo(b.date));
-
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: activeMeetups.length,
-          separatorBuilder: (context, index) => const ChatDivider(),
-          itemBuilder: (context, index) {
-            final meetup = activeMeetups[index];
-            return _ChatCardWithStream(
-              meetup: meetup,
-              userId: userId,
-              chatService: chatService,
-              isPast: false,
-            );
-          },
+        return _LegacyMeetupChatsList(
+          userId: userId,
+          chatService: chatService,
+          isPast: false,
+          emptyState: const ActiveChatsEmptyState(),
         );
       },
     );
@@ -278,10 +275,8 @@ class _PastChatsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meetupService = MeetupService();
-
-    return StreamBuilder<List<MeetupModel>>(
-      stream: meetupService.getPastMeetupsForUser(userId),
+    return StreamBuilder<List<MeetupChatSummaryModel>>(
+      stream: chatService.streamMeetupChatSummariesForUser(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -298,28 +293,32 @@ class _PastChatsTab extends StatelessWidget {
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const PastChatsEmptyState();
+        final summaries = snapshot.data ?? const <MeetupChatSummaryModel>[];
+        final pastSummaries = summaries.where((summary) => summary.isPast).toList()
+          ..sort((a, b) => b.meetupDate.compareTo(a.meetupDate));
+
+        if (pastSummaries.isNotEmpty) {
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: pastSummaries.length,
+            separatorBuilder: (context, index) => const ChatDivider(),
+            itemBuilder: (context, index) {
+              final summary = pastSummaries[index];
+              return _ChatSummaryCard(
+                summary: summary,
+                userId: userId,
+                chatService: chatService,
+                isPast: true,
+              );
+            },
+          );
         }
 
-        final pastMeetups = snapshot.data!;
-
-        // Sort by date (most recent first)
-        pastMeetups.sort((a, b) => b.date.compareTo(a.date));
-
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: pastMeetups.length,
-          separatorBuilder: (context, index) => const ChatDivider(),
-          itemBuilder: (context, index) {
-            final meetup = pastMeetups[index];
-            return _ChatCardWithStream(
-              meetup: meetup,
-              userId: userId,
-              chatService: chatService,
-              isPast: true,
-            );
-          },
+        return _LegacyMeetupChatsList(
+          userId: userId,
+          chatService: chatService,
+          isPast: true,
+          emptyState: const PastChatsEmptyState(),
         );
       },
     );
@@ -442,6 +441,117 @@ class _DirectMessagesTab extends StatelessWidget {
   }
 }
 
+class _LegacyMeetupChatsList extends StatelessWidget {
+  final String userId;
+  final ChatService chatService;
+  final bool isPast;
+  final Widget emptyState;
+
+  const _LegacyMeetupChatsList({
+    required this.userId,
+    required this.chatService,
+    required this.isPast,
+    required this.emptyState,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final meetupService = MeetupService();
+    final stream = isPast
+        ? meetupService.getPastMeetupsForUser(userId)
+        : meetupService.getUserMeetups(userId);
+
+    return StreamBuilder<List<MeetupModel>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return EmptyStateWidget(
+            icon: Icons.error_outline,
+            message: AppLocalizations.of(context)!.errorOccurred,
+            subtitle: snapshot.error.toString(),
+            iconColor: Colors.red,
+          );
+        }
+
+        final meetups = (snapshot.data ?? const <MeetupModel>[])
+            .where(
+              (meetup) => isPast
+                  ? meetupService.isMeetupPast(meetup)
+                  : !meetupService.isMeetupPast(meetup),
+            )
+            .toList()
+          ..sort(
+            (a, b) => isPast
+                ? b.date.compareTo(a.date)
+                : a.date.compareTo(b.date),
+          );
+
+        if (meetups.isEmpty) {
+          return emptyState;
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: meetups.length,
+          separatorBuilder: (context, index) => const ChatDivider(),
+          itemBuilder: (context, index) {
+            final meetup = meetups[index];
+            return _ChatCardWithStream(
+              meetup: meetup,
+              userId: userId,
+              chatService: chatService,
+              isPast: isPast,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ChatSummaryCard extends StatelessWidget {
+  final MeetupChatSummaryModel summary;
+  final String userId;
+  final ChatService chatService;
+  final bool isPast;
+
+  const _ChatSummaryCard({
+    required this.summary,
+    required this.userId,
+    required this.chatService,
+    required this.isPast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final meetup = summary.toMeetupCardModel();
+    final chatUpdate = summary.toChatUpdateModel();
+
+    return ChatCard(
+      meetup: meetup,
+      lastMessage: chatUpdate.lastMessage,
+      unreadCount: chatUpdate.unreadCount,
+      lastActivityTime: chatUpdate.chatCreatedAt ?? meetup.createdAt,
+      currentUserId: userId,
+      isPast: isPast,
+      isOrganizerOnlyMode: chatUpdate.isOrganizerOnlyMode,
+      onTap: () {
+        chatService.clearUnreadCount(summary.chatId, userId);
+        context.push(
+          '/chat',
+          extra: {'chatId': summary.chatId, 'title': summary.title},
+        );
+      },
+    );
+  }
+}
+
 // Chat Card with real-time stream updates
 class _ChatCardWithStream extends StatelessWidget {
   final MeetupModel meetup;
@@ -462,38 +572,21 @@ class _ChatCardWithStream extends StatelessWidget {
       stream: chatService.streamChatUpdates(meetup.id, userId),
       builder: (context, snapshot) {
         final chatUpdate = snapshot.data;
+        return ChatCard(
+          meetup: meetup,
+          lastMessage: chatUpdate?.lastMessage,
+          unreadCount: chatUpdate?.unreadCount ?? 0,
+          lastActivityTime: chatUpdate?.chatCreatedAt ?? meetup.createdAt,
+          currentUserId: userId,
+          isPast: isPast,
+          isOrganizerOnlyMode: chatUpdate?.isOrganizerOnlyMode ?? false,
+          onTap: () {
+            // Clear unread count when navigating to chat
+            chatService.clearUnreadCount(meetup.id, userId);
 
-        // Listen to organizer mode status
-        return StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('chats')
-              .doc(meetup.id)
-              .snapshots(),
-          builder: (context, chatSnapshot) {
-            final isOrganizerOnlyMode =
-                chatSnapshot.hasData && chatSnapshot.data != null
-                ? ((chatSnapshot.data!.data()
-                          as Map<String, dynamic>?)?['isOrganizerOnlyMode'] ??
-                      false)
-                : false;
-
-            return ChatCard(
-              meetup: meetup,
-              lastMessage: chatUpdate?.lastMessage,
-              unreadCount: chatUpdate?.unreadCount ?? 0,
-              lastActivityTime: chatUpdate?.chatCreatedAt ?? meetup.createdAt,
-              currentUserId: userId,
-              isPast: isPast,
-              isOrganizerOnlyMode: isOrganizerOnlyMode,
-              onTap: () {
-                // Clear unread count when navigating to chat
-                chatService.clearUnreadCount(meetup.id, userId);
-
-                context.push(
-                  '/chat',
-                  extra: {'chatId': meetup.id, 'title': meetup.title},
-                );
-              },
+            context.push(
+              '/chat',
+              extra: {'chatId': meetup.id, 'title': meetup.title},
             );
           },
         );

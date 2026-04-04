@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../models/meetup_chat_summary_model.dart';
 import '../models/message_model.dart';
 import '../models/chat_update_model.dart';
 
@@ -12,8 +13,8 @@ class ChatService {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   // Collection Reference
-  CollectionReference get _chatsRef => _firestore.collection('chats');
-
+  CollectionReference<Map<String, dynamic>> get _chatsRef =>
+      _firestore.collection('chats');
   // Send Message
   Future<bool> sendMessage({
     required String chatId, // This will be the meetupId
@@ -49,6 +50,8 @@ class ChatService {
       await _chatsRef.doc(chatId).set({
         'lastMessage': text,
         'lastMessageTime': FieldValue.serverTimestamp(),
+        'lastMessageSenderId': senderId,
+        'lastMessageSenderName': senderName,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -90,6 +93,7 @@ class ChatService {
         'isEdited': true,
         'editedAt': FieldValue.serverTimestamp(),
       });
+      await _syncChatPreview(chatId);
 
       debugPrint('Message edited successfully');
       return true;
@@ -124,6 +128,7 @@ class ChatService {
       }
 
       await messageRef.update({'text': 'Bu mesaj silindi', 'isDeleted': true});
+      await _syncChatPreview(chatId);
 
       debugPrint('Message deleted successfully');
       return true;
@@ -221,13 +226,12 @@ class ChatService {
   /// Get unread message count for a user in a chat.
   Future<int> getUnreadCount(String chatId, String userId) async {
     try {
-      final doc = await _chatsRef
-          .doc(chatId)
-          .collection('unread')
-          .doc(userId)
-          .get();
+      final doc = await _chatsRef.doc(chatId).get();
+      final data = doc.data();
+      if (data == null) return 0;
 
-      return doc.data()?['count'] ?? 0;
+      final unreadCounts = (data['unreadCounts'] as Map?)?.cast<String, dynamic>();
+      return _readUnreadCount(unreadCounts, userId);
     } catch (e) {
       debugPrint(
         'Error fetching unread count for chat $chatId, user $userId: $e',
@@ -238,23 +242,22 @@ class ChatService {
 
   /// Stream unread count for a user in a chat (real-time updates).
   Stream<int> streamUnreadCount(String chatId, String userId) {
-    return _chatsRef
-        .doc(chatId)
-        .collection('unread')
-        .doc(userId)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.data()?['count'] ?? 0;
-        });
+    return _chatsRef.doc(chatId).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return 0;
+
+      final unreadCounts = (data['unreadCounts'] as Map?)?.cast<String, dynamic>();
+      return _readUnreadCount(unreadCounts, userId);
+    });
   }
 
   /// Clear unread count when user opens a chat.
   Future<void> clearUnreadCount(String chatId, String userId) async {
     try {
-      await _chatsRef.doc(chatId).collection('unread').doc(userId).set({
-        'count': 0,
-        'lastCleared': FieldValue.serverTimestamp(),
-      });
+      await _chatsRef.doc(chatId).set({
+        'unreadCounts.$userId': 0,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
       debugPrint('Cleared unread count for chat $chatId, user $userId');
     } catch (e) {
       debugPrint('Error clearing unread count: $e');
@@ -269,20 +272,17 @@ class ChatService {
   ) async {
     try {
       final batch = _firestore.batch();
+      final chatUpdate = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
       for (final participantId in participantIds) {
         if (participantId != senderId) {
-          final unreadRef = _chatsRef
-              .doc(chatId)
-              .collection('unread')
-              .doc(participantId);
-          batch.set(unreadRef, {
-            'count': FieldValue.increment(1),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+          chatUpdate['unreadCounts.$participantId'] = FieldValue.increment(1);
         }
       }
 
+      batch.set(_chatsRef.doc(chatId), chatUpdate, SetOptions(merge: true));
       await batch.commit();
     } catch (e) {
       debugPrint('Error incrementing unread count: $e');
@@ -293,35 +293,47 @@ class ChatService {
   Stream<ChatUpdateModel> streamChatUpdates(String chatId, String userId) {
     return _chatsRef
         .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .limit(1)
         .snapshots()
-        .asyncMap((snapshot) async {
-          final lastMessage = snapshot.docs.isEmpty
-              ? null
-              : MessageModel.fromJson(snapshot.docs.first.data());
+        .map((snapshot) {
+          final data = snapshot.data() as Map<String, dynamic>? ?? {};
+          final chatCreatedAt = _parseDateTime(data['createdAt']);
+          final lastMessageTime = _parseDateTime(data['lastMessageTime']);
+          final unreadCounts =
+              (data['unreadCounts'] as Map?)?.cast<String, dynamic>();
+          final unreadCount = _readUnreadCount(
+            unreadCounts,
+            userId,
+          );
+          final isOrganizerOnlyMode = data['isOrganizerOnlyMode'] == true;
+
+          final lastMessageText = data['lastMessage'] as String?;
+          final lastMessageSenderId = data['lastMessageSenderId'] as String?;
+          final lastMessageSenderName =
+              data['lastMessageSenderName'] as String? ?? 'Bilinmiyor';
+
+          final lastMessage =
+              lastMessageText != null &&
+                  lastMessageText.isNotEmpty &&
+                  lastMessageTime != null
+              ? MessageModel(
+                  id: 'summary_$chatId',
+                  senderId: lastMessageSenderId ?? '',
+                  senderName: lastMessageSenderName,
+                  text: lastMessageText,
+                  type: MessageType.text,
+                  timestamp: lastMessageTime,
+                )
+              : null;
 
           if (lastMessage != null) {
             _updateCache(chatId, lastMessage);
-          }
-
-          final unreadCount = await getUnreadCount(chatId, userId);
-          final chatDoc = await _chatsRef.doc(chatId).get();
-          DateTime? chatCreatedAt;
-
-          if (chatDoc.exists) {
-            final data = chatDoc.data() as Map<String, dynamic>?;
-            final createdAtValue = data?['createdAt'];
-            if (createdAtValue is Timestamp) {
-              chatCreatedAt = createdAtValue.toDate();
-            }
           }
 
           return ChatUpdateModel(
             lastMessage: lastMessage,
             unreadCount: unreadCount,
             chatCreatedAt: chatCreatedAt,
+            isOrganizerOnlyMode: isOrganizerOnlyMode,
           );
         });
   }
@@ -403,10 +415,93 @@ class ChatService {
         .where('participants', arrayContains: userId)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final chats = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         return {'chatId': doc.id, ...data};
       }).toList();
+
+      chats.sort((a, b) {
+        final aTime = _parseDateTime(a['lastMessageTime']) ??
+            _parseDateTime(a['updatedAt']) ??
+            _parseDateTime(a['createdAt']) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime = _parseDateTime(b['lastMessageTime']) ??
+            _parseDateTime(b['updatedAt']) ??
+            _parseDateTime(b['createdAt']) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+
+      return chats;
     });
+  }
+
+  Stream<List<MeetupChatSummaryModel>> streamMeetupChatSummariesForUser(
+    String userId,
+  ) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('chat_summaries')
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => MeetupChatSummaryModel.fromJson(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
+  Future<void> _syncChatPreview(String chatId) async {
+    try {
+      final snapshot = await _chatsRef
+          .doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        invalidateCache(chatId);
+        await _chatsRef.doc(chatId).set({
+          'lastMessage': null,
+          'lastMessageTime': null,
+          'lastMessageSenderId': null,
+          'lastMessageSenderName': null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        return;
+      }
+
+      final latestMessage = MessageModel.fromJson(snapshot.docs.first.data());
+      _updateCache(chatId, latestMessage);
+      await _chatsRef.doc(chatId).set({
+        'lastMessage': latestMessage.text,
+        'lastMessageTime': Timestamp.fromDate(latestMessage.timestamp),
+        'lastMessageSenderId': latestMessage.senderId,
+        'lastMessageSenderName': latestMessage.senderName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error syncing chat preview for $chatId: $e');
+    }
+  }
+
+  int _readUnreadCount(Map<String, dynamic>? unreadCounts, String userId) {
+    if (unreadCounts == null) return 0;
+    final value = unreadCounts[userId];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

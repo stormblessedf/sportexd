@@ -8,6 +8,13 @@ class MeetupParticipationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   CollectionReference get _meetupsRef => _firestore.collection('meetups');
 
+  String _participantStateFor(int currentParticipants, int maxParticipants) {
+    return MeetupModel.computeParticipantState(
+      currentParticipants: currentParticipants,
+      maxParticipants: maxParticipants,
+    );
+  }
+
   Future<void> joinMeetup(String meetupId, String userId) async {
     final isNewJoin = await _firestore.runTransaction((transaction) async {
       final docRef = _meetupsRef.doc(meetupId);
@@ -42,6 +49,12 @@ class MeetupParticipationService {
       transaction.update(docRef, {
         'currentParticipants': FieldValue.increment(1),
         'isFull': (meetup.currentParticipants + 1) >= meetup.maxParticipants,
+        'participantState': _participantStateFor(
+          meetup.currentParticipants + 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants + 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayUnion([userId]),
         'waitlistUserIds': FieldValue.arrayRemove([userId]),
       });
@@ -119,6 +132,12 @@ class MeetupParticipationService {
       final updateData = <String, dynamic>{
         'currentParticipants': FieldValue.increment(-1),
         'isFull': false,
+        'participantState': _participantStateFor(
+          meetup.currentParticipants - 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants - 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayRemove([userId]),
       };
 
@@ -212,6 +231,12 @@ class MeetupParticipationService {
       transaction.update(docRef, {
         'currentParticipants': FieldValue.increment(1),
         'isFull': (meetup.currentParticipants + 1) >= meetup.maxParticipants,
+        'participantState': _participantStateFor(
+          meetup.currentParticipants + 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants + 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayUnion([userId]),
         'waitlistUserIds': FieldValue.arrayRemove([userId]),
         slotsField: updatedSlots.map((s) => s.toJson()).toList(),

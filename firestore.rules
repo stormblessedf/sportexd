@@ -48,6 +48,9 @@ service cloud.firestore {
       return request.resource.data.participantIds is list
         && request.resource.data.waitlistUserIds is list
         && request.resource.data.currentParticipants is int
+        && request.resource.data.availableSpots is int
+        && request.resource.data.participantState is string
+        && request.resource.data.searchKeywords is list
         && request.resource.data.maxParticipants is int;
     }
 
@@ -56,6 +59,16 @@ service cloud.firestore {
           == request.resource.data.participantIds.size()
         && request.resource.data.currentParticipants >= 1
         && request.resource.data.currentParticipants <= request.resource.data.maxParticipants
+        && request.resource.data.availableSpots
+          == request.resource.data.maxParticipants - request.resource.data.currentParticipants
+        && (
+          request.resource.data.currentParticipants >= request.resource.data.maxParticipants
+            ? request.resource.data.participantState == 'full'
+            : request.resource.data.currentParticipants * 10
+                >= request.resource.data.maxParticipants * 8
+              ? request.resource.data.participantState == 'almost_full'
+              : request.resource.data.participantState == 'has_space'
+        )
         && request.resource.data.participantIds.hasAny([resource.data.organizerId])
         && request.resource.data.isFull
           == (request.resource.data.currentParticipants >= request.resource.data.maxParticipants);
@@ -202,6 +215,8 @@ service cloud.firestore {
         && changed.hasOnly([
           'currentParticipants',
           'isFull',
+          'participantState',
+          'availableSpots',
           'participantIds',
           'waitlistUserIds',
           'teamASlots',
@@ -244,6 +259,8 @@ service cloud.firestore {
           'fcmTokens',
           'notificationPreferences',
           'processedAttendanceIds',
+          'isPremium',
+          'premiumUntil',
         ])
         && request.resource.data.id == resource.data.id
         && request.resource.data.email == resource.data.email;
@@ -462,10 +479,15 @@ service cloud.firestore {
       allow create: if isSafeOwnUserCreate(userId);
       allow update: if isSafeOwnUserUpdate(userId);
       allow delete: if false;
+
+      match /chat_summaries/{chatId} {
+        allow read: if isOwnUser(userId);
+        allow create, update, delete: if false;
+      }
     }
 
     match /meetups/{meetupId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.participantIds is list
@@ -561,8 +583,10 @@ service cloud.firestore {
           'lastMessage',
           'lastMessageTime',
           'lastMessageSenderId',
+          'lastMessageSenderName',
           'updatedAt',
           'isOrganizerOnlyMode',
+          'unreadCounts',
         ]);
       // Delete: Only DM creator or meetup organizer can delete
       allow delete: if canAccessChat(chatId)
@@ -668,7 +692,6 @@ service cloud.firestore {
         && resource.data.participantIds.hasAny([request.auth.uid]);
 
       allow create: if isSignedIn()
-        && isPremiumUser(request.auth.uid)
         && request.resource.data.keys().hasOnly([
           'id',
           'pairId',
@@ -681,6 +704,12 @@ service cloud.firestore {
           'acceptedAt',
           'rejectedAt',
           'chatId',
+          'inviteContext',
+          'sportType',
+          'meetupId',
+          'meetupTitle',
+          'senderName',
+          'senderImageUrl',
         ])
         && request.resource.data.id == inviteId
         && request.resource.data.pairId == inviteId
@@ -715,6 +744,12 @@ service cloud.firestore {
           'acceptedAt',
           'rejectedAt',
           'chatId',
+          'inviteContext',
+          'sportType',
+          'meetupId',
+          'meetupTitle',
+          'senderName',
+          'senderImageUrl',
         ])
         && request.resource.data.id == resource.data.id
         && request.resource.data.pairId == resource.data.pairId
@@ -779,6 +814,12 @@ service cloud.firestore {
               'acceptedAt',
               'rejectedAt',
               'chatId',
+              'inviteContext',
+              'sportType',
+              'meetupId',
+              'meetupTitle',
+              'senderName',
+              'senderImageUrl',
             ])
           )
         );

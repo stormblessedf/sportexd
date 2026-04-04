@@ -3357,6 +3357,204 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sohbet Baslat'**
   String get startChatButton;
+
+  /// No description provided for @premiumTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sporsal Premium'**
+  String get premiumTitle;
+
+  /// No description provided for @premiumHeroTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sporsal\'ın Tüm Gücünü Aç'**
+  String get premiumHeroTitle;
+
+  /// No description provided for @premiumHeroSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium üyelikle spor deneyimini bir üst seviyeye taşı.'**
+  String get premiumHeroSubtitle;
+
+  /// No description provided for @premiumFeaturesHeader.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium\'a Dahil Olanlar'**
+  String get premiumFeaturesHeader;
+
+  /// No description provided for @premiumFeatureSwipe.
+  ///
+  /// In tr, this message translates to:
+  /// **'Swipe Eşleşme Sistemi'**
+  String get premiumFeatureSwipe;
+
+  /// No description provided for @premiumFeatureSwipeDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sağa kaydırarak spor arkadaşı bul'**
+  String get premiumFeatureSwipeDesc;
+
+  /// No description provided for @premiumFeatureBadge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium Profil Rozeti'**
+  String get premiumFeatureBadge;
+
+  /// No description provided for @premiumFeatureBadgeDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Profilinde altın premium rozeti göster'**
+  String get premiumFeatureBadgeDesc;
+
+  /// No description provided for @premiumFeatureFeatured.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne Çıkan Profil'**
+  String get premiumFeatureFeatured;
+
+  /// No description provided for @premiumFeatureFeaturedDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Keşfet sayfasında üst sıralarda görün'**
+  String get premiumFeatureFeaturedDesc;
+
+  /// No description provided for @premiumFeatureUnlimited.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sınırsız Etkinlik Oluşturma'**
+  String get premiumFeatureUnlimited;
+
+  /// No description provided for @premiumFeatureUnlimitedDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz hesaplarda aylık 3 etkinlik limiti'**
+  String get premiumFeatureUnlimitedDesc;
+
+  /// No description provided for @premiumFeatureSupport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öncelikli Destek'**
+  String get premiumFeatureSupport;
+
+  /// No description provided for @premiumFeatureSupportDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'7/24 öncelikli müşteri desteği'**
+  String get premiumFeatureSupportDesc;
+
+  /// No description provided for @premiumPlanMonthly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık'**
+  String get premiumPlanMonthly;
+
+  /// No description provided for @premiumPlanAnnual.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yıllık'**
+  String get premiumPlanAnnual;
+
+  /// No description provided for @premiumPlanSavings.
+  ///
+  /// In tr, this message translates to:
+  /// **'%37 Tasarruf'**
+  String get premiumPlanSavings;
+
+  /// No description provided for @premiumPurchaseButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'{plan} Premium — {price}'**
+  String premiumPurchaseButton(String plan, String price);
+
+  /// No description provided for @premiumConfirmTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium\'u Onayla'**
+  String get premiumConfirmTitle;
+
+  /// No description provided for @premiumConfirmContent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Demo modunda premium aktif edilecek.'**
+  String get premiumConfirmContent;
+
+  /// No description provided for @premiumConfirmButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onayla'**
+  String get premiumConfirmButton;
+
+  /// No description provided for @premiumActivatedSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎉 Premium aktif edildi!'**
+  String get premiumActivatedSuccess;
+
+  /// No description provided for @premiumErrorRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu. Tekrar deneyin.'**
+  String get premiumErrorRetry;
+
+  /// No description provided for @premiumLoginRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satın almak için giriş yapmalısınız.'**
+  String get premiumLoginRequired;
+
+  /// No description provided for @premiumActiveTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium Aktif!'**
+  String get premiumActiveTitle;
+
+  /// No description provided for @premiumDaysLeft.
+  ///
+  /// In tr, this message translates to:
+  /// **'{days} gün kaldı'**
+  String premiumDaysLeft(int days);
+
+  /// No description provided for @premiumExpiryDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş: {date}'**
+  String premiumExpiryDate(String date);
+
+  /// No description provided for @premiumActiveFeatures.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm Premium Avantajlarını Kullanıyorsunuz'**
+  String get premiumActiveFeatures;
+
+  /// No description provided for @premiumRestoreNote.
+  ///
+  /// In tr, this message translates to:
+  /// **'Abonelikler, satın alma onayından sonra aktif olur.'**
+  String get premiumRestoreNote;
+
+  /// No description provided for @sectionPremium.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium'**
+  String get sectionPremium;
+
+  /// No description provided for @premiumSettingsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sporsal Premium'**
+  String get premiumSettingsTitle;
+
+  /// No description provided for @premiumSettingsSubtitleActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Premium üyeliğiniz aktif'**
+  String get premiumSettingsSubtitleActive;
+
+  /// No description provided for @premiumSettingsSubtitleInactive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Özelliklerinizi genişletin'**
+  String get premiumSettingsSubtitleInactive;
 }
 
 class _AppLocalizationsDelegate

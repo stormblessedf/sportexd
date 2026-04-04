@@ -7,11 +7,13 @@ class ChatUpdateModel {
   final MessageModel? lastMessage;
   final int unreadCount;
   final DateTime? chatCreatedAt;
+  final bool isOrganizerOnlyMode;
 
   const ChatUpdateModel({
     this.lastMessage,
     required this.unreadCount,
     this.chatCreatedAt,
+    this.isOrganizerOnlyMode = false,
   });
 
   /// Get the timestamp to display in the chat list.
@@ -25,11 +27,13 @@ class ChatUpdateModel {
     MessageModel? lastMessage,
     int? unreadCount,
     DateTime? chatCreatedAt,
+    bool? isOrganizerOnlyMode,
   }) {
     return ChatUpdateModel(
       lastMessage: lastMessage ?? this.lastMessage,
       unreadCount: unreadCount ?? this.unreadCount,
       chatCreatedAt: chatCreatedAt ?? this.chatCreatedAt,
+      isOrganizerOnlyMode: isOrganizerOnlyMode ?? this.isOrganizerOnlyMode,
     );
   }
 
@@ -39,9 +43,15 @@ class ChatUpdateModel {
     return other is ChatUpdateModel &&
         other.lastMessage?.id == lastMessage?.id &&
         other.unreadCount == unreadCount &&
-        other.chatCreatedAt == chatCreatedAt;
+        other.chatCreatedAt == chatCreatedAt &&
+        other.isOrganizerOnlyMode == isOrganizerOnlyMode;
   }
 
   @override
-  int get hashCode => Object.hash(lastMessage?.id, unreadCount, chatCreatedAt);
+  int get hashCode => Object.hash(
+        lastMessage?.id,
+        unreadCount,
+        chatCreatedAt,
+        isOrganizerOnlyMode,
+      );
 }

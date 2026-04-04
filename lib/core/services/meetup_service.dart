@@ -9,8 +9,15 @@ class MeetupService {
 
   CollectionReference get _meetupsRef => _firestore.collection('meetups');
 
+  String _participantStateFor(int currentParticipants, int maxParticipants) {
+    return MeetupModel.computeParticipantState(
+      currentParticipants: currentParticipants,
+      maxParticipants: maxParticipants,
+    );
+  }
+
   // Create Meetup
-  Future<void> createMeetup({
+  Future<MeetupModel> createMeetup({
     required String title,
     required String description,
     String? rules,
@@ -20,6 +27,7 @@ class MeetupService {
     required String locationName,
     required String locationAddress,
     required int maxParticipants,
+    bool hideFromFeedUntilAccepted = false,
     required String organizerId,
     required String organizerName,
     String? organizerImageUrl,
@@ -97,6 +105,7 @@ class MeetupService {
       organizerImageUrl: organizerImageUrl,
       currentParticipants: 1, // Organizer joins automatically
       maxParticipants: maxParticipants,
+      hideFromFeedUntilAccepted: hideFromFeedUntilAccepted,
       participantIds: [organizerId],
       latitude: latitude,
       longitude: longitude,
@@ -108,6 +117,7 @@ class MeetupService {
     );
 
     await docRef.set(meetup.toJson());
+    return meetup;
   }
 
   // Get Upcoming Meetups (Future events only)
@@ -119,9 +129,12 @@ class MeetupService {
         .orderBy('date', descending: false)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return MeetupModel.fromJson(doc.data() as Map<String, dynamic>);
-          }).toList();
+          return snapshot.docs
+              .map((doc) {
+                return MeetupModel.fromJson(doc.data() as Map<String, dynamic>);
+              })
+              .where((meetup) => meetup.isFeedVisible)
+              .toList();
         });
   }
 
@@ -212,6 +225,12 @@ class MeetupService {
       transaction.update(docRef, {
         'currentParticipants': FieldValue.increment(1),
         'isFull': (meetup.currentParticipants + 1) >= meetup.maxParticipants,
+        'participantState': _participantStateFor(
+          meetup.currentParticipants + 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants + 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayUnion([userId]),
         'waitlistUserIds': FieldValue.arrayRemove([
           userId,
@@ -311,6 +330,12 @@ class MeetupService {
       final updateData = <String, dynamic>{
         'currentParticipants': FieldValue.increment(-1),
         'isFull': false, // No longer full since someone left
+        'participantState': _participantStateFor(
+          meetup.currentParticipants - 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants - 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayRemove([userId]),
       };
 
@@ -438,6 +463,12 @@ class MeetupService {
       transaction.update(docRef, {
         'currentParticipants': FieldValue.increment(1),
         'isFull': (meetup.currentParticipants + 1) >= meetup.maxParticipants,
+        'participantState': _participantStateFor(
+          meetup.currentParticipants + 1,
+          meetup.maxParticipants,
+        ),
+        'availableSpots': (meetup.maxParticipants - (meetup.currentParticipants + 1))
+            .clamp(0, meetup.maxParticipants),
         'participantIds': FieldValue.arrayUnion([userId]),
         'waitlistUserIds': FieldValue.arrayRemove([userId]),
         slotsField: updatedSlots.map((s) => s.toJson()).toList(),

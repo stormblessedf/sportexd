@@ -4,7 +4,6 @@ import 'package:sporsal/core/services/location_service.dart';
 import 'package:sporsal/core/services/places_service.dart';
 import 'package:sporsal/core/services/search_history_service.dart';
 import 'package:sporsal/core/services/venue_recommendation_service.dart';
-import 'package:sporsal/features/profile/presentation/controllers/photo_upload_controller.dart';
 import 'package:sporsal/features/venue_recommendations/presentation/venue_detail_screen.dart';
 import 'package:sporsal/features/venue_recommendations/presentation/venue_list_screen.dart';
 import 'package:sporsal/features/venue_recommendations/presentation/venue_onboarding_screen.dart';
@@ -23,13 +22,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   final SearchHistoryService _searchHistoryService = SearchHistoryService();
   bool _hasActiveSession = false;
-
-  /// Kullanıcı kendi profil ekranındaysa true döner.
-  /// `/profile` rotası kendi profili; `/profile/:id` başka kullanıcı.
-  bool get _isOnOwnProfile {
-    final location = GoRouterState.of(context).uri.toString();
-    return location == '/profile';
-  }
 
   @override
   void initState() {
@@ -114,30 +106,23 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isOwnProfile = _isOnOwnProfile;
-
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: ListenableBuilder(
-        listenable: PhotoUploadController.instance,
-        builder: (context, _) {
+      bottomNavigationBar: Builder(
+        builder: (context) {
           final l10n = AppLocalizations.of(context)!;
           return NavigationBar(
             selectedIndex: _calculateSelectedIndex(context),
-            onDestinationSelected: (index) =>
-                _onItemTapped(index, context, isOwnProfile),
-            destinations: _buildDestinations(isOwnProfile, l10n),
+            onDestinationSelected: (index) => _onItemTapped(index, context),
+            destinations: _buildDestinations(l10n),
           );
         },
       ),
     );
   }
 
-  List<NavigationDestination> _buildDestinations(
-    bool isOwnProfile,
-    AppLocalizations l10n,
-  ) {
-    final destinations = <NavigationDestination>[
+  List<NavigationDestination> _buildDestinations(AppLocalizations l10n) {
+    return <NavigationDestination>[
       NavigationDestination(
         icon: const Icon(Icons.home_outlined),
         selectedIcon: const Icon(Icons.home),
@@ -177,26 +162,6 @@ class _MainShellState extends State<MainShell> {
         label: l10n.navProfile,
       ),
     ];
-
-    if (isOwnProfile) {
-      final isUploading = PhotoUploadController.instance.isUploading;
-      destinations.add(
-        NavigationDestination(
-          icon: Icon(
-            Icons.add_a_photo_outlined,
-            color: isUploading ? Colors.grey : null,
-          ),
-          selectedIcon: Icon(
-            Icons.add_a_photo,
-            color: isUploading ? Colors.grey : null,
-          ),
-          label: l10n.navPhoto,
-          enabled: !isUploading,
-        ),
-      );
-    }
-
-    return destinations;
   }
 
   int _calculateSelectedIndex(BuildContext context) {
@@ -210,17 +175,7 @@ class _MainShellState extends State<MainShell> {
     return 0;
   }
 
-  void _onItemTapped(int index, BuildContext context, bool isOwnProfile) {
-    final photoUploadIndex = isOwnProfile ? 6 : -1;
-
-    // Intercept the photo upload button (last item when on own profile)
-    if (isOwnProfile && index == photoUploadIndex) {
-      if (!PhotoUploadController.instance.isUploading) {
-        PhotoUploadController.instance.triggerUpload();
-      }
-      return;
-    }
-
+  void _onItemTapped(int index, BuildContext context) {
     // Intercept venue icon tap - not a route-based navigation
     if (index == 4) {
       _onVenueIconTapped();

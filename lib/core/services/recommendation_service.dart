@@ -7,6 +7,9 @@ import 'filter_service.dart';
 class RecommendationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FilterService _filterService = FilterService();
+  final Map<String, List<String>> _interestedSportsCache = {};
+  final Map<String, DateTime> _interestedSportsCacheTimestamps = {};
+  static const Duration _interestedSportsCacheDuration = Duration(minutes: 10);
 
   /// Generate all recommendation sections
   Future<RecommendationSections> generateRecommendations({
@@ -18,6 +21,9 @@ class RecommendationService {
     try {
       // Fetch all upcoming meetups if not provided
       final meetups = allMeetups ?? await _fetchUpcomingMeetups();
+      if (meetups.isEmpty) {
+        return const RecommendationSections();
+      }
 
       // Track used meetup IDs to avoid overlap
       final usedIds = <String>{};
@@ -48,14 +54,19 @@ class RecommendationService {
   /// Fetch upcoming meetups
   Future<List<MeetupModel>> _fetchUpcomingMeetups() async {
     final now = DateTime.now();
+    final horizon = now.add(const Duration(days: 21));
     final snapshot = await _firestore
         .collection('meetups')
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(horizon))
         .orderBy('date')
-        .limit(100)
+        .limit(40)
         .get();
 
-    return snapshot.docs.map((doc) => MeetupModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => MeetupModel.fromJson(doc.data()))
+        .where((meetup) => meetup.isFeedVisible)
+        .toList();
   }
 
   /// Get "For You" recommendations based on user's participated sport types
@@ -66,16 +77,7 @@ class RecommendationService {
   ) async {
     try {
       // Get user's participation history
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) {
-        return _getTrending(meetups, usedIds);
-      }
-
-      final userData = userDoc.data();
-      final interestedSports = (userData?['interestedSports'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [];
+      final interestedSports = await _getInterestedSports(userId);
 
       if (interestedSports.isEmpty) {
         return _getTrending(meetups, usedIds);
@@ -104,6 +106,38 @@ class RecommendationService {
       debugPrint('Error getting for you recommendations: $e');
       return _getTrending(meetups, usedIds);
     }
+  }
+
+  Future<List<String>> _getInterestedSports(String userId) async {
+    if (_isInterestedSportsCacheValid(userId)) {
+      return _interestedSportsCache[userId] ?? const [];
+    }
+
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      _updateInterestedSportsCache(userId, const []);
+      return const [];
+    }
+
+    final userData = userDoc.data();
+    final interestedSports = (userData?['interestedSports'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    _updateInterestedSportsCache(userId, interestedSports);
+    return interestedSports;
+  }
+
+  bool _isInterestedSportsCacheValid(String userId) {
+    final timestamp = _interestedSportsCacheTimestamps[userId];
+    if (timestamp == null) return false;
+    return DateTime.now().difference(timestamp) <
+        _interestedSportsCacheDuration;
+  }
+
+  void _updateInterestedSportsCache(String userId, List<String> interestedSports) {
+    _interestedSportsCache[userId] = interestedSports;
+    _interestedSportsCacheTimestamps[userId] = DateTime.now();
   }
 
   /// Get trending meetups (fallback for users without history)

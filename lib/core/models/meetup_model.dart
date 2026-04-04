@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'position_slot.dart';
 import 'route_data.dart';
 
@@ -37,13 +37,13 @@ extension MeetupTypeExtension on MeetupType {
       case MeetupType.badminton:
         return 'Badminton';
       case MeetupType.swimming:
-        return 'Yüzme';
+        return 'YÃ¼zme';
       case MeetupType.running:
-        return 'Koşu';
+        return 'KoÅŸu';
       case MeetupType.cycling:
         return 'Bisiklet';
       case MeetupType.hiking:
-        return 'Doğa Yürüyüşü';
+        return 'DoÄŸa YÃ¼rÃ¼yÃ¼ÅŸÃ¼';
       case MeetupType.yoga:
         return 'Yoga';
       case MeetupType.fitness:
@@ -51,15 +51,15 @@ extension MeetupTypeExtension on MeetupType {
       case MeetupType.boxing:
         return 'Boks';
       case MeetupType.climbing:
-        return 'Tırmanış';
+        return 'TÄ±rmanÄ±ÅŸ';
       case MeetupType.skiing:
         return 'Kayak';
       case MeetupType.other:
-        return 'Diğer';
+        return 'DiÄŸer';
     }
   }
 
-  /// Bu etkinlik türü rota planlama destekliyor mu?
+  /// Bu etkinlik tÃ¼rÃ¼ rota planlama destekliyor mu?
   bool get supportsRoute =>
       this == MeetupType.running ||
       this == MeetupType.cycling ||
@@ -83,6 +83,7 @@ class MeetupModel {
   final double? organizerRating;
   final int currentParticipants;
   final int maxParticipants;
+  final bool hideFromFeedUntilAccepted;
   final bool isFull;
   final List<String> participantIds;
   final List<String> waitlistUserIds;
@@ -120,6 +121,7 @@ class MeetupModel {
     this.organizerRating,
     required this.currentParticipants,
     required this.maxParticipants,
+    this.hideFromFeedUntilAccepted = false,
     this.isFull = false,
     this.participantIds = const [],
     this.waitlistUserIds = const [],
@@ -135,6 +137,36 @@ class MeetupModel {
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get hasCoordinates => latitude != null && longitude != null;
+
+  int get availableSpots {
+    final spots = maxParticipants - currentParticipants;
+    return spots < 0 ? 0 : spots;
+  }
+
+  double get fillRatio {
+    if (maxParticipants <= 0) return 0;
+    return currentParticipants / maxParticipants;
+  }
+
+  String get participantState {
+    return computeParticipantState(
+      currentParticipants: currentParticipants,
+      maxParticipants: maxParticipants,
+    );
+  }
+
+  List<String> get searchKeywords => buildSearchKeywords(
+        title: title,
+        description: description,
+        locationName: locationName,
+        locationAddress: locationAddress,
+        organizerName: organizerName,
+        type: type,
+      );
+
+  /// Only swipe-created invite meetups may stay hidden until the invite is accepted.
+  bool get isFeedVisible =>
+      !hideFromFeedUntilAccepted || currentParticipants > 1;
 
   /// Is this a football meetup with team formations?
   bool get isFootballWithTeams =>
@@ -162,7 +194,11 @@ class MeetupModel {
       'organizerRating': organizerRating,
       'currentParticipants': currentParticipants,
       'maxParticipants': maxParticipants,
+      'hideFromFeedUntilAccepted': hideFromFeedUntilAccepted,
       'isFull': isFull,
+      'participantState': participantState,
+      'availableSpots': availableSpots,
+      'searchKeywords': searchKeywords,
       'participantIds': participantIds,
       'waitlistUserIds': waitlistUserIds,
       'latitude': latitude,
@@ -209,6 +245,8 @@ class MeetupModel {
       organizerRating: (json['organizerRating'] as num?)?.toDouble(),
       currentParticipants: json['currentParticipants'] ?? 0,
       maxParticipants: json['maxParticipants'] ?? 0,
+      hideFromFeedUntilAccepted:
+          json['hideFromFeedUntilAccepted'] == true,
       isFull: json['isFull'] ?? false,
       participantIds: List<String>.from(json['participantIds'] ?? []),
       waitlistUserIds: List<String>.from(json['waitlistUserIds'] ?? []),
@@ -243,16 +281,108 @@ class MeetupModel {
     return DateTime.now();
   }
 
+  static String computeParticipantState({
+    required int currentParticipants,
+    required int maxParticipants,
+  }) {
+    if (maxParticipants <= 0) return 'has_space';
+    if (currentParticipants >= maxParticipants) return 'full';
+    if (currentParticipants / maxParticipants >= 0.8) return 'almost_full';
+    return 'has_space';
+  }
+
+/*
+  static List<String> buildSearchKeywords({
+    required String title,
+    required String description,
+    required String locationName,
+    required String locationAddress,
+    required String organizerName,
+    required MeetupType type,
+  }) {
+    final rawText = [
+      title,
+      description,
+      locationName,
+      locationAddress,
+      organizerName,
+      type.name,
+      type.displayName,
+    ].join(' ');
+
+    final normalized = rawText
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9Ã§ÄŸÄ±Ã¶ÅŸÃ¼\s]'), ' ')
+        .split(RegExp(r'\s+'))
+        .where((token) => token.trim().length >= 2)
+        .map((token) => token.trim())
+        .toSet()
+        .toList()
+      ..sort();
+
+    return normalized;
+  }
+
+*/
+
+  static List<String> buildSearchKeywords({
+    required String title,
+    required String description,
+    required String locationName,
+    required String locationAddress,
+    required String organizerName,
+    required MeetupType type,
+  }) {
+    final rawText = [
+      title,
+      description,
+      locationName,
+      locationAddress,
+      organizerName,
+      type.name,
+      type.displayName,
+    ].join(' ');
+
+    final normalized = _normalizeSearchText(rawText)
+        .split(RegExp(r'\s+'))
+        .where((token) => token.trim().length >= 2)
+        .map((token) => token.trim())
+        .toSet()
+        .toList()
+      ..sort();
+
+    return normalized;
+  }
+
+  static String _normalizeSearchText(String input) {
+    var normalized = input.toLowerCase();
+    const replacements = <String, String>{
+      '\u00E7': 'c',
+      '\u011F': 'g',
+      '\u0131': 'i',
+      'i\u0307': 'i',
+      '\u00F6': 'o',
+      '\u015F': 's',
+      '\u00FC': 'u',
+    };
+
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+
+    return normalized.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+  }
+
   factory MeetupModel.mockFootball() {
     return MeetupModel(
       id: 'm1',
-      title: 'Hafta Sonu 7vs7 Halı Saha',
-      description: 'Dostluk maçı yapacağız, eksik oyuncular var. Kaleci lazım!',
+      title: 'Hafta Sonu 7vs7 HalÄ± Saha',
+      description: 'Dostluk maÃ§Ä± yapacaÄŸÄ±z, eksik oyuncular var. Kaleci lazÄ±m!',
       imageUrl: 'football.png',
       type: MeetupType.football,
       date: DateTime.now().add(const Duration(days: 2)),
       locationName: 'Caddebostan Sahil Spor',
-      locationAddress: 'Caddebostan, Kadıköy/İstanbul',
+      locationAddress: 'Caddebostan, KadÄ±kÃ¶y/Ä°stanbul',
       organizerId: 'mock_1',
       organizerName: 'Kaan Sportif',
       currentParticipants: 11,
@@ -263,14 +393,14 @@ class MeetupModel {
   factory MeetupModel.mockYoga() {
     return MeetupModel(
       id: 'm2',
-      title: 'Gün Batımında Yoga',
+      title: 'GÃ¼n BatÄ±mÄ±nda Yoga',
       description:
-          'Zihnimizi boşaltmak ve esnemek için harika bir fırsat. Matınızı getirin.',
+          'Zihnimizi boÅŸaltmak ve esnemek iÃ§in harika bir fÄ±rsat. MatÄ±nÄ±zÄ± getirin.',
       imageUrl: 'yoga.png',
       type: MeetupType.yoga,
       date: DateTime.now().add(const Duration(days: 1)),
       locationName: 'Moda Sahili',
-      locationAddress: 'Moda, Kadıköy/İstanbul',
+      locationAddress: 'Moda, KadÄ±kÃ¶y/Ä°stanbul',
       organizerId: 'mock_2',
       organizerName: 'Yoga Master',
       currentParticipants: 5,
@@ -281,14 +411,14 @@ class MeetupModel {
   factory MeetupModel.mockTennis() {
     return MeetupModel(
       id: 'm3',
-      title: 'Tenis Partneri Aranıyor',
+      title: 'Tenis Partneri AranÄ±yor',
       description:
-          'Orta seviye tenis partneri arıyorum. Kort ücretini bölüşeceğiz.',
+          'Orta seviye tenis partneri arÄ±yorum. Kort Ã¼cretini bÃ¶lÃ¼ÅŸeceÄŸiz.',
       imageUrl: 'tennis.png',
       type: MeetupType.tennis,
       date: DateTime.now().add(const Duration(days: 3)),
-      locationName: 'Dalyan Tenis Kulübü',
-      locationAddress: 'Fenerbahçe, Kadıköy',
+      locationName: 'Dalyan Tenis KulÃ¼bÃ¼',
+      locationAddress: 'FenerbahÃ§e, KadÄ±kÃ¶y',
       organizerId: 'mock_1',
       organizerName: 'Kaan Sportif',
       currentParticipants: 1,
@@ -296,3 +426,4 @@ class MeetupModel {
     );
   }
 }
+

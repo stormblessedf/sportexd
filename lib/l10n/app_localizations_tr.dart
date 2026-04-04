@@ -1716,4 +1716,115 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get startChatButton => 'Sohbet Baslat';
+
+  @override
+  String get premiumTitle => 'Sporsal Premium';
+
+  @override
+  String get premiumHeroTitle => 'Sporsal\'ın Tüm Gücünü Aç';
+
+  @override
+  String get premiumHeroSubtitle =>
+      'Premium üyelikle spor deneyimini bir üst seviyeye taşı.';
+
+  @override
+  String get premiumFeaturesHeader => 'Premium\'a Dahil Olanlar';
+
+  @override
+  String get premiumFeatureSwipe => 'Swipe Eşleşme Sistemi';
+
+  @override
+  String get premiumFeatureSwipeDesc => 'Sağa kaydırarak spor arkadaşı bul';
+
+  @override
+  String get premiumFeatureBadge => 'Premium Profil Rozeti';
+
+  @override
+  String get premiumFeatureBadgeDesc =>
+      'Profilinde altın premium rozeti göster';
+
+  @override
+  String get premiumFeatureFeatured => 'Öne Çıkan Profil';
+
+  @override
+  String get premiumFeatureFeaturedDesc =>
+      'Keşfet sayfasında üst sıralarda görün';
+
+  @override
+  String get premiumFeatureUnlimited => 'Sınırsız Etkinlik Oluşturma';
+
+  @override
+  String get premiumFeatureUnlimitedDesc =>
+      'Ücretsiz hesaplarda aylık 3 etkinlik limiti';
+
+  @override
+  String get premiumFeatureSupport => 'Öncelikli Destek';
+
+  @override
+  String get premiumFeatureSupportDesc => '7/24 öncelikli müşteri desteği';
+
+  @override
+  String get premiumPlanMonthly => 'Aylık';
+
+  @override
+  String get premiumPlanAnnual => 'Yıllık';
+
+  @override
+  String get premiumPlanSavings => '%37 Tasarruf';
+
+  @override
+  String premiumPurchaseButton(String plan, String price) {
+    return '$plan Premium — $price';
+  }
+
+  @override
+  String get premiumConfirmTitle => 'Premium\'u Onayla';
+
+  @override
+  String get premiumConfirmContent => 'Demo modunda premium aktif edilecek.';
+
+  @override
+  String get premiumConfirmButton => 'Onayla';
+
+  @override
+  String get premiumActivatedSuccess => '🎉 Premium aktif edildi!';
+
+  @override
+  String get premiumErrorRetry => 'Bir hata oluştu. Tekrar deneyin.';
+
+  @override
+  String get premiumLoginRequired => 'Satın almak için giriş yapmalısınız.';
+
+  @override
+  String get premiumActiveTitle => 'Premium Aktif!';
+
+  @override
+  String premiumDaysLeft(int days) {
+    return '$days gün kaldı';
+  }
+
+  @override
+  String premiumExpiryDate(String date) {
+    return 'Bitiş: $date';
+  }
+
+  @override
+  String get premiumActiveFeatures =>
+      'Tüm Premium Avantajlarını Kullanıyorsunuz';
+
+  @override
+  String get premiumRestoreNote =>
+      'Abonelikler, satın alma onayından sonra aktif olur.';
+
+  @override
+  String get sectionPremium => 'Premium';
+
+  @override
+  String get premiumSettingsTitle => 'Sporsal Premium';
+
+  @override
+  String get premiumSettingsSubtitleActive => 'Premium üyeliğiniz aktif';
+
+  @override
+  String get premiumSettingsSubtitleInactive => 'Özelliklerinizi genişletin';
 }

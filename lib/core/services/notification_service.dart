@@ -255,6 +255,7 @@ class NotificationService extends ChangeNotifier {
     try {
       await _firestore.collection('notifications').doc(notificationId).update({
         'isRead': true,
+        'metadata.unreadCount': 0,
       });
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
@@ -275,7 +276,10 @@ class NotificationService extends ChangeNotifier {
           .get();
 
       for (final doc in unreadDocs.docs) {
-        batch.update(doc.reference, {'isRead': true});
+        batch.update(doc.reference, {
+          'isRead': true,
+          'metadata.unreadCount': 0,
+        });
       }
 
       await batch.commit();

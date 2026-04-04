@@ -170,8 +170,10 @@ class DiscoveryController extends ChangeNotifier {
         _hasMore = false;
       } else {
         _lastDocument = snapshot.docs.last;
-        final newMeetups =
-            snapshot.docs.map((doc) => MeetupModel.fromJson(doc.data())).toList();
+        final newMeetups = snapshot.docs
+            .map((doc) => MeetupModel.fromJson(doc.data()))
+            .where((meetup) => meetup.isFeedVisible)
+            .toList();
         _allMeetups.addAll(newMeetups);
         _hasMore = newMeetups.length == _pageSize;
       }

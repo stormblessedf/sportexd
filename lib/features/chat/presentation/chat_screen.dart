@@ -80,11 +80,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _toggleOrganizerOnlyMode() async {
     try {
+      final nextValue = !_isOrganizerOnlyMode;
       await FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
           .set({
-            'isOrganizerOnlyMode': !_isOrganizerOnlyMode,
+            'isOrganizerOnlyMode': nextValue,
+          }, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('meetups')
+          .doc(widget.chatId)
+          .set({
+            'isOrganizerOnlyChat': nextValue,
           }, SetOptions(merge: true));
 
       if (mounted) {
@@ -119,7 +126,10 @@ class _ChatScreenState extends State<ChatScreen> {
           .get();
 
       for (final doc in notifications.docs) {
-        await doc.reference.update({'isRead': true});
+        await doc.reference.update({
+          'isRead': true,
+          'metadata.unreadCount': 0,
+        });
       }
     } catch (e) {
       debugPrint('Error marking chat notification as read: $e');

@@ -37,6 +37,7 @@ import '../../l10n/app_localizations.dart';
 import '../../features/venue_recommendations/presentation/venue_onboarding_screen.dart';
 import '../../features/venue_recommendations/presentation/venue_detail_screen.dart';
 import '../../core/services/meetup_service.dart' as meetup_svc;
+import '../../features/premium/presentation/premium_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -65,7 +66,9 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/create',
-          builder: (context, state) => const CreateMeetupScreen(),
+          builder: (context, state) => CreateMeetupScreen(
+            initialData: state.extra as Map<String, dynamic>?,
+          ),
         ),
         GoRoute(
           path: '/swipe-invites',
@@ -76,6 +79,10 @@ final appRouter = GoRouter(
           builder: (context, state) => const ProfileScreen(),
         ),
       ],
+    ),
+    GoRoute(
+      path: '/premium',
+      builder: (context, state) => const PremiumScreen(),
     ),
     GoRoute(
       path: '/detail',

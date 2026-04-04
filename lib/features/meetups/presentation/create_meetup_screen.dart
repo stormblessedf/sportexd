@@ -8,10 +8,12 @@ import '../../../core/models/meetup_model.dart';
 import '../../../core/models/location_data.dart';
 import '../../../core/models/formation_config.dart';
 import '../../../core/models/position_slot.dart';
+import '../../../core/models/swipe_invite_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/meetup_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/places_service.dart';
+import '../../../core/services/swipe_invite_service.dart';
 import '../../../core/widgets/styled_tile_layer.dart';
 import '../../../core/models/route_data.dart';
 import 'widgets/formation_picker_widget.dart';
@@ -19,7 +21,12 @@ import 'widgets/route_planner_widget.dart';
 import '../../../l10n/app_localizations.dart';
 
 class CreateMeetupScreen extends StatefulWidget {
-  const CreateMeetupScreen({super.key});
+  final Map<String, dynamic>? initialData;
+
+  const CreateMeetupScreen({
+    super.key,
+    this.initialData,
+  });
 
   @override
   State<CreateMeetupScreen> createState() => _CreateMeetupScreenState();
@@ -56,6 +63,9 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
 
   // Route planning state
   RouteData? _routeData;
+  String? _inviteTargetUserId;
+  String? _inviteTargetUsername;
+  String? _successRedirectPath;
 
   // Autocomplete
   List<PlaceAutocompleteResult> _suggestions = [];
@@ -95,6 +105,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
       LocationService.defaultLongitude,
     );
     _searchFocusNode.addListener(_onFocusChange);
+    _applyInitialData();
   }
 
   @override
@@ -125,6 +136,49 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         _maxParticipants = FormationData.totalPlayers(_selectedFormat);
       }
     });
+  }
+
+  bool get _isInviteCreationFlow => _inviteTargetUserId != null;
+
+  void _applyInitialData() {
+    final initialData = widget.initialData;
+    if (initialData == null) return;
+
+    final sportTypeName = initialData['sportType'] as String?;
+    if (sportTypeName != null) {
+      try {
+        _selectedType = MeetupType.values.firstWhere(
+          (type) => type.name == sportTypeName,
+        );
+      } catch (_) {}
+    }
+
+    _inviteTargetUserId = initialData['invitedUserId'] as String?;
+    _inviteTargetUsername = initialData['invitedUserName'] as String?;
+    _successRedirectPath = initialData['successRedirectPath'] as String?;
+    if (_successRedirectPath == null &&
+        initialData['returnResultOnSuccess'] == true) {
+      _successRedirectPath = '/swipe-invites';
+    }
+
+    if (_isInviteCreationFlow && _selectedType != MeetupType.football) {
+      _maxParticipants = 2;
+    }
+
+    if (_titleController.text.trim().isEmpty) {
+      final sportName = _selectedType.displayName;
+      if (_inviteTargetUsername?.isNotEmpty == true) {
+        _titleController.text = '$sportName - $_inviteTargetUsername';
+      } else {
+        _titleController.text = '$sportName Etkinligi';
+      }
+    }
+
+    if (_descriptionController.text.trim().isEmpty &&
+        _inviteTargetUsername?.isNotEmpty == true) {
+      _descriptionController.text =
+          '$_inviteTargetUsername ile birlikte $_selectedType için planlandi.';
+    }
   }
 
   void _onFormatChanged(String format) {
@@ -414,6 +468,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
     try {
       final authService = context.read<AuthService>();
       final meetupService = context.read<MeetupService>();
+      final swipeInviteService = SwipeInviteService();
 
       final user = await authService.getCurrentUser();
       if (user == null) throw Exception(l10n.notLoggedIn);
@@ -458,7 +513,7 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         routeDataToSave = _routeData;
       }
 
-      await meetupService.createMeetup(
+      final createdMeetup = await meetupService.createMeetup(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         rules: _rulesController.text.trim(),
@@ -469,6 +524,8 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
             _selectedLocation?.name ?? _selectedLocation?.address ?? '',
         locationAddress: _selectedLocation?.address ?? '',
         maxParticipants: _maxParticipants,
+        hideFromFeedUntilAccepted:
+            _isInviteCreationFlow && _maxParticipants <= 2,
         organizerId: user.id,
         organizerName: user.username,
         organizerImageUrl: user.profileImageUrl,
@@ -481,16 +538,39 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
         routeData: routeDataToSave,
       );
 
+      if (_inviteTargetUserId != null) {
+        await swipeInviteService.sendInvite(
+          actorId: user.id,
+          targetId: _inviteTargetUserId!,
+          senderName: user.username,
+          senderImageUrl: user.profileImageUrl,
+          inviteContext: SwipeInviteContext.meetup,
+          sportType: createdMeetup.type.name,
+          meetupId: createdMeetup.id,
+          meetupTitle: createdMeetup.title,
+        );
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.eventCreated),
+            content: Text(
+              _inviteTargetUserId != null
+                  ? 'Etkinlik olusturuldu ve davet gonderildi.'
+                  : l10n.eventCreated,
+            ),
             backgroundColor: primary,
           ),
         );
-        context.go('/home');
+        if (_successRedirectPath?.isNotEmpty == true) {
+          context.go(_successRedirectPath!);
+        } else {
+          context.go('/home');
+        }
       }
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('CreateMeetupScreen._submit error: $e');
+      debugPrint('$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.errorWithMessage(e.toString())), backgroundColor: Colors.red),
@@ -533,6 +613,10 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
+                  if (_isInviteCreationFlow) ...[
+                    _buildInviteFlowBanner(),
+                    const SizedBox(height: 24),
+                  ],
                   _buildSportSection(),
                   const SizedBox(height: 32),
                   _buildDateTimeSection(),
@@ -602,6 +686,65 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInviteFlowBanner() {
+    final inviteName = _inviteTargetUsername?.trim();
+    final visibilityText = _maxParticipants > 2
+        ? '3+ kisilik etkinlikler akista hemen gorunur.'
+        : '2 kisilik etkinlikler, davet kabul edilene kadar akista gorunmez.';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: primary.withValues(alpha: 0.22)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.mail_outline_rounded, color: primary, size: 18),
+                const SizedBox(width: 8),
+                const Text(
+                  'Davetli Etkinlik',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textDark,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              inviteName?.isNotEmpty == true
+                  ? '$inviteName icin etkinlik olusturuyorsun. Kayit tamamlaninca davet otomatik gidecek.'
+                  : 'Bu ekran spor davetinden acildi. Kayit tamamlaninca davet otomatik gidecek.',
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: textMuted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              visibilityText,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textDark,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1318,6 +1461,20 @@ class _CreateMeetupScreenState extends State<CreateMeetupScreen> {
                       ],
                     ),
                   ],
+                ),
+              ),
+            ),
+          if (_selectedType != MeetupType.football && _isInviteCreationFlow)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+              child: Text(
+                _maxParticipants > 2
+                    ? 'Bu etkinlik akista herkese acik gorunecek.'
+                    : 'Bu etkinlik, davet kabul edilene kadar gizli kalacak.',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textMuted,
                 ),
               ),
             ),

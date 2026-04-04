@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/filter_state.dart';
@@ -15,6 +15,31 @@ class FilterService {
     // Apply date range filter (server-side) using Timestamp
     final startDate = state.dateRange.startDate;
     final endDate = state.dateRange.endDate;
+    final sportTypes = state.sportTypes.map((type) => type.name).toList();
+
+    // Push single-sport and small multi-sport filters to Firestore to avoid
+    // downloading irrelevant meetup pages at scale.
+    if (sportTypes.length == 1) {
+      query = query.where('type', isEqualTo: sportTypes.first);
+    } else if (sportTypes.length > 1 && sportTypes.length <= 10) {
+      query = query.where('type', whereIn: sportTypes);
+    }
+
+    switch (state.participantFilter) {
+      case ParticipantFilter.any:
+        break;
+      case ParticipantFilter.hasSpace:
+        query = query.where('isFull', isEqualTo: false);
+        break;
+      case ParticipantFilter.almostFull:
+        query = query.where('participantState', isEqualTo: 'almost_full');
+        break;
+    }
+
+    final normalizedSearchToken = _normalizeSearchToken(state.searchQuery);
+    if (normalizedSearchToken != null) {
+      query = query.where('searchKeywords', arrayContains: normalizedSearchToken);
+    }
 
     query = query
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
@@ -22,6 +47,61 @@ class FilterService {
         .orderBy('date', descending: false);
 
     return query;
+  }
+
+/*
+  String? _normalizeSearchToken(String query) {
+    final normalized = query
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9Ã§ÄŸÄ±Ã¶ÅŸÃ¼\s]'), ' ')
+        .trim();
+    if (normalized.isEmpty) return null;
+
+    final token = normalized
+        .split(RegExp(r'\s+'))
+        .where((part) => part.trim().length >= 2)
+        .fold<String?>(
+          null,
+          (best, part) => best == null || part.length > best.length ? part : best,
+        );
+
+    return token;
+  }
+
+*/
+
+  String? _normalizeSearchToken(String query) {
+    final normalized = _normalizeSearchText(query).trim();
+    if (normalized.isEmpty) return null;
+
+    final token = normalized
+        .split(RegExp(r'\s+'))
+        .where((part) => part.trim().length >= 2)
+        .fold<String?>(
+          null,
+          (best, part) => best == null || part.length > best.length ? part : best,
+        );
+
+    return token;
+  }
+
+  String _normalizeSearchText(String input) {
+    var normalized = input.toLowerCase();
+    const replacements = <String, String>{
+      '\u00E7': 'c',
+      '\u011F': 'g',
+      '\u0131': 'i',
+      'i\u0307': 'i',
+      '\u00F6': 'o',
+      '\u015F': 's',
+      '\u00FC': 'u',
+    };
+
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+
+    return normalized.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
   }
 
   /// Apply post-query filters (client-side)
@@ -253,3 +333,4 @@ class _ScoredMeetup {
 
   _ScoredMeetup(this.meetup, this.score);
 }
+
